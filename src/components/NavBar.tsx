@@ -19,7 +19,9 @@ export default function NavBar() {
   return (
     <div className='flex items-center justify-between h-26'>
       <div className='flex items-center'>
-        <Button className='mx-12 p-0'><img src="/nav-bar/menu.svg" alt="menu" width={18} height={19}/></Button>
+        <div className='border-r-[0.2px] border-[#FFFFFF20] h-full'>
+          <Button className='mx-12 p-0'><img src="/nav-bar/menu.svg" alt="menu" width={18} height={19}/></Button>
+        </div>
         <img src="/nav-bar/logo.svg" alt="logo" width={188} height={51}/>
       </div>
 
