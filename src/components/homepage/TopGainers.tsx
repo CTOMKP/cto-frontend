@@ -256,8 +256,9 @@ export default function TopGainers() {
           <TableBody>
             {mockData.map((data, index) => (
               <TableRow key={index} className="border-none">
-                <TableCell className="flex items-center gap-1 !py-1">
-                  <div className="relative">
+                <TableCell className="!py-1">
+                  <div className="flex items-center gap-1">
+                    <div className="relative">
                     <img
                       className="size-7 rounded-full border-[0.36px] border-white"
                       src="/homepage/trending-coins/default-coin.png"
@@ -319,10 +320,11 @@ export default function TopGainers() {
                       </Link>
                     </div>
                   </div>
+                  </div>
                 </TableCell>
                 <TableCell className="!py-1">
                   <div>
-                    <span className={`text-xs font-bold`}>
+                    <span className={`text-xs font-medium`}>
                       ${data.price.amount}
                     </span>
                     <span className="flex font-medium items-end text-[10px] text-[#16C784]">
@@ -338,7 +340,7 @@ export default function TopGainers() {
                 </TableCell>
                 <TableCell className="!py-1">
                   <div>
-                    <span className={`text-xs font-bold`}>
+                    <span className={`text-xs font-medium`}>
                       ${compactNumber(data.marketCap)}
                     </span>
                     <span className="flex font-medium items-center text-[10px] text-[#FF9631]">
@@ -354,7 +356,7 @@ export default function TopGainers() {
                 </TableCell>
                 <TableCell className="!py-1">
                   <div>
-                    <span className={`text-xs font-bold`}>
+                    <span className={`text-xs font-medium`}>
                       ${compactNumber(data.volume.amount)}
                     </span>
                     <span className="flex font-medium items-center text-[10px] text-[#16C784]">
@@ -376,7 +378,7 @@ export default function TopGainers() {
                 </TableCell>
                 <TableCell className="!py-1">
                   <div className="flex flex-col items-end">
-                    <span className={`text-xs font-bold`}>
+                    <span className={`text-xs font-medium`}>
                       ${compactNumber(data.holders)}
                     </span>
                     <span>
@@ -384,7 +386,7 @@ export default function TopGainers() {
                         src="/up-trend-graph.png"
                         alt="up-trend-graph"
                         width={44}
-                        height={11}
+                        className="h-[11px]"
                       />
                     </span>
                   </div>
