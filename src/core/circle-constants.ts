@@ -14,6 +14,24 @@ export const CIRCLE_CONFIG = {
   walletType: 'USER_CONTROLLED' as const,
 };
 
+// Validate required environment variables
+export const validateEnvironment = () => {
+  const requiredVars = [
+    'NEXT_PUBLIC_CIRCLE_APP_ID',
+    'NEXT_PUBLIC_CIRCLE_API_KEY',
+    'NEXT_PUBLIC_CIRCLE_API_BASE'
+  ];
+  
+  const missing = requiredVars.filter(varName => !process.env[varName]);
+  
+  if (missing.length > 0) {
+    console.warn(`Missing environment variables: ${missing.join(', ')}`);
+    return false;
+  }
+  
+  return true;
+};
+
 export const GOOGLE_CONFIG = {
   clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '',
 };
