@@ -18,22 +18,6 @@ const nextConfig: NextConfig = {
     // Panora API Configuration
     PANORA_API_KEY: process.env.PANORA_API_KEY,
   },
-  // Ensure the build doesn't fail if environment variables are missing
-  experimental: {
-    serverComponentsExternalPackages: ['@aptos-labs/ts-sdk'],
-  },
-  // Add fallback for missing environment variables
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        net: false,
-        tls: false,
-      };
-    }
-    return config;
-  },
 };
 
 export default nextConfig;
