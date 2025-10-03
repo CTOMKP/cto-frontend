@@ -12,6 +12,7 @@ import NavBar from "@/components/NavBar";
 import MarketTrends from "@/components/MarketTrends";
 import TokenSwapCard from "@/components/TokenSwapCard";
 import { Dialog } from "@/components/ui/dialog";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const grotesqueArabicPro = localFont({
   src: './fonts/BasisGrotesqueArabicPro-Regular.woff2',
@@ -36,20 +37,22 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} ${grotesqueArabicPro.className} antialiased`}>
-        <GoogleOAuthProviderWrapper>
-          <Dialog>
-            <WalletProvider>
-              <HeaderAd />
-              <NavBar />
-              <MarketTrends />
-              {children}
-              <WelcomeSlideshow />
-              <div className="fixed bottom-15 right-20 z-50">
-                <TokenSwapCard />
-              </div>
-            </WalletProvider>
-          </Dialog>
-        </GoogleOAuthProviderWrapper>
+        <ErrorBoundary>
+          <GoogleOAuthProviderWrapper>
+            <Dialog>
+              <WalletProvider>
+                <HeaderAd />
+                <NavBar />
+                <MarketTrends />
+                {children}
+                <WelcomeSlideshow />
+                <div className="fixed bottom-15 right-20 z-50">
+                  <TokenSwapCard />
+                </div>
+              </WalletProvider>
+            </Dialog>
+          </GoogleOAuthProviderWrapper>
+        </ErrorBoundary>
         <ToastContainer
           position="top-right"
           autoClose={3000}
