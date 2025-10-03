@@ -1,23 +1,27 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import WalletProvider from "@/components/WalletProvider";
+import { GoogleOAuthProviderWrapper } from "@/components/GoogleOAuthProvider";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { ToastContainer } from 'react-toastify';
+import { Inter } from 'next/font/google';
 
 import localFont from 'next/font/local'
+import WelcomeSlideshow from "@/components/onboarding/WelcomeSlideshow";
+import HeaderAd from "@/components/HeaderAd";
+import NavBar from "@/components/NavBar";
+import MarketTrends from "@/components/MarketTrends";
+import TokenSwapCard from "@/components/TokenSwapCard";
+import { Dialog } from "@/components/ui/dialog";
 
 const grotesqueArabicPro = localFont({
   src: './fonts/BasisGrotesqueArabicPro-Regular.woff2',
   display: 'swap',
-})
+});
+
+const inter = Inter({
+  subsets: ['latin'], // Specify the necessary subsets
+  display: 'swap',    // Optional: Controls how font is displayed while loading
+});
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -31,10 +35,33 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${grotesqueArabicPro.className} antialiased`}
-      >
-        {children}
+      <body className={`${inter.className} ${grotesqueArabicPro.className} antialiased`}>
+        <GoogleOAuthProviderWrapper>
+          <Dialog>
+            <WalletProvider>
+              <HeaderAd />
+              <NavBar />
+              <MarketTrends />
+              {children}
+              <WelcomeSlideshow />
+              <div className="fixed bottom-15 right-20 z-50">
+                <TokenSwapCard />
+              </div>
+            </WalletProvider>
+          </Dialog>
+        </GoogleOAuthProviderWrapper>
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="dark"
+        />
       </body>
     </html>
   );

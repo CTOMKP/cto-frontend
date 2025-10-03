@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  env: {
+    PANORA_API_KEY: process.env.PANORA_API_KEY,
+  },
 };
 
 export default nextConfig;

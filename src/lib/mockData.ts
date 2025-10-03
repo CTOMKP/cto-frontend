@@ -8,7 +8,7 @@ export const mockData = [
     "website": "https://gainer1.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 40,
-    "degenAudit": 1,
+    "degenAudit": 20,
     "mindshare": {
       "mentions": 1907,
       "sentiment": "positive",
@@ -47,7 +47,7 @@ export const mockData = [
     "website": "https://gainer2.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 60,
-    "degenAudit": 3,
+    "degenAudit": 50,
     "mindshare": {
       "mentions": 1885,
       "sentiment": "positive",
@@ -86,7 +86,7 @@ export const mockData = [
     "website": "https://gainer3.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 34,
-    "degenAudit": 2,
+    "degenAudit": 80,
     "mindshare": {
       "mentions": 253,
       "sentiment": "positive",
@@ -125,7 +125,7 @@ export const mockData = [
     "website": "https://gainer4.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 45,
-    "degenAudit": 1,
+    "degenAudit": 60,
     "mindshare": {
       "mentions": 44,
       "sentiment": "positive",
@@ -164,7 +164,7 @@ export const mockData = [
     "website": "https://gainer5.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 40,
-    "degenAudit": 1,
+    "degenAudit": 35,
     "mindshare": {
       "mentions": 1410,
       "sentiment": "positive",
@@ -203,7 +203,7 @@ export const mockData = [
     "website": "https://gainer6.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 73,
-    "degenAudit": 0,
+    "degenAudit": 57,
     "mindshare": {
       "mentions": 561,
       "sentiment": "positive",
@@ -242,7 +242,7 @@ export const mockData = [
     "website": "https://gainer7.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 37,
-    "degenAudit": 3,
+    "degenAudit": 50,
     "mindshare": {
       "mentions": 309,
       "sentiment": "positive",
@@ -281,7 +281,7 @@ export const mockData = [
     "website": "https://gainer8.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 56,
-    "degenAudit": 1,
+    "degenAudit": 70,
     "mindshare": {
       "mentions": 476,
       "sentiment": "positive",
@@ -320,7 +320,7 @@ export const mockData = [
     "website": "https://gainer9.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 35,
-    "degenAudit": 0,
+    "degenAudit": 45,
     "mindshare": {
       "mentions": 414,
       "sentiment": "positive",
@@ -359,7 +359,7 @@ export const mockData = [
     "website": "https://gainer10.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 73,
-    "degenAudit": 2,
+    "degenAudit": 25,
     "mindshare": {
       "mentions": 1371,
       "sentiment": "positive",
@@ -398,7 +398,7 @@ export const mockData = [
     "website": "https://gainer11.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 53,
-    "degenAudit": 3,
+    "degenAudit": 35,
     "mindshare": {
       "mentions": 1476,
       "sentiment": "positive",
@@ -437,7 +437,7 @@ export const mockData = [
     "website": "https://gainer12.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 56,
-    "degenAudit": 2,
+    "degenAudit": 20,
     "mindshare": {
       "mentions": 1700,
       "sentiment": "positive",
@@ -476,7 +476,7 @@ export const mockData = [
     "website": "https://gainer13.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 68,
-    "degenAudit": 2,
+    "degenAudit": 27,
     "mindshare": {
       "mentions": 866,
       "sentiment": "positive",
@@ -515,7 +515,7 @@ export const mockData = [
     "website": "https://gainer14.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 97,
-    "degenAudit": 3,
+    "degenAudit": 90,
     "mindshare": {
       "mentions": 1375,
       "sentiment": "positive",
@@ -554,7 +554,7 @@ export const mockData = [
     "website": "https://gainer15.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 57,
-    "degenAudit": 1,
+    "degenAudit": 79,
     "mindshare": {
       "mentions": 1176,
       "sentiment": "positive",
@@ -593,7 +593,7 @@ export const mockData = [
     "website": "https://loser1.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 79,
-    "degenAudit": 1,
+    "degenAudit": 19,
     "mindshare": {
       "mentions": 704,
       "sentiment": "negative",
@@ -632,7 +632,7 @@ export const mockData = [
     "website": "https://loser2.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 84,
-    "degenAudit": 2,
+    "degenAudit": 29,
     "mindshare": {
       "mentions": 870,
       "sentiment": "negative",
@@ -671,7 +671,7 @@ export const mockData = [
     "website": "https://loser3.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 74,
-    "degenAudit": 3,
+    "degenAudit": 39,
     "mindshare": {
       "mentions": 627,
       "sentiment": "negative",
@@ -710,7 +710,7 @@ export const mockData = [
     "website": "https://loser4.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 54,
-    "degenAudit": 2,
+    "degenAudit": 62,
     "mindshare": {
       "mentions": 904,
       "sentiment": "negative",
@@ -749,7 +749,7 @@ export const mockData = [
     "website": "https://loser5.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 74,
-    "degenAudit": 3,
+    "degenAudit": 63,
     "mindshare": {
       "mentions": 201,
       "sentiment": "negative",
@@ -788,7 +788,7 @@ export const mockData = [
     "website": "https://loser6.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 30,
-    "degenAudit": 1,
+    "degenAudit": 71,
     "mindshare": {
       "mentions": 1953,
       "sentiment": "negative",
@@ -827,7 +827,7 @@ export const mockData = [
     "website": "https://loser7.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 71,
-    "degenAudit": 0,
+    "degenAudit": 60,
     "mindshare": {
       "mentions": 1744,
       "sentiment": "negative",
@@ -866,7 +866,7 @@ export const mockData = [
     "website": "https://loser8.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 48,
-    "degenAudit": 2,
+    "degenAudit": 27,
     "mindshare": {
       "mentions": 1020,
       "sentiment": "negative",
@@ -905,7 +905,7 @@ export const mockData = [
     "website": "https://loser9.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 91,
-    "degenAudit": 3,
+    "degenAudit": 39,
     "mindshare": {
       "mentions": 990,
       "sentiment": "negative",
@@ -944,7 +944,7 @@ export const mockData = [
     "website": "https://loser10.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 67,
-    "degenAudit": 3,
+    "degenAudit": 73,
     "mindshare": {
       "mentions": 699,
       "sentiment": "negative",
@@ -983,7 +983,7 @@ export const mockData = [
     "website": "https://loser11.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 40,
-    "degenAudit": 2,
+    "degenAudit": 27,
     "mindshare": {
       "mentions": 1192,
       "sentiment": "negative",
@@ -1022,7 +1022,7 @@ export const mockData = [
     "website": "https://loser12.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 34,
-    "degenAudit": 3,
+    "degenAudit": 38,
     "mindshare": {
       "mentions": 811,
       "sentiment": "negative",
@@ -1061,7 +1061,7 @@ export const mockData = [
     "website": "https://loser13.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 85,
-    "degenAudit": 3,
+    "degenAudit": 83,
     "mindshare": {
       "mentions": 597,
       "sentiment": "negative",
@@ -1100,7 +1100,7 @@ export const mockData = [
     "website": "https://loser14.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 56,
-    "degenAudit": 2,
+    "degenAudit": 82,
     "mindshare": {
       "mentions": 634,
       "sentiment": "negative",
@@ -1139,7 +1139,7 @@ export const mockData = [
     "website": "https://loser15.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 83,
-    "degenAudit": 0,
+    "degenAudit": 60,
     "mindshare": {
       "mentions": 226,
       "sentiment": "negative",
@@ -1178,7 +1178,7 @@ export const mockData = [
     "website": "https://new1.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 34,
-    "degenAudit": 1,
+    "degenAudit": 71,
     "mindshare": {
       "mentions": 1943,
       "sentiment": "positive",
@@ -1217,7 +1217,7 @@ export const mockData = [
     "website": "https://new2.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 61,
-    "degenAudit": 3,
+    "degenAudit": 37,
     "mindshare": {
       "mentions": 1719,
       "sentiment": "neutral",
@@ -1256,7 +1256,7 @@ export const mockData = [
     "website": "https://new3.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 36,
-    "degenAudit": 3,
+    "degenAudit": 38,
     "mindshare": {
       "mentions": 507,
       "sentiment": "positive",
@@ -1295,7 +1295,7 @@ export const mockData = [
     "website": "https://new4.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 62,
-    "degenAudit": 1,
+    "degenAudit": 78,
     "mindshare": {
       "mentions": 864,
       "sentiment": "mixed",
@@ -1334,7 +1334,7 @@ export const mockData = [
     "website": "https://new5.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 68,
-    "degenAudit": 1,
+    "degenAudit": 69,
     "mindshare": {
       "mentions": 1341,
       "sentiment": "mixed",
@@ -1373,7 +1373,7 @@ export const mockData = [
     "website": "https://new6.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 74,
-    "degenAudit": 1,
+    "degenAudit": 67,
     "mindshare": {
       "mentions": 1952,
       "sentiment": "mixed",
@@ -1412,7 +1412,7 @@ export const mockData = [
     "website": "https://new7.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 35,
-    "degenAudit": 2,
+    "degenAudit": 76,
     "mindshare": {
       "mentions": 1144,
       "sentiment": "mixed",
@@ -1451,7 +1451,7 @@ export const mockData = [
     "website": "https://new8.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 69,
-    "degenAudit": 0,
+    "degenAudit": 50,
     "mindshare": {
       "mentions": 1560,
       "sentiment": "positive",
@@ -1490,7 +1490,7 @@ export const mockData = [
     "website": "https://new9.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 72,
-    "degenAudit": 1,
+    "degenAudit": 51,
     "mindshare": {
       "mentions": 876,
       "sentiment": "positive",
@@ -1529,7 +1529,7 @@ export const mockData = [
     "website": "https://new10.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 60,
-    "degenAudit": 1,
+    "degenAudit": 21,
     "mindshare": {
       "mentions": 1417,
       "sentiment": "mixed",
@@ -1568,7 +1568,7 @@ export const mockData = [
     "website": "https://new11.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 93,
-    "degenAudit": 3,
+    "degenAudit": 39,
     "mindshare": {
       "mentions": 543,
       "sentiment": "neutral",
@@ -1607,7 +1607,7 @@ export const mockData = [
     "website": "https://new12.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 44,
-    "degenAudit": 3,
+    "degenAudit": 36,
     "mindshare": {
       "mentions": 560,
       "sentiment": "mixed",
@@ -1646,7 +1646,7 @@ export const mockData = [
     "website": "https://new13.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 43,
-    "degenAudit": 0,
+    "degenAudit": 60,
     "mindshare": {
       "mentions": 925,
       "sentiment": "mixed",
@@ -1685,7 +1685,7 @@ export const mockData = [
     "website": "https://new14.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 56,
-    "degenAudit": 1,
+    "degenAudit": 19,
     "mindshare": {
       "mentions": 1596,
       "sentiment": "positive",
@@ -1724,7 +1724,7 @@ export const mockData = [
     "website": "https://new15.com",
     "image": "/homepage/trending-coins/default-coin.png",
     "communityScore": 50,
-    "degenAudit": 0,
+    "degenAudit": 50,
     "mindshare": {
       "mentions": 1499,
       "sentiment": "mixed",
