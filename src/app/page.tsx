@@ -156,7 +156,7 @@ export default function Home() {
       <div className='max-w-[557px] text-wrap pt-14 sm:pt-[117px]'>
         <h3 className='leading-[140%] text-2xl sm:text-[40px]'>Liquidity In, Liquidity Out. Communities Left Behind.</h3>
         <p className='text-white/80 mt-4 mb-7 sm:mb-[70px]'>Launchpads are built for launches, not longterm growth</p>
-        <div className='grid grid-cols-3 gap-4 sm:gap-6'>
+        <div className='grid grid-cols-3 gap-6 sm:gap-12'>
           <div>
             <h4 className='text-[#FF9631] font-medium sm:text-[60px] text-[26px] leading-[130%]'>{stats.dailyTokensDeployed.toLocaleString()}</h4>
             <p className='text-white text-sm sm:text-[24px]'>Launched</p>
