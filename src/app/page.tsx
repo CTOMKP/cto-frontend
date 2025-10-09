@@ -47,6 +47,35 @@ const cardData = [
 export default function Home() {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [stats, setStats] = useState({
+    dailyTokensDeployed: 100,
+    dailyGraduates: 100,
+    topTokensLast7Days: 100,
+  });
+
+  // Fetch memecoin stats on component mount
+  React.useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://cto-backend-production-28e3.up.railway.app';
+        const response = await fetch(`${backendUrl}/api/stats/memecoin`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          setStats({
+            dailyTokensDeployed: data.dailyTokensDeployed || 100,
+            dailyGraduates: data.dailyGraduates || 100,
+            topTokensLast7Days: data.topTokensLast7Days || 100,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch stats:', error);
+        // Keep fallback values
+      }
+    };
+
+    fetchStats();
+  }, []);
 
   const handleWaitlistSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,15 +158,15 @@ export default function Home() {
         <p className='text-white/80 mt-4 mb-7 sm:mb-[70px]'>Launchpads are built for launches, not longterm growth</p>
         <div className='grid grid-cols-3 gap-4 sm:gap-6'>
           <div>
-            <h4 className='text-[#FF9631] font-medium sm:text-[60px] text-[26px] leading-[130%]'>100</h4>
+            <h4 className='text-[#FF9631] font-medium sm:text-[60px] text-[26px] leading-[130%]'>{stats.dailyTokensDeployed.toLocaleString()}</h4>
             <p className='text-white text-sm sm:text-[24px]'>Launched</p>
           </div>
           <div>
-            <h4 className='text-[#FF9631] font-medium sm:text-[60px] text-[26px] leading-[130%]'>100</h4>
+            <h4 className='text-[#FF9631] font-medium sm:text-[60px] text-[26px] leading-[130%]'>{stats.dailyGraduates.toLocaleString()}</h4>
             <p className='text-white text-sm sm:text-[24px]'>Graduated</p>
           </div>
           <div>
-            <h4 className='text-[#FF9631] font-medium sm:text-[60px] text-[26px] leading-[130%]'>100</h4>
+            <h4 className='text-[#FF9631] font-medium sm:text-[60px] text-[26px] leading-[130%]'>{stats.topTokensLast7Days.toLocaleString()}</h4>
             <p className='text-white text-sm sm:text-[24px]'>Runners</p>
           </div>
         </div>
