@@ -96,19 +96,24 @@ export default function Home() {
       <div className='text-center m-5 mt-20 flex flex-col items-center justify-center'>
         <h1 className='text-[50px] sm:text-[70px] text-left sm:text-center text-wrap max-w-[606px] mx-auto leading-[120%]'>Revive. Rebuild. Rememe</h1>
         <p className='text-lg text-left md:text-center text-[#FFFFFFCC] text-wrap max-w-[606px] mx-auto'>Discover, explore, and build with high value communities</p>
-        <form className="flex justify-center items-center gap-4 max-w-md mx-auto mt-[30px]">
+        <form onSubmit={handleWaitlistSubmit} className="flex justify-center items-center gap-4 max-w-md mx-auto mt-[30px]">
         <div>
         <Input
           type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           placeholder='Enter your mail'
+          disabled={isSubmitting}
+          required
           className="bg-[#434343]/80 border border-[#A1A1A1] h-13 placeholder:text-[20px] text-white px-4 py-3 rounded-[30px] w-full sm:w-[502px] focus:outline-none"
         />
         </div>
         <Button
           type="submit"
-          className="bg-white text-[20px] px-6 h-12 py-4 rounded-[30px] font-semibold text-black"
+          disabled={isSubmitting}
+          className="bg-white text-[20px] px-6 h-12 py-4 rounded-[30px] font-semibold text-black disabled:opacity-70"
         >
-          Join Waitlist
+          {isSubmitting ? 'Joining...' : 'Join Waitlist'}
         </Button>
       </form>
       </div>
