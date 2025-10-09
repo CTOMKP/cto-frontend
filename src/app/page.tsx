@@ -219,7 +219,7 @@ export default function Home() {
       </div>
     </div>
       <Image src="/Frame 1618869528.png" alt="cto marketplace" width={600} height={600} className='absolute h-full top-0 right-0 hidden sm:block' />
-      <img src="/Frame 1618869547.png" alt="cto marketplace" className='absolute w-full right-0 left-0 -top-10  sm:hidden' />
+      <Image src="/Frame 1618869547.png" alt="cto marketplace" width={600} height={600} className='absolute w-full right-0 left-0 -top-10  sm:hidden' />
     </section>
     
     <section className="bg-black text-white py-16 px-4 text-center mt-24">
