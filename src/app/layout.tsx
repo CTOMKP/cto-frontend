@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import WalletProvider from "@/components/WalletProvider";
 import { GoogleOAuthProviderWrapper } from "@/components/GoogleOAuthProvider";
 import "./globals.css";
+import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
 import { Inter } from 'next/font/google';
 
