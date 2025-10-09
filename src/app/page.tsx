@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import Image from 'next/image';
-import React from 'react'
+import React, { useState } from 'react';
+import { toast } from 'react-toastify';
 
 const cardData = [
   {
@@ -44,6 +45,46 @@ const cardData = [
 
 
 export default function Home() {
+  const [email, setEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleWaitlistSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email || !email.includes('@')) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://cto-backend-production-28e3.up.railway.app';
+      
+      const response = await fetch(`${backendUrl}/api/waitlist`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success(data.message || 'Thank you for joining our waitlist!');
+        setEmail(''); // Clear the input
+      } else {
+        toast.error(data.message || 'Failed to join waitlist');
+      }
+    } catch (error) {
+      console.error('Waitlist error:', error);
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <main>
     <section className='relative sm:bg-[url("/orbital.png")] h-[500px] sm:h-[1024px] bg-cover bg-center bg-no-repeat'>
@@ -153,19 +194,25 @@ export default function Home() {
         Support community led memecoins before the market catches on.
       </p>
 
-      <form className="flex flex-col sm:flex-row justify-center items-center gap-4 max-w-md mx-auto">
+      <form onSubmit={handleWaitlistSubmit} className="flex flex-col sm:flex-row justify-center items-center gap-4 max-w-md mx-auto">
         <div className='bg-[#FFFFFF17] rounded-lg relative'>
           <Label className='absolute text-gray-400 text-xs left-4 top-2'>Email Address</Label>
         <Input
           type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="your@email.com"
+          disabled={isSubmitting}
+          required
           className="bg-transparent text-base border-none h-16 text-white px-4 py-3 rounded-md w-full sm:w-[502px] focus:outline-none"
         />
         </div>
         <Button
           type="submit"
-          className="cta-gradient px-6 h-12 py-3 rounded-md font-semibold text-white"
+          disabled={isSubmitting}
+          className="cta-gradient px-6 h-12 py-3 rounded-md font-semibold text-white disabled:opacity-70"
         >
-          Join Waitlist
+          {isSubmitting ? 'Joining...' : 'Join Waitlist'}
         </Button>
       </form>
     </section>
