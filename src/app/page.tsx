@@ -152,8 +152,8 @@ export default function Home() {
       <p className='text-center text-[24px] sm:text-[40px] mb-20'>An ecosystem built to last long</p>
 
       <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mx-5 sm:mx-[105px] pb-17 sm:pb-[140px]'>
-        {cardData.map((card, index) => (
-          <div
+      {cardData.map((card, index) => (
+        <div
           key={index}
           className="bg-gradient-to-t from-white/40 via-white/10 to-white/5 rounded-3xl p-[1px]"
         >
@@ -161,10 +161,10 @@ export default function Home() {
             <span className='size-[50px] bg-[radial-gradient(circle_at_center,#FF9631,#F04866)] mb-15 rounded-[10px] flex justify-center items-center'><Image src={card.icon} alt={card.title} width={30} height={30} /></span>
             <h3 className='text-[24px] mb-2'>{card.title}</h3>
             <p className='text-[#D1D1D1] text-[16px]'>{card.description}</p>
-            </div>
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
+    </div>
     </section>
 
     <section className='flex flex-col-reverse sm:flex-row justify-center items-center gap-10 mx-5 sm:mx-[105px] my-16'>
@@ -182,8 +182,8 @@ export default function Home() {
         <div className='flex gap-1'>
         <Button className='bg-[#222222] text-white rounded-full h-11 w-[114px]'>Get started</Button>
         <Button className='bg-white text-[#222222] rounded-full h-11 w-[114px]'>Learn more</Button>
-        </div>
       </div>
+    </div>
       <Image src="/Frame 1618869528.png" alt="cto marketplace" width={600} height={600} className='absolute h-full top-0 right-0 hidden sm:block' />
       <img src="/Frame 1618869547.png" alt="cto marketplace" className='absolute w-full right-0 left-0 -top-10  sm:hidden' />
     </section>
