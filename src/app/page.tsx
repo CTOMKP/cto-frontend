@@ -156,18 +156,18 @@ export default function Home() {
       <div className='max-w-[557px] text-wrap pt-14 sm:pt-[117px]'>
         <h3 className='leading-[140%] text-2xl sm:text-[40px]'>Liquidity In, Liquidity Out. Communities Left Behind.</h3>
         <p className='text-white/80 mt-4 mb-7 sm:mb-[70px]'>Launchpads are built for launches, not longterm growth</p>
-        <div className='grid grid-cols-3 gap-6 sm:gap-12'>
-          <div>
-            <h4 className='text-[#FF9631] font-medium sm:text-[60px] text-[26px] leading-[130%]'>{stats.dailyTokensDeployed.toLocaleString()}</h4>
-            <p className='text-white text-sm sm:text-[24px]'>Launched</p>
+        <div className='flex flex-wrap gap-8 sm:gap-16'>
+          <div className='flex flex-col'>
+            <h4 className='text-[#FF9631] font-medium sm:text-[60px] text-[26px] leading-[130%] whitespace-nowrap'>{stats.dailyTokensDeployed.toLocaleString()}</h4>
+            <p className='text-white text-sm sm:text-[24px] mt-2'>Launched</p>
           </div>
-          <div>
-            <h4 className='text-[#FF9631] font-medium sm:text-[60px] text-[26px] leading-[130%]'>{stats.dailyGraduates.toLocaleString()}</h4>
-            <p className='text-white text-sm sm:text-[24px]'>Graduated</p>
+          <div className='flex flex-col'>
+            <h4 className='text-[#FF9631] font-medium sm:text-[60px] text-[26px] leading-[130%] whitespace-nowrap'>{stats.dailyGraduates.toLocaleString()}</h4>
+            <p className='text-white text-sm sm:text-[24px] mt-2'>Graduated</p>
           </div>
-          <div>
-            <h4 className='text-[#FF9631] font-medium sm:text-[60px] text-[26px] leading-[130%]'>{stats.topTokensLast7Days.toLocaleString()}</h4>
-            <p className='text-white text-sm sm:text-[24px]'>Runners</p>
+          <div className='flex flex-col'>
+            <h4 className='text-[#FF9631] font-medium sm:text-[60px] text-[26px] leading-[130%] whitespace-nowrap'>{stats.topTokensLast7Days.toLocaleString()}</h4>
+            <p className='text-white text-sm sm:text-[24px] mt-2'>Runners</p>
           </div>
         </div>
       </div>
