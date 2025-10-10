@@ -126,29 +126,31 @@ export default function Home() {
       </div>
     </section>
 
-    <section className='flex flex-col-reverse sm:flex-row justify-center items-center gap-10 mx-5 sm:mx-[105px] my-16'>
+    <section className='flex flex-col-reverse sm:flex-row justify-center items-center gap-10 mx-5 sm:mx-[50px] md:mx-[105px] my-16'>
       <div>
         <h3 className='font-semibold text-[42px] mx-w-[663px] mb-6 text-wrap'>Every grape has a role. Together, we build the vine.</h3>
         <Button className='font-medium py-3.5 px-5 cta-gradient'>Join the community</Button>
       </div>
-      <Image src="/card-stack.png" alt="cto marketplace cards" width={500} height={500} className='size-[350px] md:size-[400px] sm:size-[500px]' />
+      <Image src="/card-stack.png" alt="cto marketplace cards" width={500} height={500} className='size-[350px] md:size-[350px] lg:size-[500px] sm:size-[300px]' />
     </section>
 
-    <section className='relative overflow-hidden'>
-      <div className='bg-[radial-gradient(circle_at_center,#FF9631,#F04866)] pt-[450px] sm:pt-[50px] md:pt-[162px] pl-5 sm:pl-[50px] md:pl-[140px] mx-5 h-[800px]'>
-        <h3 className='text-[#222222] font-bold text-[24px] sm:text-[40px] max-w-[564px] text-wrap'>The Revival Hub for Forgotten Communities</h3>
-        <p className='text-[#151515] mb-[30px] mt-4 font-medium max-w-[564px] text-wrap'>CTO Marketplace is built for comeback stories, where rugged tokens get revived and communities take charge. No dev? No problem. The community leads her</p>
+    <section className='relative sm:overflow-hidden'>
+      <div className='bg-[radial-gradient(circle_at_center,#FF9631,#F04866)] sm:ml-16 sm:mt-16 sm:mb-16 pl-5 sm:pl-[20px] md:pl-[100px] mx-5 h-fit pb-22 sm:pb-0 sm:h-[592px]'>
+        <div className='flex pt-140 sm:pt-0 flex-col w-full  justify-center h-full'>
+        <h3 className='text-[#222222] font-bold text-[24px] sm:text-[40px] sm:w-[250px] md:w-[300px] lg:w-full max-w-[564px] text-wrap'>The Revival Hub for Forgotten Communities</h3>
+        <p className='text-[#151515] mb-[30px] mt-4 font-medium max-w-[564px] sm:w-[250px] md:w-[300px] lg:w-full text-wrap'>CTO Marketplace is built for comeback stories, where rugged tokens get revived and communities take charge. No dev? No problem. The community leads her</p>
         <div className='flex gap-1'>
         <Button className='bg-[#222222] text-white rounded-full h-11 w-[114px]'>Get started</Button>
         <Button className='bg-white text-[#222222] rounded-full h-11 w-[114px]'>Learn more</Button>
         </div>
+        </div>
       </div>
-      <Image src="/Frame 1618869528.png" alt="cto marketplace" width={600} height={600} className='absolute h-full top-0 right-0 hidden sm:block' />
-      <img src="/Frame 1618869547.png" alt="cto marketplace" className='absolute w-full right-0 left-0 -top-10  sm:hidden' />
+      <Image src="/Frame 1618869528.png" alt="cto marketplace" width={600} height={600} className='absolute h-full ml-16 top-0 right-0 hidden sm:block' />
+      <Image src="/Frame 1618869547.png" alt="cto marketplace" width={300} height={300} className='absolute w-full right-0 left-0  -top-10  sm:hidden' />
     </section>
     
     <section className="bg-black text-white py-16 px-4 text-center mt-24">
-      <h2 className="sm:text-[76px] text-[40px] leading-[120%] text-center sm:text-left font-[600]">Built for Community</h2>
+      <h2 className="sm:text-[76px] text-[40px] leading-[120%] text-center font-[600]">Built for Community</h2>
       <p className="text-[#DDDDDD] mb-8">
         Support community led memecoins before the market catches on.
       </p>
@@ -170,9 +172,9 @@ export default function Home() {
       </form>
     </section>
     <footer className="bg-black text-white px-5 sm:px-25 py-10">
-      <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+      <div className="flex flex-col md:flex-row justify-center items-center gap-8">
 
-        <div className="flex flex-col sm:items-start items-center">
+        <div className="flex flex-col sm:justify-center items-center">
           <div className="flex items-center gap-2 mb-12.5 sm:mb-1">
             <Image src="/nav-bar/logo.svg" alt="Logo" className="h-12 w-[188px]" width={188} height={51}/>
           </div>
@@ -181,21 +183,8 @@ export default function Home() {
             <Link href='#'><Image src="/x-white-bg.png" alt="x" width={24} height={24} /></Link>
             <Link href='#'><Image src="/discord-white-bg.png" alt="discord" width={24} height={24} /></Link>
             <Link href='#'><Image src="/telegram-white-bg.png" alt="telegram" width={24} height={24} /></Link>
-          </div>
-        </div>
-
-        <div className="flex gap-12 text-sm text-[#D0D0D0]">
-          <div>
-            <h4 className="text[22px] mb-7.5">Community</h4>
-            <ul className="space-y-1">
-              <li><a href="#">Docs</a></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="text[22px] mb-7.5">Resources</h4>
-            <ul className="space-y-1">
-              <li><a href="#">FAQ</a></li>
-            </ul>
+            <Link href='#'><Image src="/medium.png" alt="medium" width={24} height={24} /></Link>
+            <Link href='#'><Image src="/github.png" alt="github" width={24} height={24} /></Link>
           </div>
         </div>
       </div>
@@ -203,7 +192,7 @@ export default function Home() {
       <div className="mt-8 border-t border-neutral-800 pt-4 text-base text-[#FFFFFF99] flex flex-col sm:flex-row justify-between items-center gap-2">
         <p>© 2025 CTO Marketplace, Inc.</p>
         <p className='text-[#FFFFFF99] text-center'>
-          Listing your project? <a href="mailto:partnerships@ctoMarketplace.com" className="underline text-white">partnerships@ctoMarketplace.com</a>
+          Listing your project? <a href="hello@CTOmarketplace.com" className="underline text-white">hello@CTOmarketplace.com</a>
         </p>
       </div>
     </footer>

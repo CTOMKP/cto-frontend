@@ -16,7 +16,7 @@ const mockData = [
 
 export default function MarketTrends() {
   const pathname = usePathname();
-  if (pathname === "/") return null;
+  if (pathname === "/" || pathname === "/faq") return null;
 
   // One "group" = your items + MindshareLeader at the end
   const Group = () => (

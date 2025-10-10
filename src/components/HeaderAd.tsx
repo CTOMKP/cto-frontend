@@ -9,7 +9,7 @@ export default function HeaderAd() {
   const [isShowing, setIsShowing] = useState(true);
   const pathname = usePathname();
 
-  if (pathname === '/') return null
+  if (pathname === '/' || pathname === '/faq') return null
 
   return (
     <div className={`!bg-linear-to-r from-[#FF5340] to-[#FFFFFF] to-110%  flex relative justify-center items-center h-13 ${isShowing ? '' : 'hidden'}`}>

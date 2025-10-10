@@ -14,7 +14,7 @@ export default function NavBar() {
   return (
     <div className="flex items-center w-full max-w-[1168px] justify-between p-4 md:p-6 bg-[#FFFFFF08] rounded-2xl">
       {/* Logo - Desktop uses logo.svg, Mobile uses logo.png */}
-      <div>
+      <Link href={'/'}>
         <Image 
           src="/nav-bar/logo.svg" 
           alt="logo" 
@@ -29,7 +29,7 @@ export default function NavBar() {
           height={40} 
           className="block md:hidden"
         />
-      </div>
+      </Link>
 
       {/* Desktop Navigation */}
       <div className="hidden md:flex items-center mx-6">
@@ -44,7 +44,7 @@ export default function NavBar() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <NavigationMenuLink className="px-0" asChild>
-                      <Link href="#">FAQ</Link>
+                      <Link href="/faq">FAQ</Link>
                     </NavigationMenuLink>
                     <NavigationMenuLink className="px-0" asChild>
                       <Link href="#">Docs</Link>
@@ -75,7 +75,7 @@ export default function NavBar() {
       </div>
 
       {/* Desktop CTA Button */}
-      <Link className='cta-gradient hidden md:flex justify-center items-center rounded-lg h-10 w-30.5 px-4' href={'/listings'}>
+      <Link className='cta-gradient hidden md:flex justify-center items-center rounded-lg h-10 w-30.5 px-4' href={'/listing'}>
         Launch App
       </Link>
 
@@ -90,14 +90,14 @@ export default function NavBar() {
               <Link href="#" className="text-base py-2 cursor-pointer">Community</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="#" className="text-base py-2 cursor-pointer">FAQ</Link>
+              <Link href="/faq" className="text-base py-2 cursor-pointer">FAQ</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="#" className="text-base py-2 cursor-pointer">Docs</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link 
-                href="/listings" 
+                href="/listing" 
                 className="cta-gradient flex justify-center items-center rounded-lg h-10 mt-2 cursor-pointer"
               >
                 Launch App

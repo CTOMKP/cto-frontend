@@ -46,7 +46,7 @@ export default function NavBar() {
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const pathname = usePathname();
 
-  if (pathname === '/') return null
+  if (pathname === '/' || pathname === '/faq') return null
 
   return (
     <div className="flex items-center justify-between h-26">
