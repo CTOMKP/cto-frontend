@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import Image from 'next/image';
-import React from 'react'
+import React, { useState } from 'react';
+import { toast } from 'react-toastify';
 
 const cardData = [
   {
@@ -44,6 +45,75 @@ const cardData = [
 
 
 export default function Home() {
+  const [email, setEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [stats, setStats] = useState({
+    dailyTokensDeployed: 100,
+    dailyGraduates: 100,
+    topTokensLast7Days: 100,
+  });
+
+  // Fetch memecoin stats on component mount
+  React.useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://cto-backend-production-28e3.up.railway.app';
+        const response = await fetch(`${backendUrl}/api/stats/memecoin`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          setStats({
+            dailyTokensDeployed: data.dailyTokensDeployed || 100,
+            dailyGraduates: data.dailyGraduates || 100,
+            topTokensLast7Days: data.topTokensLast7Days || 100,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch stats:', error);
+        // Keep fallback values
+      }
+    };
+
+    fetchStats();
+  }, []);
+
+  const handleWaitlistSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email || !email.includes('@')) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://cto-backend-production-28e3.up.railway.app';
+      
+      const response = await fetch(`${backendUrl}/api/waitlist`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success(data.message || 'Thank you for joining our waitlist!');
+        setEmail(''); // Clear the input
+      } else {
+        toast.error(data.message || 'Failed to join waitlist');
+      }
+    } catch (error) {
+      console.error('Waitlist error:', error);
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <main>
     <section className='relative sm:bg-[url("/orbital.png")] h-[500px] sm:h-[1024px] bg-cover bg-center bg-no-repeat'>
@@ -55,19 +125,24 @@ export default function Home() {
       <div className='text-center m-5 mt-20 flex flex-col items-center justify-center'>
         <h1 className='text-[50px] sm:text-[70px] text-left sm:text-center text-wrap max-w-[606px] mx-auto leading-[120%]'>Revive. Rebuild. Rememe</h1>
         <p className='text-lg text-left md:text-center text-[#FFFFFFCC] text-wrap max-w-[606px] mx-auto'>Discover, explore, and build with high value communities</p>
-        <form className="flex justify-center items-center gap-4 max-w-md mx-auto mt-[30px]">
+        <form onSubmit={handleWaitlistSubmit} className="flex justify-center items-center gap-4 max-w-md mx-auto mt-[30px]">
         <div>
         <Input
           type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           placeholder='Enter your mail'
+          disabled={isSubmitting}
+          required
           className="bg-[#434343]/80 border border-[#A1A1A1] h-13 placeholder:text-[20px] text-white px-4 py-3 rounded-[30px] w-full sm:w-[502px] focus:outline-none"
         />
         </div>
         <Button
           type="submit"
-          className="bg-white text-[20px] px-6 h-12 py-4 rounded-[30px] font-semibold text-black"
+          disabled={isSubmitting}
+          className="bg-white text-[20px] px-6 h-12 py-4 rounded-[30px] font-semibold text-black disabled:opacity-70"
         >
-          Join Waitlist
+          {isSubmitting ? 'Joining...' : 'Join Waitlist'}
         </Button>
       </form>
       </div>
@@ -81,18 +156,18 @@ export default function Home() {
       <div className='max-w-[557px] text-wrap pt-14 sm:pt-[117px]'>
         <h3 className='leading-[140%] text-2xl sm:text-[40px]'>Liquidity In, Liquidity Out. Communities Left Behind.</h3>
         <p className='text-white/80 mt-4 mb-7 sm:mb-[70px]'>Launchpads are built for launches, not longterm growth</p>
-        <div className='grid grid-cols-3 gap-4 sm:gap-6'>
-          <div>
-            <h4 className='text-[#FF9631] font-medium sm:text-[60px] text-[26px] leading-[130%]'>100</h4>
-            <p className='text-white text-sm sm:text-[24px]'>Launched</p>
+        <div className='flex flex-wrap gap-8 sm:gap-16'>
+          <div className='flex flex-col'>
+            <h4 className='text-[#FF9631] font-medium sm:text-[60px] text-[26px] leading-[130%] whitespace-nowrap'>{stats.dailyTokensDeployed.toLocaleString()}</h4>
+            <p className='text-white text-sm sm:text-[24px] mt-2'>Launched</p>
           </div>
-          <div>
-            <h4 className='text-[#FF9631] font-medium sm:text-[60px] text-[26px] leading-[130%]'>100</h4>
-            <p className='text-white text-sm sm:text-[24px]'>Graduated</p>
+          <div className='flex flex-col'>
+            <h4 className='text-[#FF9631] font-medium sm:text-[60px] text-[26px] leading-[130%] whitespace-nowrap'>{stats.dailyGraduates.toLocaleString()}</h4>
+            <p className='text-white text-sm sm:text-[24px] mt-2'>Graduated</p>
           </div>
-          <div>
-            <h4 className='text-[#FF9631] font-medium sm:text-[60px] text-[26px] leading-[130%]'>100</h4>
-            <p className='text-white text-sm sm:text-[24px]'>Runners</p>
+          <div className='flex flex-col'>
+            <h4 className='text-[#FF9631] font-medium sm:text-[60px] text-[26px] leading-[130%] whitespace-nowrap'>{stats.topTokensLast7Days.toLocaleString()}</h4>
+            <p className='text-white text-sm sm:text-[24px] mt-2'>Runners</p>
           </div>
         </div>
       </div>
@@ -111,8 +186,8 @@ export default function Home() {
       <p className='text-center text-[24px] sm:text-[40px] mb-20'>An ecosystem built to last long</p>
 
       <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mx-5 sm:mx-[105px] pb-17 sm:pb-[140px]'>
-        {cardData.map((card, index) => (
-          <div
+      {cardData.map((card, index) => (
+        <div
           key={index}
           className="bg-gradient-to-t from-white/40 via-white/10 to-white/5 rounded-3xl p-[1px]"
         >
@@ -120,10 +195,10 @@ export default function Home() {
             <span className='size-[50px] bg-[radial-gradient(circle_at_center,#FF9631,#F04866)] mb-15 rounded-[10px] flex justify-center items-center'><Image src={card.icon} alt={card.title} width={30} height={30} /></span>
             <h3 className='text-[24px] mb-2'>{card.title}</h3>
             <p className='text-[#D1D1D1] text-[16px]'>{card.description}</p>
-            </div>
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
+    </div>
     </section>
 
     <section className='flex flex-col-reverse sm:flex-row justify-center items-center gap-10 mx-5 sm:mx-[50px] md:mx-[105px] my-16'>
@@ -155,19 +230,25 @@ export default function Home() {
         Support community led memecoins before the market catches on.
       </p>
 
-      <form className="flex flex-col sm:flex-row justify-center items-center gap-4 max-w-md mx-auto">
+      <form onSubmit={handleWaitlistSubmit} className="flex flex-col sm:flex-row justify-center items-center gap-4 max-w-md mx-auto">
         <div className='bg-[#FFFFFF17] rounded-lg relative'>
           <Label className='absolute text-gray-400 text-xs left-4 top-2'>Email Address</Label>
         <Input
           type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="your@email.com"
+          disabled={isSubmitting}
+          required
           className="bg-transparent text-base border-none h-16 text-white px-4 py-3 rounded-md w-full sm:w-[502px] focus:outline-none"
         />
         </div>
         <Button
           type="submit"
-          className="cta-gradient px-6 h-12 py-3 rounded-md font-semibold text-white"
+          disabled={isSubmitting}
+          className="cta-gradient px-6 h-12 py-3 rounded-md font-semibold text-white disabled:opacity-70"
         >
-          Join Waitlist
+          {isSubmitting ? 'Joining...' : 'Join Waitlist'}
         </Button>
       </form>
     </section>
