@@ -48,9 +48,9 @@ export default function Home() {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [stats, setStats] = useState({
-    dailyTokensDeployed: 100,
-    dailyGraduates: 100,
-    topTokensLast7Days: 100,
+    weeklyTokensLaunched: 80000,
+    weeklyGraduates: 600,
+    topTokensLast7Days: 64,
   });
 
   // Fetch memecoin stats on component mount
@@ -63,9 +63,9 @@ export default function Home() {
         if (response.ok) {
           const data = await response.json();
           setStats({
-            dailyTokensDeployed: data.dailyTokensDeployed || 100,
-            dailyGraduates: data.dailyGraduates || 100,
-            topTokensLast7Days: data.topTokensLast7Days || 100,
+            weeklyTokensLaunched: data.weeklyTokensLaunched || 80000,
+            weeklyGraduates: data.weeklyGraduates || 600,
+            topTokensLast7Days: data.topTokensLast7Days || 64,
           });
         }
       } catch (error) {
@@ -158,11 +158,11 @@ export default function Home() {
         <p className='text-white/80 mt-4 mb-7 sm:mb-[70px]'>Launchpads are built for launches, not longterm growth</p>
         <div className='flex flex-wrap gap-8 sm:gap-16'>
           <div className='flex flex-col'>
-            <h4 className='text-[#FF9631] font-medium sm:text-[60px] text-[26px] leading-[130%] whitespace-nowrap'>{stats.dailyTokensDeployed.toLocaleString()}</h4>
+            <h4 className='text-[#FF9631] font-medium sm:text-[60px] text-[26px] leading-[130%] whitespace-nowrap'>{stats.weeklyTokensLaunched.toLocaleString()}</h4>
             <p className='text-white text-sm sm:text-[24px] mt-2'>Launched</p>
           </div>
           <div className='flex flex-col'>
-            <h4 className='text-[#FF9631] font-medium sm:text-[60px] text-[26px] leading-[130%] whitespace-nowrap'>{stats.dailyGraduates.toLocaleString()}</h4>
+            <h4 className='text-[#FF9631] font-medium sm:text-[60px] text-[26px] leading-[130%] whitespace-nowrap'>{stats.weeklyGraduates.toLocaleString()}</h4>
             <p className='text-white text-sm sm:text-[24px] mt-2'>Graduated</p>
           </div>
           <div className='flex flex-col'>
