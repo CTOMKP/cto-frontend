@@ -5,10 +5,10 @@ import NavBar from '@/components/homepage/NavBar'
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import Link from 'next/link';
 import Image from 'next/image';
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
+import Footer from '@/components/homepage/Footer';
 
 const cardData = [
   {
@@ -42,6 +42,29 @@ const cardData = [
     description: "Incentivizes engagement and referrals, letting users earn tokens, NFTs, and passive income to boost platform growth.",
   },
 ];
+
+const forProjectsData=[
+  {
+    icon: "/why-community-section/Frame 1618869536.png",
+    title: "CTO Focus",
+    description: "Community-driven project revival",
+  },
+  {
+    icon: "/why-community-section/Frame 1618869536-1.png",
+    title: "Trusted Vetting",
+    description: "Ensures credible project listings",
+  },
+  {
+    icon: "/why-community-section/Frame 1618869536-2.png",
+    title: "Investor Access",
+    description: "Reach passionate investors.",
+  },
+  {
+    icon: "/why-community-section/Frame 1618869536-3.png",
+    title: "Promotional Boost",
+    description: "Amplify visibility, attract engagement",
+  },
+]
 
 
 export default function Home() {
@@ -204,9 +227,14 @@ export default function Home() {
     <section className='flex flex-col-reverse sm:flex-row justify-center items-center gap-10 mx-5 sm:mx-[50px] md:mx-[105px] my-16'>
       <div>
         <h3 className='font-semibold text-[42px] mx-w-[663px] mb-6 text-wrap'>Every grape has a role. Together, we build the vine.</h3>
-        <Button className='font-medium py-3.5 px-5 cta-gradient'>Join the community</Button>
+        <Button className='font-medium py-3.5 px-5 cta-gradient rounded-[25px]'>Join the community</Button>
       </div>
-      <Image src="/card-stack.png" alt="cto marketplace cards" width={500} height={500} className='size-[350px] md:size-[350px] lg:size-[500px] sm:size-[300px]' />
+      
+      <div className="bg-gradient-to-br from-[#FF9631] via-[#F04866] to-[#FF9631] rounded-3xl p-[0.7px]">
+        <div className="bg-black rounded-3xl p-2 size-[350px] md:size-[350px] lg:size-[500px] sm:size-[300px]">
+          <Image src="/card-stack.png" alt="cto marketplace cards" width={478} height={235} className='rounded-2xl' />
+        </div>
+      </div>
     </section>
 
     <section className='relative sm:overflow-hidden'>
@@ -221,7 +249,7 @@ export default function Home() {
         </div>
       </div>
       <Image src="/Frame 1618869528.png" alt="cto marketplace" width={600} height={600} className='absolute h-full ml-16 top-0 right-0 hidden sm:block' />
-      <Image src="/Frame 1618869547.png" alt="cto marketplace" width={300} height={300} className='absolute w-full right-0 left-0  -top-10  sm:hidden' />
+      <Image src="/cta-mobile bg v1.png" alt="cto marketplace" width={300} height={300} className='absolute w-full right-0 left-0  -top-10  sm:hidden' />
     </section>
     
     <section className="bg-black text-white py-16 px-4 text-center mt-24">
@@ -252,31 +280,7 @@ export default function Home() {
         </Button>
       </form>
     </section>
-    <footer className="bg-black text-white px-5 sm:px-25 py-10">
-      <div className="flex flex-col md:flex-row justify-center items-center gap-8">
-
-        <div className="flex flex-col sm:justify-center items-center">
-          <div className="flex items-center gap-2 mb-12.5 sm:mb-1">
-            <Image src="/nav-bar/logo.svg" alt="Logo" className="h-12 w-[188px]" width={188} height={51}/>
-          </div>
-          <p className="text-base sm:text-left text-center text-white mb-3">Where Memecoins go to live again</p>
-          <div className="flex gap-4 text-lg">
-            <Link href='#'><Image src="/x-white-bg.png" alt="x" width={24} height={24} /></Link>
-            <Link href='#'><Image src="/discord-white-bg.png" alt="discord" width={24} height={24} /></Link>
-            <Link href='#'><Image src="/telegram-white-bg.png" alt="telegram" width={24} height={24} /></Link>
-            <Link href='#'><Image src="/medium.png" alt="medium" width={24} height={24} /></Link>
-            <Link href='#'><Image src="/github.png" alt="github" width={24} height={24} /></Link>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-8 border-t border-neutral-800 pt-4 text-base text-[#FFFFFF99] flex flex-col sm:flex-row justify-between items-center gap-2">
-        <p>© 2025 CTO Marketplace, Inc.</p>
-        <p className='text-[#FFFFFF99] text-center'>
-          Listing your project? <a href="hello@CTOmarketplace.com" className="underline text-white">hello@CTOmarketplace.com</a>
-        </p>
-      </div>
-    </footer>
+    <Footer />
     </main>
   )
 }
