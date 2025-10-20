@@ -71,9 +71,9 @@ export default function Home() {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [stats, setStats] = useState({
-    dailyTokensDeployed: 100,
-    dailyGraduates: 100,
-    topTokensLast7Days: 100,
+    dailyTokensDeployed: 10000,
+    dailyGraduates: 80,
+    topTokensLast7Days: 8,
   });
 
   // Fetch memecoin stats on component mount
@@ -86,9 +86,9 @@ export default function Home() {
         if (response.ok) {
           const data = await response.json();
           setStats({
-            dailyTokensDeployed: data.dailyTokensDeployed || 100,
-            dailyGraduates: data.dailyGraduates || 100,
-            topTokensLast7Days: data.topTokensLast7Days || 100,
+            dailyTokensDeployed: data.dailyTokensDeployed || 10000,
+            dailyGraduates: data.dailyGraduates || 80,
+            topTokensLast7Days: data.topTokensLast7Days || 8,
           });
         }
       } catch (error) {
