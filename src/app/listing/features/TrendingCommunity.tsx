@@ -1,9 +1,10 @@
-import React from "react";
+"use client";
+
+import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { shortenAddress } from "@/utils/helper/shortenAddress";
 import {
   Table,
   TableBody,
@@ -12,248 +13,192 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ApiCoinItem } from "@/types/api";
 
-const mockData = [
-  {
-    name: "$ROGERS",
-    whale: true,
-    age: "1h",
-    address: "0x1234567890abcdef1234567890abcdef12345678",
-    x: "https://example.com/rogers",
-    website: "https://rogers.com",
-    image: "/default-trending-coin-img.png",
-    mindshare: {
-      mentions: 4.5,
-      sentiment: "positive",
-      volume: 1000,
-    },
-    price: {
-      amount: 0.0254,
-      change: {
-        "1m": 0.1,
-        "5m": 0.2,
-        "1h": 0.3,
-        "5h": 0.6,
-        "24h": 0.9,
-      },
-    },
-    marketCap: 360700,
-    liquidity: 61900,
-    volume: {
-      amount: 100600,
-      timeframe: {
-        "1m": 9.31,
-        "5m": 0.05,
-        "1h": 4.5,
-        "5h": 0.08,
-        "24h": 0.07,
-      },
-    },
-    holders: 4500,
-    riskScore: 85,
-    communityScore: 0.7,
-  },
-  {
-    name: "$ROGERS",
-    whale: true,
-    age: "1h",
-    address: "0x1234567890abcdef1234567890abcdef12345678",
-    x: "https://example.com/rogers",
-    website: "https://rogers.com",
-    image: "/default-trending-coin-img.png",
-    mindshare: {
-      mentions: 4.5,
-      sentiment: "positive",
-      volume: 1000,
-    },
-    price: {
-      amount: 0.0254,
-      change: {
-        "1m": 0.1,
-        "5m": 0.2,
-        "1h": 0.3,
-        "5h": 0.6,
-        "24h": 0.9,
-      },
-    },
-    marketCap: 360700,
-    liquidity: 61900,
-    volume: {
-      amount: 100600,
-      timeframe: {
-        "1m": 9.31,
-        "5m": 0.05,
-        "1h": 4.5,
-        "5h": 0.08,
-        "24h": 0.07,
-      },
-    },
-    holders: 4500,
-    riskScore: 85,
-    communityScore: 0.7,
-  },
-  {
-    name: "$ROGERS",
-    whale: true,
-    age: "1h",
-    address: "0x1234567890abcdef1234567890abcdef12345678",
-    x: "https://example.com/rogers",
-    website: "https://rogers.com",
-    image: "/default-trending-coin-img.png",
-    mindshare: {
-      mentions: 4.5,
-      sentiment: "positive",
-      volume: 1000,
-    },
-    price: {
-      amount: 0.0254,
-      change: {
-        "1m": 0.1,
-        "5m": 0.2,
-        "1h": 0.3,
-        "5h": 0.6,
-        "24h": 0.9,
-      },
-    },
-    marketCap: 360700,
-    liquidity: 61900,
-    volume: {
-      amount: 100600,
-      timeframe: {
-        "1m": 9.31,
-        "5m": 0.05,
-        "1h": 4.5,
-        "5h": 0.08,
-        "24h": 0.07,
-      },
-    },
-    holders: 4500,
-    riskScore: 85,
-    communityScore: 0.7,
-  },
-  {
-    name: "$ROGERS",
-    whale: true,
-    age: "1h",
-    address: "0x1234567890abcdef1234567890abcdef12345678",
-    x: "https://example.com/rogers",
-    website: "https://rogers.com",
-    image: "/default-trending-coin-img.png",
-    mindshare: {
-      mentions: 4.5,
-      sentiment: "positive",
-      volume: 1000,
-    },
-    price: {
-      amount: 0.0254,
-      change: {
-        "1m": 0.1,
-        "5m": 0.2,
-        "1h": 0.3,
-        "5h": 0.6,
-        "24h": 0.9,
-      },
-    },
-    marketCap: 360700,
-    liquidity: 61900,
-    volume: {
-      amount: 100600,
-      timeframe: {
-        "1m": 9.31,
-        "5m": 0.05,
-        "1h": 4.5,
-        "5h": 0.08,
-        "24h": 0.07,
-      },
-    },
-    holders: 4500,
-    riskScore: 85,
-    communityScore: 0.7,
-  },
-  {
-    name: "$ROGERS",
-    whale: true,
-    age: "1h",
-    address: "0x1234567890abcdef1234567890abcdef12345678",
-    x: "https://example.com/rogers",
-    website: "https://rogers.com",
-    image: "/default-trending-coin-img.png",
-    mindshare: {
-      mentions: 4.5,
-      sentiment: "positive",
-      volume: 1000,
-    },
-    price: {
-      amount: 0.0254,
-      change: {
-        "1m": 0.1,
-        "5m": 0.2,
-        "1h": 0.3,
-        "5h": 0.6,
-        "24h": 0.9,
-      },
-    },
-    marketCap: 360700,
-    liquidity: 61900,
-    volume: {
-      amount: 100600,
-      timeframe: {
-        "1m": 9.31,
-        "5m": 0.05,
-        "1h": 4.5,
-        "5h": 0.08,
-        "24h": 0.07,
-      },
-    },
-    holders: 4500,
-    riskScore: 85,
-    communityScore: 0.7,
-  },
-  {
-    name: "$ROGERS",
-    whale: true,
-    age: "1h",
-    address: "0x1234567890abcdef1234567890abcdef12345678",
-    x: "https://example.com/rogers",
-    website: "https://rogers.com",
-    image: "/default-trending-coin-img.png",
-    mindshare: {
-      mentions: 4.5,
-      sentiment: "positive",
-      volume: 1000,
-    },
-    price: {
-      amount: 0.0254,
-      change: {
-        "1m": 0.1,
-        "5m": 0.2,
-        "1h": 0.3,
-        "5h": 0.6,
-        "24h": 0.9,
-      },
-    },
-    marketCap: 360700,
-    liquidity: 61900,
-    volume: {
-      amount: 100600,
-      timeframe: {
-        "1m": 9.31,
-        "5m": 0.05,
-        "1h": 4.5,
-        "5h": 0.08,
-        "24h": 0.07,
-      },
-    },
-    holders: 4500,
-    riskScore: 85,
-    communityScore: 0.7,
-  },
-];
+// Helper function to format relative age
+function formatRelativeAge(date: Date): string {
+  const diffMs = Date.now() - date.getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 60) return `${mins}min`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}hr`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}d`;
+  const months = Math.floor(days / 30);
+  return `${months}mo`;
+}
 
-export default function TrendingCommunity() {
+// Helper function to create shorter address for TrendingCommunity
+function shortenAddressForTrending(address: string): string {
+  if (!address) return "";
+  if (address.length <= 6) return address;
+  return `${address.substring(0, 3)}...${address.substring(address.length - 3)}`;
+}
+
+// Helper function to get chain image path
+function getChainImage(chain: string): string {
+  const chainMap: Record<string, string> = {
+    'solana': '/listings-chains/solana.png',
+    'ethereum': '/listings-chains/ethereum.png',
+    'bsc': '/listings-chains/bnb.png',
+    'sui': '/listings-chains/sui.jpg',
+    'base': '/listings-chains/base.png',
+    'aptos': '/listings-chains/aptos.png',
+    'near': '/listings-chains/near.png',
+    'osmosis': '/listings-chains/osmosis.jpg',
+  };
+  return chainMap[chain.toLowerCase()] || '/listings-chains/solana.png';
+}
+
+export default function TrendingCommunity({
+  apiData,
+  isLoading,
+}: {
+  apiData: ApiCoinItem[];
+  isLoading: boolean;
+}) {
+  // Convert API data to the format expected by the component
+  const communityData = useMemo(() => {
+    if (!apiData || apiData.length === 0) {
+      console.log('TrendingCommunity: No API data available');
+      return [];
+    }
+    
+    console.log('TrendingCommunity: Processing API data:', apiData.length, 'items');
+    
+    // Calculate community score for each coin and filter out coins with no community score
+    const coinsWithCommunityScore = apiData
+      .map((item) => {
+        const communityScore = typeof item.communityScore === "number" 
+          ? item.communityScore 
+          : (item?.metadata?.market?.communityScore ?? 0);
+        
+        return {
+          item,
+          communityScore
+        };
+      })
+      .filter(({ communityScore }) => communityScore > 0); // Only include coins with community score > 0
+    
+    // Sort by community score (highest first) and take top 6
+    const sortedCoins = coinsWithCommunityScore
+      .sort((a, b) => b.communityScore - a.communityScore)
+      .slice(0, 6);
+    
+    console.log('TrendingCommunity: Top community coins:', sortedCoins.map(c => ({ 
+      name: c.item.name, 
+      score: c.communityScore 
+    })));
+    
+    return sortedCoins.map(({ item, communityScore }) => {
+      const createdAt = item.createdAt ? new Date(item.createdAt) : null;
+      const ageStr = createdAt ? formatRelativeAge(createdAt) : item.age || "1h";
+      
+      return {
+        name: item.name || item.symbol || "Unknown",
+        age: ageStr,
+        address: item.contractAddress,
+        chain: item.chain,
+        image: item.logoUrl || item?.metadata?.market?.logoUrl,
+        communityScore: communityScore
+      };
+    });
+  }, [apiData]);
+
+  if (isLoading) {
+    return (
+      <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[0.7px] w-full rounded-xl lg:w-auto lg:flex-1">
+        <Card className="border-none p-3 bg-[#010101] w-full">
+          <CardHeader className="px-0">
+            <CardTitle className="flex items-center gap-1 text-base font-bold">
+              Community trending{" "}
+              <Image
+                className="mt-0.5"
+                src="/info.svg"
+                alt="info"
+                width={13}
+                height={13}
+              />
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-0 -mt-4">
+            <div className="overflow-x-auto xl:overflow-visible">
+              <Table className="w-full min-w-[500px] xl:w-full">
+                <TableHeader className="!text-[#FFFFFF]/50">
+                  <TableRow className="border-none">
+                    <TableHead className="!font-bold">Name</TableHead>
+                    <TableHead className="!font-bold">
+                      <span className="flex justify-end items-center gap-1">
+                        Community Score
+                        <Image
+                          src="/info.svg"
+                          alt="info"
+                          width={13}
+                          height={13}
+                        />
+                      </span>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...Array(6)].map((_, index) => (
+                    <TableRow key={index} className="border-none">
+                      <TableCell className="!py-1">
+                        <div className="flex items-center gap-1 max-w-full">
+                          <div className="w-7 h-7 bg-gray-600 rounded-full animate-pulse"></div>
+                          <div className="w-6 h-6 bg-gray-600 rounded-full animate-pulse"></div>
+                          <div className="space-y-1">
+                            <div className="h-4 bg-gray-600 rounded w-16 animate-pulse"></div>
+                            <div className="h-3 bg-gray-600 rounded w-12 animate-pulse"></div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="!py-1">
+                        <div className="flex justify-end items-center gap-1">
+                          <div className="w-6 h-6 bg-gray-600 rounded animate-pulse"></div>
+                          <div className="h-4 bg-gray-600 rounded w-8 animate-pulse"></div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // If no data available, show empty state
+  if (communityData.length === 0) {
+    return (
+      <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[0.7px] w-full rounded-xl xl:w-auto xl:flex-1">
+        <Card className="border-none p-3 bg-[#010101] w-full">
+          <CardHeader className="px-0">
+            <CardTitle className="flex items-center gap-1 text-base font-bold">
+              Community trending{" "}
+              <Image
+                className="mt-0.5"
+                src="/info.svg"
+                alt="info"
+                width={13}
+                height={13}
+              />
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-0 -mt-4">
+            <div className="w-full h-[200px] flex items-center justify-center text-white/50">
+              No community data available
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
   return (
-    <div className="bg-gradient-to-r from-pink-500 to-yellow-400 p-[0.7px] w-full rounded-xl">
-      <Card className="border-none  p-3 bg-[#010101]">
+    <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[0.7px] w-full rounded-xl xl:w-auto xl:flex-1">
+      <Card className="border-none p-3 bg-[#010101] w-full">
         <CardHeader className="px-0">
           <CardTitle className="flex items-center gap-1 text-base font-bold">
             Community trending{" "}
@@ -267,7 +212,8 @@ export default function TrendingCommunity() {
           </CardTitle>
         </CardHeader>
         <CardContent className="px-0 -mt-4">
-          <Table>
+          <div className="overflow-x-auto xl:overflow-visible">
+            <Table className="w-full min-w-[322px] lg:w-full">
             <TableHeader className="!text-[#FFFFFF]/50">
               <TableRow className="border-none">
                 <TableHead className="!font-bold">Name</TableHead>
@@ -286,31 +232,34 @@ export default function TrendingCommunity() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockData.map((data, index) => (
+              {communityData.map((data, index) => (
                 <TableRow key={index} className="border-none">
                   <TableCell className="!py-1">
                     <div className="flex items-center gap-1">
                       <div className="relative">
                         <Image
                           className="size-7 rounded-full border-[0.36px] border-white"
-                          src="/homepage/trending-coins/default-coin.png"
-                          alt="default-coin"
+                          src={data.image || ""}
+                          alt="coin-image"
                           width={28}
                           height={28}
                         />
-                        <Image
-                          className="absolute bottom-0 left-0 size-[14px]"
-                          src="/homepage/trending-coins/default-chain.png"
-                          alt="trending-coins"
-                          width={14}
-                          height={14}
-                        />
+                        {/* Chain image - using actual chain data */}
+                        {data.chain && (
+                          <Image
+                            className="absolute bottom-0 left-0 size-[14px] rounded-full"
+                            src={getChainImage(data.chain)}
+                            alt={`${data.chain}-chain`}
+                            width={14}
+                            height={14}
+                          />
+                        )}
                       </div>
 
                       <div>
                         <div className="flex items-center gap-1">
-                          <span className="font-medium capitalize">
-                            {data.name}
+                          <span className="font-medium capitalize max-w-[60px] truncate" title={data.name}>
+                            {data.name.length > 8 ? `${data.name.substring(0, 8)}...` : data.name}
                           </span>
                           <span
                             className={`bg-[#15FF00]/20 rounded-[4px] p-[3px]`}
@@ -324,8 +273,8 @@ export default function TrendingCommunity() {
                           </span>
                         </div>
                         <div className="flex items-center gap-0.5">
-                          <span className="text-[#FFFFFF]/50 text-xs uppercase">
-                            {shortenAddress(data.address)}
+                          <span className="text-[#FFFFFF]/50 text-xs uppercase" title={data.address}>
+                            {shortenAddressForTrending(data.address)}
                           </span>
                           <Button className="p-0 h-fit w-fit text-white">
                             <Image
@@ -339,14 +288,6 @@ export default function TrendingCommunity() {
                           <Link href="#">
                             <Image src="/x.svg" alt="x" height={8} width={8} />
                           </Link>
-                          <Link href="#">
-                            <Image
-                              src="/globe.svg"
-                              alt="website"
-                              width={7.5}
-                              height={7.5}
-                            />
-                          </Link>
                         </div>
                       </div>
                     </div>
@@ -354,11 +295,17 @@ export default function TrendingCommunity() {
                   <TableCell className="!py-1">
                     <div className="flex items-center justify-end gap-1">
                       <Image
-                        src="/communitry-score-icons/bad-red.svg"
-                        alt="bad-red"
+                        src={`${
+                          data.communityScore >= 70
+                            ? "/communitry-score-icons/good-green.svg"
+                            : data.communityScore >= 50
+                            ? "/communitry-score-icons/average-yellow.svg"
+                            : "/communitry-score-icons/bad-red.svg"
+                        }`}
+                        alt="community-score"
                         width={16}
                         height={16}
-                      />{" "}
+                      />
                       <p className="text-[#FFFFFF80]">{data.communityScore}%</p>
                     </div>
                   </TableCell>
@@ -366,6 +313,7 @@ export default function TrendingCommunity() {
               ))}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

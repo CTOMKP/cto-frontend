@@ -1,10 +1,54 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Highlights from "@/app/listing/features/Highlights";
 import Listing from "@/app/listing/features/Listing";
+import { ApiCoinItem } from "@/types/api";
+
+type ApiListingResponse = {
+  page: number;
+  limit: number;
+  total: number;
+  items: ApiCoinItem[];
+};
 
 export default function Listings() {
+  const [apiData, setApiData] = useState<ApiCoinItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchListings = async () => {
+      setIsLoading(true);
+      const base = process.env.NEXT_PUBLIC_BACKEND_URL || "https://cto-backend-production-28e3.up.railway.app";
+      
+      // Fetch from all chains initially
+      const url = `${base}/api/listing/listings?category=MEME&sort=updatedAt%3Adesc&limit=10000&chain=SOLANA`;
+      
+      try {
+        const res = await fetch(url);
+        if (!res.ok) {
+          setIsLoading(false);
+          return;
+        }
+        const data: ApiListingResponse = await res.json();
+
+        console.log('API Response:', data);
+        console.log('API Items count:', data.items?.length || 0);
+        console.log('First few items:', data.items?.slice(0, 3));
+        setApiData(data.items || []);
+        setIsLoading(false);
+      } catch (e) {
+        console.log(e);
+        setIsLoading(false);
+      }
+    };
+    
+    fetchListings();
+  }, []);
+
   return (
     <div>
-      <Highlights />
+      <Highlights apiData={apiData} isLoading={isLoading} />
       <Listing />
     </div>
   );

@@ -43,30 +43,6 @@ const cardData = [
   },
 ];
 
-const forProjectsData=[
-  {
-    icon: "/why-community-section/Frame 1618869536.png",
-    title: "CTO Focus",
-    description: "Community-driven project revival",
-  },
-  {
-    icon: "/why-community-section/Frame 1618869536-1.png",
-    title: "Trusted Vetting",
-    description: "Ensures credible project listings",
-  },
-  {
-    icon: "/why-community-section/Frame 1618869536-2.png",
-    title: "Investor Access",
-    description: "Reach passionate investors.",
-  },
-  {
-    icon: "/why-community-section/Frame 1618869536-3.png",
-    title: "Promotional Boost",
-    description: "Amplify visibility, attract engagement",
-  },
-]
-
-
 export default function Home() {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
