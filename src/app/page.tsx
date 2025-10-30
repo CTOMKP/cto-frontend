@@ -52,7 +52,7 @@ export default function Home() {
     topTokensLast7Days: 8,
   });
 
-  // Fetch memecoin stats on component mount
+  // Fetch memecoin stats on component mount and every 30 seconds
   React.useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -73,7 +73,14 @@ export default function Home() {
       }
     };
 
-    fetchStats();
+    fetchStats(); // Initial fetch
+    
+    // Auto-refresh Dune stats every 30 seconds
+    const interval = setInterval(() => {
+      fetchStats();
+    }, 30000);
+
+    return () => clearInterval(interval); // Cleanup on unmount
   }, []);
 
   const handleWaitlistSubmit = async (e: React.FormEvent) => {
@@ -221,8 +228,8 @@ export default function Home() {
         <div className='flex gap-1'>
         <Button className='bg-[#222222] text-white rounded-full h-11 w-[114px]'>Get started</Button>
         <Button className='bg-white text-[#222222] rounded-full h-11 w-[114px]'>Learn more</Button>
-        </div>
-        </div>
+      </div>
+    </div>
       </div>
       <Image src="/Frame 1618869528.png" alt="cto marketplace" width={600} height={600} className='absolute h-full ml-16 top-0 right-0 hidden sm:block' />
       <Image src="/cta-mobile bg v1.png" alt="cto marketplace" width={300} height={300} className='absolute w-full right-0 left-0  -top-10  sm:hidden' />
