@@ -183,7 +183,7 @@ export default function Home() {
     <section>
       <h2 className='text-[24px] max-w-[258px] sm:max-w-none mb-3 mx-auto leading-[120%] sm:text-[40px] text-center'>Why the community deserves its own market</h2>
       <p className='leading-[150%] text-[#D1D1D1] text-center max-w-[831px] mx-auto'>We enable communities mature in DeFi by providing the platform that boost your visibility, empowering communities to grow. Discover driven communities with value and thrive.</p>
-      <Image src="/why-img.png" alt="why ctomarkelplace" width={672} height={1280} className='mx-auto w-[90%] hidden sm:block' />
+      <Image src="/why-img.png" alt="why ctomarkelplace" width={672} height={1280} className='mx-auto w-[90%] hidden sm:block mt-20 mb-25' />
       <Image src="/why-img-mobile.png" alt="why ctomarkelplace" width={350} height={1210} className='mx-auto mt-22 mb-12 block sm:hidden' />
     </section>
 

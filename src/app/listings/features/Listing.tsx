@@ -36,77 +36,99 @@ import { ApiCoinItem, ApiListingResponse } from "@/types/api";
 type SortField = 'name' | 'marketCap' | 'liquidity' | 'holders' | 'age' | 'price' | 'change24h' | 'change1m' | 'change5m' | 'change1h' | 'communityScore' | 'degenAudit';
 type SortDirection = 'asc' | 'desc' | null;
 
-// Skeleton component for loading state with dimmer background
-const TableSkeleton = () => (
-  <div className="space-y-3">
-    {[...Array(5)].map((_, index) => (
-      <div key={index} className="flex items-center space-x-4 p-2 bg-[#FFFFFF]/5 rounded">
-        {/* Watchlist button skeleton */}
-        <div className="w-6 h-6 bg-gray-600 rounded animate-pulse"></div>
-        
-        {/* Name column skeleton */}
-        <div className="flex items-center space-x-2 flex-1 min-w-0">
-          <div className="w-7 h-7 bg-gray-600 rounded-full animate-pulse"></div>
-          <div className="space-y-1 flex-1 min-w-0">
-            <div className="h-4 bg-gray-600 rounded w-20 animate-pulse"></div>
-            <div className="h-3 bg-gray-600 rounded w-16 animate-pulse"></div>
+// Skeleton rows matching the table layout
+const ListingTableSkeleton = () => (
+  <>
+    {Array.from({ length: 6 }).map((_, index) => (
+      <TableRow key={index} className="border-none bg-[#FFFFFF]/5 h-13">
+        <TableCell>
+          <div className="flex justify-center">
+            <div className="size-6 rounded-full bg-white/10 animate-pulse" />
           </div>
-        </div>
-        
-        {/* MC/Liq column skeleton */}
-        <div className="w-20 space-y-1">
-          <div className="h-4 bg-gray-600 rounded w-16 animate-pulse"></div>
-          <div className="h-3 bg-gray-600 rounded w-12 animate-pulse"></div>
-        </div>
-        
-        {/* Holders column skeleton */}
-        <div className="w-16">
-          <div className="h-4 bg-gray-600 rounded w-12 animate-pulse"></div>
-        </div>
-        
-        {/* Age column skeleton */}
-        <div className="w-12">
-          <div className="h-4 bg-gray-600 rounded w-8 animate-pulse"></div>
-        </div>
-        
-        {/* Price/24% column skeleton */}
-        <div className="w-20 space-y-1">
-          <div className="h-4 bg-gray-600 rounded w-16 animate-pulse"></div>
-          <div className="h-3 bg-gray-600 rounded w-12 animate-pulse"></div>
-        </div>
-        
-        {/* 1m% column skeleton */}
-        <div className="w-12">
-          <div className="h-4 bg-gray-600 rounded w-10 animate-pulse"></div>
-        </div>
-        
-        {/* 5m% column skeleton */}
-        <div className="w-12">
-          <div className="h-4 bg-gray-600 rounded w-10 animate-pulse"></div>
-        </div>
-        
-        {/* 1h% column skeleton */}
-        <div className="w-12">
-          <div className="h-4 bg-gray-600 rounded w-10 animate-pulse"></div>
-        </div>
-        
-        {/* Community score column skeleton */}
-        <div className="w-16">
-          <div className="h-4 bg-gray-600 rounded w-12 animate-pulse"></div>
-        </div>
-        
-        {/* Risk score column skeleton */}
-        <div className="w-16">
-          <div className="h-4 bg-gray-600 rounded w-10 animate-pulse"></div>
-        </div>
-        
-        {/* Engagement column skeleton */}
-        <div className="w-20">
-          <div className="h-4 bg-gray-600 rounded w-16 animate-pulse"></div>
-        </div>
-      </div>
+        </TableCell>
+        <TableCell>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <div className="size-7 rounded-full bg-white/10 animate-pulse" />
+                <div className="absolute bottom-0 left-0 size-[14px] rounded-full border border-[#010101] bg-white/10 animate-pulse" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <div className="h-3 w-24 rounded bg-white/20 animate-pulse" />
+                <div className="flex items-center gap-1">
+                  <div className="h-3 w-20 rounded bg-white/10 animate-pulse" />
+                  <div className="size-4 rounded bg-white/10 animate-pulse" />
+                  <div className="size-[10px] rounded-full bg-white/10 animate-pulse" />
+                  <div className="size-[10px] rounded-full bg-white/10 animate-pulse" />
+                </div>
+              </div>
+            </div>
+            <div className="h-6 w-12 rounded bg-[#FF4A15]/30 animate-pulse" />
+          </div>
+        </TableCell>
+        <TableCell>
+          <div className="flex flex-col items-center gap-1">
+            <div className="h-3 w-16 rounded bg-white/10 animate-pulse" />
+            <div className="h-3 w-14 rounded bg-white/10 animate-pulse" />
+          </div>
+        </TableCell>
+        <TableCell>
+          <div className="flex justify-center">
+            <div className="h-3 w-12 rounded bg-white/10 animate-pulse" />
+          </div>
+        </TableCell>
+        <TableCell>
+          <div className="flex justify-center">
+            <div className="h-3 w-10 rounded bg-white/10 animate-pulse" />
+          </div>
+        </TableCell>
+        <TableCell>
+          <div className="flex flex-col items-center gap-1">
+            <div className="h-3 w-14 rounded bg-white/10 animate-pulse" />
+            <div className="flex items-center gap-1">
+              <div className="size-3 rounded bg-white/10 animate-pulse" />
+              <div className="h-3 w-10 rounded bg-white/10 animate-pulse" />
+            </div>
+          </div>
+        </TableCell>
+        <TableCell>
+          <div className="flex items-center justify-center gap-1">
+            <div className="size-3 rounded bg-white/10 animate-pulse" />
+            <div className="h-3 w-10 rounded bg-white/10 animate-pulse" />
+          </div>
+        </TableCell>
+        <TableCell>
+          <div className="flex items-center justify-center gap-1">
+            <div className="size-3 rounded bg-white/10 animate-pulse" />
+            <div className="h-3 w-10 rounded bg-white/10 animate-pulse" />
+          </div>
+        </TableCell>
+        <TableCell>
+          <div className="flex items-center justify-center gap-1">
+            <div className="size-3 rounded bg-white/10 animate-pulse" />
+            <div className="h-3 w-10 rounded bg-white/10 animate-pulse" />
+          </div>
+        </TableCell>
+        <TableCell>
+          <div className="flex justify-center items-center gap-2">
+            <div className="size-4 rounded-full bg-white/10 animate-pulse" />
+            <div className="h-3 w-10 rounded bg-white/10 animate-pulse" />
+          </div>
+        </TableCell>
+        <TableCell>
+          <div className="flex justify-center items-center gap-2">
+            <div className="h-3 w-8 rounded bg-white/10 animate-pulse" />
+            <div className="size-3 rounded-full bg-white/10 animate-pulse" />
+          </div>
+        </TableCell>
+        <TableCell>
+          <div className="flex justify-center">
+            <div className="h-4 w-16 rounded bg-white/10 animate-pulse" />
+          </div>
+        </TableCell>
+      </TableRow>
     ))}
-  </div>
+  </>
 );
 
 
@@ -140,7 +162,7 @@ export default function TopListings() {
   const [selectedNetwork, setSelectedNetwork] = useState<Network | null>(null);
   const [page, setPage] = useState<number>(1);
 
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [total, setTotal] = useState<number>(0);
   const [limit] = useState<number>(20);
   const [liveItems, setLiveItems] = useState<MockLikeCoin[]>([]);
@@ -624,11 +646,7 @@ export default function TopListings() {
               </TableHeader>
               <TableBody>
                   {isLoading ? (
-                    <TableRow className="border-none">
-                      <TableCell colSpan={12} className="!py-4">
-                        <TableSkeleton />
-                      </TableCell>
-                    </TableRow>
+                    <ListingTableSkeleton />
                   ) : (
                     filteredData.map((coin, index) => (
                   <TableRow

@@ -20,6 +20,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import TimeframeFilterBar, {
   Timeframe,
 } from "../../../components/TimeframeFilterBar";
@@ -61,42 +62,81 @@ function getChainImage(chain: string): string {
   return chainMap[chain.toLowerCase()] || '/listings-chains/solana.png';
 }
 
-// Skeleton component for loading state matching Listing component style
+// Skeleton component tuned to match the final table layout + sizing
 const TrendingCoinsTableSkeleton = () => (
-  <div className="space-y-2">
-    {[...Array(6)].map((_, index) => (
-      <div key={index} className="flex items-center space-x-4 p-2 bg-[#FFFFFF]/5 rounded">
-        {/* Name column skeleton */}
-        <div className="flex items-center space-x-2 flex-1 min-w-0">
-          <div className="w-7 h-7 bg-gray-600 rounded-full animate-pulse"></div>
-          <div className="space-y-1 flex-1 min-w-0">
-            <div className="h-4 bg-gray-600 rounded w-16 animate-pulse"></div>
-            <div className="h-3 bg-gray-600 rounded w-12 animate-pulse"></div>
-          </div>
-        </div>
-        
-        {/* MC/Liq column skeleton */}
-        <div className="w-16 space-y-1">
-          <div className="h-4 bg-gray-600 rounded w-12 animate-pulse"></div>
-          <div className="h-3 bg-gray-600 rounded w-10 animate-pulse"></div>
-        </div>
-        
-        {/* Age column skeleton */}
-        <div className="w-10">
-          <div className="h-4 bg-gray-600 rounded w-8 animate-pulse"></div>
-        </div>
-        
-        {/* Risk score column skeleton */}
-        <div className="w-12">
-          <div className="h-4 bg-gray-600 rounded w-10 animate-pulse"></div>
-        </div>
-        
-        {/* Holders column skeleton */}
-        <div className="w-12">
-          <div className="h-4 bg-gray-600 rounded w-10 animate-pulse"></div>
-        </div>
-      </div>
-    ))}
+  <div className="overflow-x-auto xl:overflow-visible">
+    <Table className="w-full min-w-[550px] xl:w-full">
+      <TableHeader className="!text-[#FFFFFF]/50">
+        <TableRow className="border-none">
+          <TableHead className="!font-bold">
+            <span className="hidden">Watchlist button</span>
+          </TableHead>
+          <TableHead className="!font-bold">Name</TableHead>
+          <TableHead className="!font-bold text-center">MC/Liq</TableHead>
+          <TableHead className="!font-bold text-center">Price/24%</TableHead>
+          <TableHead className="!font-bold text-center">Age</TableHead>
+          <TableHead className="!font-bold text-center">Risk score</TableHead>
+          <TableHead className="!font-bold text-right">Holders</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {Array.from({ length: 6 }).map((_, index) => (
+          <TableRow key={index} className="border-none">
+            <TableCell className="!py-1">
+              <div className="flex justify-center">
+                <div className="size-4 rounded-full bg-white/10 animate-pulse" />
+              </div>
+            </TableCell>
+            <TableCell className="!py-1">
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <div className="size-7 rounded-full bg-white/10 animate-pulse" />
+                  <div className="absolute bottom-0 left-0 size-[14px] rounded-full border border-[#010101] bg-white/5 animate-pulse" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <div className="h-3 w-[90px] rounded bg-white/20 animate-pulse" />
+                  <div className="flex items-center gap-1">
+                    <div className="h-3 w-[70px] rounded bg-white/10 animate-pulse" />
+                    <div className="size-4 rounded bg-white/10 animate-pulse" />
+                    <div className="size-[10px] rounded-full bg-white/10 animate-pulse" />
+                    <div className="size-[10px] rounded-full bg-white/10 animate-pulse" />
+                  </div>
+                </div>
+              </div>
+            </TableCell>
+            <TableCell className="!py-1">
+              <div className="flex flex-col items-center gap-1">
+                <div className="h-3 w-14 rounded bg-white/10 animate-pulse" />
+                <div className="h-3 w-12 rounded bg-white/10 animate-pulse" />
+              </div>
+            </TableCell>
+            <TableCell className="!py-1">
+              <div className="flex flex-col items-center gap-1">
+                <div className="h-3 w-12 rounded bg-white/10 animate-pulse" />
+                <div className="h-3 w-14 rounded bg-white/10 animate-pulse" />
+              </div>
+            </TableCell>
+            <TableCell className="!py-1">
+              <div className="flex justify-center">
+                <div className="h-3 w-10 rounded bg-white/10 animate-pulse" />
+              </div>
+            </TableCell>
+            <TableCell className="!py-1">
+              <div className="flex items-center justify-center gap-1">
+                <div className="h-3 w-8 rounded bg-white/10 animate-pulse" />
+                <div className="size-[12px] rounded-full bg-white/10 animate-pulse" />
+              </div>
+            </TableCell>
+            <TableCell className="!py-1">
+              <div className="flex flex-col items-end gap-1">
+                <div className="h-3 w-12 rounded bg-white/10 animate-pulse" />
+                <div className="h-3 w-8 rounded bg-white/10 animate-pulse" />
+              </div>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   </div>
 );
 
@@ -110,6 +150,12 @@ export default function TrendingCoins({
   isLoading: boolean;
 }) {
   const [timeframe, setTimeframe] = useState<Timeframe>("1h");
+  const router = useRouter();
+
+  const handleRowClick = (address?: string) => {
+    if (!address) return;
+    router.push(`/projectProfile/${address}`);
+  };
 
   // Function to calculate trending score based on multiple factors
   const calculateTrendingScore = (item: ApiCoinItem): number => {
@@ -251,7 +297,7 @@ export default function TrendingCoins({
 
   if (isLoading) {
     return (
-      <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[0.7px] w-full rounded-xl lg:w-auto lg:flex-1">
+      <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[0.7px] w-full rounded-xl lg:w-fit">
         <Card className="border-none p-3 bg-[#010101] w-full">
           <CardHeader className="flex justify-between items-center px-0">
             <CardTitle className="flex items-center gap-1 text-base">
@@ -313,7 +359,7 @@ export default function TrendingCoins({
   }
 
   return (
-    <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[0.7px] w-full rounded-xl lg:max-w-fit">
+    <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[0.7px] w-full rounded-xl lg:w-fit">
       <Card className="border-none p-3 bg-[#010101] w-full">
         <CardHeader className="flex justify-between items-center px-0">
           <CardTitle className="flex items-center gap-1 text-base">
@@ -351,7 +397,11 @@ export default function TrendingCoins({
             </TableHeader>
             <TableBody>
               {trendingData.map((data, index) => (
-                <TableRow key={index} className="border-none">
+                <TableRow
+                  key={index}
+                  className="border-none cursor-pointer"
+                  onClick={() => handleRowClick(data.address)}
+                >
                   <TableCell>
                       <div>
                         <Button 
@@ -415,7 +465,13 @@ export default function TrendingCoins({
                           <span className="text-[#FFFFFF]/50 text-xs uppercase" title={data.address}>
                             {shortenAddressForTrending(data.address)}
                           </span>
-                          <Button className="p-0 h-fit w-fit text-white">
+                          <Button
+                            className="p-0 h-fit w-fit text-white"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (data.address) navigator.clipboard.writeText(data.address);
+                            }}
+                          >
                             <Image
                               src="/copy.svg"
                               alt="copy"
@@ -424,10 +480,10 @@ export default function TrendingCoins({
                               height={8.38}
                             />
                           </Button>
-                          <Link href="#">
+                          <Link href="#" onClick={(e) => e.stopPropagation()}>
                             <Image src="/x.svg" alt="x" height={8} width={8} />
                           </Link>
-                          <Link href="#">
+                          <Link href="#" onClick={(e) => e.stopPropagation()}>
                             <Image
                               src="/globe.svg"
                               alt="website"

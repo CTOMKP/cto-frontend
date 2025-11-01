@@ -4,7 +4,7 @@ import Image from 'next/image'
 import { Eye, EyeOff } from 'lucide-react'
 import TrendingCoins from './TrendingCoins'
 import TrendingCommunity from './TrendingCommunity'
-import Breadcrumbs from './Breadcrumbs'
+// import Breadcrumbs from './Breadcrumbs'
 import { ApiCoinItem } from '@/types/api'
 
 // Define the API item type to match the actual data structure
@@ -54,10 +54,10 @@ export default function Highlights({
       </div>
 
       {!isHidden && (
-        <div className='flex flex-col lg:flex-row items-center gap-2 lg:gap-4 w-full overflow-x-auto'>
+        <div className='flex flex-col lg:flex-row items-center gap-2 lg:gap-4 w-full overflow-x-auto pb-5'>
             <TrendingCoins apiData={apiData} isLoading={isLoading} />
             <TrendingCommunity apiData={apiData} isLoading={isLoading} />
-            <Breadcrumbs />
+            {/* <Breadcrumbs /> */}
         </div>
       )}
     </div>

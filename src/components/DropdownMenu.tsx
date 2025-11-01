@@ -214,7 +214,7 @@ export default function NavDropdownMenu() {
         <div className="p-3 rounded-lg bg-[#FFFFFF0A]">
           <h1 className="font-bold text-base text-white">Dev&apos;s gone? You&apos;re not</h1>
           <p className="text-xs mt-2 mb-4">If your community is still building, then you deserve all the spotlight</p>
-          <Button className="w-full rounded-lg h-8.5 cta-gradient text-white">Apply for Listing</Button>
+          <Link href="/list-asset" className="w-full flex justify-center items-center rounded-lg h-8.5 cta-gradient text-white">Apply for Listing</Link>
         </div>
 
         <div className="flex justify-center items-center gap-4 mt-6">

@@ -13,9 +13,9 @@ export default function Footer() {
           </div>
           <p className="text-base sm:text-left text-center text-white mb-3">Where Memecoins go to live again</p>
           <div className="flex gap-4 text-lg">
-            <Link href='#'><Image src="/x-white-bg.png" alt="x" width={24} height={24} /></Link>
-            <Link href='#'><Image src="/telegram-white-bg.png" alt="telegram" width={24} height={24} /></Link>
-            <Link href='#'><Image src="/github.png" alt="github" width={24} height={24} /></Link>
+            <Link target='_blank' href='https://x.com/CTOMarketplace'><Image src="/x-white-bg.png" alt="x" width={24} height={24} /></Link>
+            <Link target='_blank' href='#'><Image src="/telegram-white-bg.png" alt="telegram" width={24} height={24} /></Link>
+            <Link target='_blank' href='https://github.com/CTOMKP'><Image src="/github.png" alt="github" width={24} height={24} /></Link>
           </div>
         </div>
       </div>

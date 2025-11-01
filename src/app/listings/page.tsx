@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Highlights from "@/app/listing/features/Highlights";
-import Listing from "@/app/listing/features/Listing";
+import Highlights from "@/app/listings/features/Highlights";
+import Listing from "@/app/listings/features/Listing";
 import { ApiCoinItem } from "@/types/api";
 
 type ApiListingResponse = {

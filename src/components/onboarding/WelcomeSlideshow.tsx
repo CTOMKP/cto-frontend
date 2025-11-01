@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 
 const slides = [
   {
@@ -31,6 +32,7 @@ const slides = [
 export default function WelcomeSlideshow() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const pathname = usePathname();
 
   const isLastSlide = currentIndex === slides.length - 1;
 
@@ -47,21 +49,25 @@ export default function WelcomeSlideshow() {
   // };
 
   useEffect(() => {
+    if (pathname === "/") {
+      setShowOnboarding(false);
+      return;
+    }
+
     const hasSeenOnboarding = localStorage.getItem("onboardingShown");
     if (!hasSeenOnboarding) {
       setShowOnboarding(true);
       localStorage.setItem("onboardingShown", "true");
     } else {
-      console.log("inside", hasSeenOnboarding)
-      setShowOnboarding(false)
+      setShowOnboarding(false);
     }
-  }, []);
+  }, [pathname]);
 
   // const handleFinish = () => {
   //   console.log("Finished onboarding");
   // };
 
-  if (!showOnboarding) return null;
+  if (pathname === "/" || !showOnboarding) return null;
 
   return (
     <Dialog open={showOnboarding} onOpenChange={setShowOnboarding}>
