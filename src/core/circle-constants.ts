@@ -41,7 +41,7 @@ export const API_ENDPOINTS = {
     base: CIRCLE_CONFIG.apiBase,
   },
   auth: {
-    base: process.env.NEXT_PUBLIC_AUTH_API_BASE || 'http://localhost:3001',
+    base: process.env.NEXT_PUBLIC_AUTH_API_BASE || process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'https://github.useguidr.com',
   },
 };
 

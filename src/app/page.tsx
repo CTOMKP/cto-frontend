@@ -43,6 +43,9 @@ const cardData = [
   },
 ];
 
+// Removed unused forProjectsData - can be restored if needed later
+
+
 export default function Home() {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -56,7 +59,7 @@ export default function Home() {
   React.useEffect(() => {
     const fetchStats = async () => {
       try {
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://cto-backend-production-28e3.up.railway.app';
+        const backendUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'https://github.useguidr.com';
         const response = await fetch(`${backendUrl}/api/stats/memecoin`);
         
         if (response.ok) {
@@ -131,7 +134,7 @@ export default function Home() {
       <div className='text-center m-5 mt-20 flex flex-col items-center justify-center'>
         <h1 className='text-[50px] sm:text-[70px] text-left sm:text-center text-wrap max-w-[606px] mx-auto leading-[120%]'>Revive. Rebuild. Rememe</h1>
         <p className='text-lg text-left md:text-center text-[#FFFFFFCC] text-wrap max-w-[606px] mx-auto'>Discover, explore, and build with high value communities</p>
-        <form onSubmit={handleWaitlistSubmit} className="flex relative z-100 justify-center items-center gap-4 max-w-md mx-auto mt-[30px]">
+        <form onSubmit={handleWaitlistSubmit} className="flex justify-center items-center gap-4 max-w-md mx-auto mt-[30px]">
         <div>
         <Input
           type="email"
@@ -183,7 +186,7 @@ export default function Home() {
     <section>
       <h2 className='text-[24px] max-w-[258px] sm:max-w-none mb-3 mx-auto leading-[120%] sm:text-[40px] text-center'>Why the community deserves its own market</h2>
       <p className='leading-[150%] text-[#D1D1D1] text-center max-w-[831px] mx-auto'>We enable communities mature in DeFi by providing the platform that boost your visibility, empowering communities to grow. Discover driven communities with value and thrive.</p>
-      <Image src="/why-img.png" alt="why ctomarkelplace" width={672} height={1280} className='mx-auto w-[90%] hidden sm:block mt-20 mb-25' />
+      <Image src="/why-img.png" alt="why ctomarkelplace" width={672} height={1280} className='mx-auto w-[90%] hidden sm:block' />
       <Image src="/why-img-mobile.png" alt="why ctomarkelplace" width={350} height={1210} className='mx-auto mt-22 mb-12 block sm:hidden' />
     </section>
 
@@ -216,8 +219,8 @@ export default function Home() {
       <div className="bg-gradient-to-br from-[#FF9631] via-[#F04866] to-[#FF9631] rounded-3xl p-[0.7px]">
         <div className="bg-black rounded-3xl p-2 size-[350px] md:size-[350px] lg:size-[500px] sm:size-[300px]">
           <Image src="/card-stack.png" alt="cto marketplace cards" width={478} height={235} className='rounded-2xl' />
-        </div>
       </div>
+    </div>
     </section>
 
     <section className='relative sm:overflow-hidden'>
@@ -229,8 +232,8 @@ export default function Home() {
         <Button className='bg-[#222222] text-white rounded-full h-11 w-[114px]'>Get started</Button>
         <Button className='bg-white text-[#222222] rounded-full h-11 w-[114px]'>Learn more</Button>
       </div>
-    </div>
       </div>
+    </div>
       <Image src="/Frame 1618869528.png" alt="cto marketplace" width={600} height={600} className='absolute h-full ml-16 top-0 right-0 hidden sm:block' />
       <Image src="/cta-mobile bg v1.png" alt="cto marketplace" width={300} height={300} className='absolute w-full right-0 left-0  -top-10  sm:hidden' />
     </section>

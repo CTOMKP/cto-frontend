@@ -1,4 +1,4 @@
-const CIRCLE_API_BASE = 'https://cto-backend-production-28e3.up.railway.app/api';
+const CIRCLE_API_BASE = (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'https://github.useguidr.com') + '/api';
 
 export interface CircleUser {
   id: string;
