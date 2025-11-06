@@ -64,16 +64,63 @@ export default function NavBar() {
               <DropdownMenuContent className="bg-[#010101] text-sm font-normal text-[#FFFFFFB2] w-[534px] !border-2 !border-[#86868630] p-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <NavigationMenuLink className="px-0" asChild>
-                      <Link href="#">Listing</Link>
-                    </NavigationMenuLink>
-                    <NavigationMenuLink className="px-0" asChild>
-                      <Link href="#">Discovery Hub</Link>
-                    </NavigationMenuLink>
+                    {[{
+                      label: "Listing",
+                      href: "#",
+                    }, {
+                      label: "Discovery Hub",
+                      href: "#",
+                    }].map((item) => (
+                      <NavigationMenuLink key={item.label} className="px-0">
+                        <div
+                          className="rounded-lg p-[0.8px] transition-all duration-300"
+                          style={{ background: "transparent" }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background =
+                              "linear-gradient(100.86deg, rgba(255, 0, 117, 0.3) 4.13%, rgba(255, 74, 21, 0.3) 55.91%, rgba(255, 203, 69, 0.3) 100%)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "transparent";
+                          }}
+                        >
+                          <div
+                            className="rounded-lg w-full h-full px-2 py-2"
+                            style={{
+                              background: "#010101",
+                              transition: "all 0.3s ease-in-out",
+                            }}
+                          >
+                            <div className="flex items-center justify-between">
+                              <Link href={item.href}>{item.label}</Link>
+                            </div>
+                          </div>
+                        </div>
+                      </NavigationMenuLink>
+                    ))}
                     <NavigationMenuLink className="px-0">
-                      <div className="flex items-center justify-between">
-                        <Link href="#">CTO Vision</Link>
-                        <span className="text-[#C44FE2] text-[10px] bg-[#C44FE20D] rounded-[3px] px-[7px] py-1.5">Soon!</span>
+                      <div
+                        className="rounded-lg p-[0.8px] transition-all duration-300"
+                        style={{ background: "transparent" }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background =
+                            "linear-gradient(100.86deg, rgba(255, 0, 117, 0.3) 4.13%, rgba(255, 74, 21, 0.3) 55.91%, rgba(255, 203, 69, 0.3) 100%)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = "transparent";
+                        }}
+                      >
+                        <div
+                          className="rounded-lg w-full h-full px-2 py-1"
+                          style={{
+                            background: "#010101",
+                            transition: "all 0.3s ease-in-out",
+                          }}
+                        >
+                          <div className="flex items-center justify-between">
+                            <Link href="#">CTO Vision</Link>
+                            <span className="text-[#C44FE2] text-[10px] bg-[#C44FE20D] rounded-[3px] px-[7px] py-1.5">Soon!</span>
+                          </div>
+                        </div>
                       </div>
                     </NavigationMenuLink>
                   </div>

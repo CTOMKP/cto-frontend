@@ -75,9 +75,9 @@ export default function NavBar() {
       </div>
 
       {/* Desktop CTA Button */}
-      <Link className='cta-gradient hidden md:flex justify-center items-center rounded-lg h-10 w-30.5 px-4' href={'/listing'}>
+      {/* <Link className='cta-gradient hidden md:flex justify-center items-center rounded-lg h-10 w-30.5 px-4' href={'/listing'}>
         Launch App
-      </Link>
+      </Link> */}
 
       {/* Mobile Hamburger Menu */}
       <div className="flex md:hidden items-center gap-2">
@@ -96,12 +96,12 @@ export default function NavBar() {
               <Link href="#" className="text-base py-2 cursor-pointer">Docs</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link 
+              {/* <Link 
                 href="/listing" 
                 className="cta-gradient flex justify-center items-center rounded-lg h-10 mt-2 cursor-pointer"
               >
                 Launch App
-              </Link>
+              </Link> */}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
