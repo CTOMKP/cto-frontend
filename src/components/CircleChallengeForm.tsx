@@ -90,7 +90,7 @@ export function CircleChallengeForm({ isLoginMode, onClose }: CircleChallengeFor
         }).then(res => res.json())
         
         if (userInfo.email) {
-          const backendUrl = 'https://cto-backend-production-28e3.up.railway.app'
+          const backendUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'https://cto-backend-production-28e3.up.railway.app'
           
           try {
             const walletsResponse = await axios.get(`${backendUrl}/api/circle/users/${userInfo.email}/wallets`)

@@ -95,7 +95,8 @@ export default function Step1({
       }, 100);
 
       // Make API call to scan token with authentication
-      const response = await fetch('https://cto-backend-production-28e3.up.railway.app/api/scan/scan', {
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'https://cto-backend-production-28e3.up.railway.app';
+      const response = await fetch(`${backendUrl}/api/scan/scan`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

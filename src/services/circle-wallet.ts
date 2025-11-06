@@ -24,7 +24,7 @@ export class CircleWalletService {
     this.baseUrl = process.env.NEXT_PUBLIC_CIRCLE_API_BASE || 'https://api.circle.com/v1/w3s';
     this.apiKey = process.env.NEXT_PUBLIC_CIRCLE_API_KEY || '';
     this.appId = process.env.NEXT_PUBLIC_CIRCLE_APP_ID || '';
-    this.backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://cto-backend-production-28e3.up.railway.app';
+    this.backendUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'https://cto-backend-production-28e3.up.railway.app';
     this.isProduction = !!(this.apiKey && this.appId);
     
     

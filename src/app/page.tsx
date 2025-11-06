@@ -59,7 +59,7 @@ export default function Home() {
   React.useEffect(() => {
     const fetchStats = async () => {
       try {
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://cto-backend-production-28e3.up.railway.app';
+        const backendUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'https://cto-backend-production-28e3.up.railway.app';
         const response = await fetch(`${backendUrl}/api/stats/memecoin`);
         
         if (response.ok) {
@@ -219,8 +219,8 @@ export default function Home() {
       <div className="bg-gradient-to-br from-[#FF9631] via-[#F04866] to-[#FF9631] rounded-3xl p-[0.7px]">
         <div className="bg-black rounded-3xl p-2 size-[350px] md:size-[350px] lg:size-[500px] sm:size-[300px]">
           <Image src="/card-stack.png" alt="cto marketplace cards" width={478} height={235} className='rounded-2xl' />
-        </div>
       </div>
+    </div>
     </section>
 
     <section className='relative sm:overflow-hidden'>
@@ -232,8 +232,8 @@ export default function Home() {
         <Button className='bg-[#222222] text-white rounded-full h-11 w-[114px]'>Get started</Button>
         <Button className='bg-white text-[#222222] rounded-full h-11 w-[114px]'>Learn more</Button>
       </div>
-    </div>
       </div>
+    </div>
       <Image src="/Frame 1618869528.png" alt="cto marketplace" width={600} height={600} className='absolute h-full ml-16 top-0 right-0 hidden sm:block' />
       <Image src="/cta-mobile bg v1.png" alt="cto marketplace" width={300} height={300} className='absolute w-full right-0 left-0  -top-10  sm:hidden' />
     </section>
