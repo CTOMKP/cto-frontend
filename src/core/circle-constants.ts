@@ -5,6 +5,12 @@ export const APP_CONFIG = {
   description: 'Circle Programmable Wallet Integration with Aptos Blockchain',
 };
 
+const backendBaseUrl =
+  process.env.NEXT_INTERNAL_API_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  process.env.NEXT_PUBLIC_BACKEND_URL ||
+  'https://github.useguidr.com';
+
 export const CIRCLE_CONFIG = {
   appId: process.env.NEXT_PUBLIC_CIRCLE_APP_ID || '',
   apiKey: process.env.NEXT_PUBLIC_CIRCLE_API_KEY || '',
@@ -41,7 +47,7 @@ export const API_ENDPOINTS = {
     base: CIRCLE_CONFIG.apiBase,
   },
   auth: {
-    base: process.env.NEXT_PUBLIC_AUTH_API_BASE || process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'https://cto-backend-production-28e3.up.railway.app',
+    base: process.env.NEXT_PUBLIC_AUTH_API_BASE || backendBaseUrl,
   },
 };
 

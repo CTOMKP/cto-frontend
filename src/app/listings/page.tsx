@@ -19,7 +19,11 @@ export default function Listings() {
   useEffect(() => {
     const fetchListings = async () => {
       setIsLoading(true);
-      const base = process.env.NEXT_PUBLIC_BACKEND_URL || "https://cto-backend-production-28e3.up.railway.app";
+      const base =
+        process.env.NEXT_INTERNAL_API_URL ||
+        process.env.NEXT_PUBLIC_API_URL ||
+        process.env.NEXT_PUBLIC_BACKEND_URL ||
+        "https://github.useguidr.com";
       
       // Fetch from all chains initially
       const url = `${base}/api/listing/listings?category=MEME&sort=updatedAt%3Adesc&limit=10000&chain=SOLANA`;

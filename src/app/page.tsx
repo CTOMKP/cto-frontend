@@ -59,7 +59,11 @@ export default function Home() {
   React.useEffect(() => {
     const fetchStats = async () => {
       try {
-        const backendUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'https://cto-backend-production-28e3.up.railway.app';
+        const backendUrl =
+          process.env.NEXT_INTERNAL_API_URL ||
+          process.env.NEXT_PUBLIC_API_URL ||
+          process.env.NEXT_PUBLIC_BACKEND_URL ||
+          'https://github.useguidr.com';
         const response = await fetch(`${backendUrl}/api/stats/memecoin`);
         
         if (response.ok) {
@@ -97,7 +101,11 @@ export default function Home() {
     setIsSubmitting(true);
 
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://cto-backend-production-28e3.up.railway.app';
+      const backendUrl =
+        process.env.NEXT_INTERNAL_API_URL ||
+        process.env.NEXT_PUBLIC_API_URL ||
+        process.env.NEXT_PUBLIC_BACKEND_URL ||
+        'https://github.useguidr.com';
       
       const response = await fetch(`${backendUrl}/api/waitlist`, {
         method: 'POST',

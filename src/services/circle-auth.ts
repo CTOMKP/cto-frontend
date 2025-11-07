@@ -1,4 +1,10 @@
-const CIRCLE_API_BASE = (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'https://cto-backend-production-28e3.up.railway.app') + '/api';
+const backendBaseUrl =
+  process.env.NEXT_INTERNAL_API_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  process.env.NEXT_PUBLIC_BACKEND_URL ||
+  'https://github.useguidr.com';
+
+const CIRCLE_API_BASE = `${backendBaseUrl}/api`;
 
 export interface CircleUser {
   id: string;

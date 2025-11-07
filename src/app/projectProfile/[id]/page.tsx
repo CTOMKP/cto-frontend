@@ -48,7 +48,11 @@ export default function ProjectProfilePage() {
       if (!id) return;
       
       setIsLoading(true);
-      const base = process.env.NEXT_PUBLIC_BACKEND_URL || "https://cto-backend-production-28e3.up.railway.app";
+      const base =
+        process.env.NEXT_INTERNAL_API_URL ||
+        process.env.NEXT_PUBLIC_API_URL ||
+        process.env.NEXT_PUBLIC_BACKEND_URL ||
+        "https://github.useguidr.com";
       const url = `${base}/api/listing/${id}`;
       
       try {
