@@ -45,6 +45,10 @@ const cardData = [
 
 // Removed unused forProjectsData - can be restored if needed later
 
+const backendBaseUrl =
+  process.env.NEXT_PUBLIC_API_URL ||
+  process.env.NEXT_PUBLIC_BACKEND_URL ||
+  'https://api.ctomarketplace.com';
 
 export default function Home() {
   const [email, setEmail] = useState('');
@@ -53,46 +57,46 @@ export default function Home() {
     dailyTokensDeployed: 10000,
     dailyGraduates: 80,
     topTokensLast7Days: 8,
+    lastUpdated: '',
+    timeframe: '24 hours',
   });
 
   // Fetch memecoin stats on component mount and every 30 seconds
   React.useEffect(() => {
     const fetchStats = async () => {
       try {
-        const backendUrl =
-          process.env.NEXT_INTERNAL_API_URL ||
-          process.env.NEXT_PUBLIC_API_URL ||
-          process.env.NEXT_PUBLIC_BACKEND_URL ||
-          'https://github.useguidr.com';
-        const response = await fetch(`${backendUrl}/api/stats/memecoin`);
-        
-        if (response.ok) {
-          const data = await response.json();
-          setStats({
-            dailyTokensDeployed: data.dailyTokensDeployed || 10000,
-            dailyGraduates: data.dailyGraduates || 80,
-            topTokensLast7Days: data.topTokensLast7Days || 8,
-          });
+        const response = await fetch(`${backendBaseUrl}/api/stats/memecoin`, {
+          cache: 'no-store',
+        });
+
+        if (!response.ok) {
+          throw new Error(`Request failed with status ${response.status}`);
         }
+
+        const data = await response.json();
+        setStats(prev => ({
+          dailyTokensDeployed: data.dailyTokensDeployed ?? prev.dailyTokensDeployed,
+          dailyGraduates: data.dailyGraduates ?? prev.dailyGraduates,
+          topTokensLast7Days: data.topTokensLast7Days ?? prev.topTokensLast7Days,
+          lastUpdated: data.lastUpdated ?? new Date().toISOString(),
+          timeframe: data.timeframe ?? prev.timeframe,
+        }));
       } catch (error) {
         console.error('Failed to fetch stats:', error);
-        // Keep fallback values
       }
     };
 
     fetchStats(); // Initial fetch
-    
+
     // Auto-refresh Dune stats every 30 seconds
-    const interval = setInterval(() => {
-      fetchStats();
-    }, 30000);
+    const interval = setInterval(fetchStats, 30000);
 
     return () => clearInterval(interval); // Cleanup on unmount
   }, []);
 
   const handleWaitlistSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !email.includes('@')) {
       toast.error('Please enter a valid email address');
       return;
@@ -101,13 +105,7 @@ export default function Home() {
     setIsSubmitting(true);
 
     try {
-      const backendUrl =
-        process.env.NEXT_INTERNAL_API_URL ||
-        process.env.NEXT_PUBLIC_API_URL ||
-        process.env.NEXT_PUBLIC_BACKEND_URL ||
-        'https://github.useguidr.com';
-      
-      const response = await fetch(`${backendUrl}/api/waitlist`, {
+      const response = await fetch(`${backendBaseUrl}/api/waitlist`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
