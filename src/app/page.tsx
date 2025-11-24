@@ -43,11 +43,6 @@ const cardData = [
   },
 ];
 
-// Removed unused forProjectsData - can be restored if needed later
-
-const backendBaseUrl =
-  process.env.NEXT_PUBLIC_BACKEND_URL;
-
 export default function Home() {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
