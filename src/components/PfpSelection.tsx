@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "./ui/button";
-import { Save, X } from "lucide-react";
+import { X } from "lucide-react";
 import { DialogClose, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 import Image from "next/image";
+import { pfpService, PFPCard } from "@/services/pfpService";
+import { toast } from "react-toastify";
+import { CardReveal } from "./pfp/CardReveal";
 
 const sharelinks = [
   {
@@ -30,60 +33,85 @@ const PfpSelection = () => {
   );
   const [selectedCardId, setSelectedCardId] = useState<number | null>(null);
   const [isRevealed, setIsRevealed] = useState(false);
+  const [cards, setCards] = useState<PFPCard[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const cards = [
-    { id: 1, img: "/default-card.png" },
-    { id: 2, img: "/default-card.png" },
-    { id: 3, img: "/default-card.png" },
-    { id: 4, img: "/default-card.png" },
-    { id: 5, img: "/default-card.png" },
-  ];
-
-  // Spread cards on mount
+  // Fetch cards on mount
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setPhase("spread");
-    }, 500);
-    return () => clearTimeout(timer);
+    const fetchCards = async () => {
+      setIsLoading(true);
+      try {
+        const fetchedCards = await pfpService.getCards();
+        setCards(fetchedCards);
+      } catch (error) {
+        console.error('Failed to fetch cards:', error);
+        toast.error('Failed to load cards');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCards();
   }, []);
+
+  // Spread cards after they're loaded
+  useEffect(() => {
+    if (cards.length > 0) {
+      const timer = setTimeout(() => {
+        setPhase("spread");
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [cards]);
 
   const handleSelect = (id: number) => {
     setSelectedCardId(id);
   };
 
   const handleReveal = () => {
+    if (!selectedCardId) return;
+    
+    // Just transition to reveal the card - no API call needed
     setIsRevealed(false); // Trigger exit animation of placeholder
     setTimeout(() => {
-      setIsRevealed(true); // Show actual image with entrance animation
+      setIsRevealed(true); // Show mascot reveal with entrance animation
     }, 500); // Matches exit duration
   };
 
   const handleHarvest = () => {
     if (!selectedCardId) return;
+    
+    // Just transition to the next phase - no API call needed
     setPhase("stacked");
     setTimeout(() => {
       setPhase("selected");
     }, 900); // Wait for exit animation to finish
   };
 
+
   return (
     <div>
       <DialogHeader className="flex !flex-row justify-between items-center pb-2 border-b-[0.5px] border-[#FFFFFF20]">
-          <div>
-            <DialogTitle className="font-bold text-base">{phase === 'selected' ? 'Reveal Traits' : 'Harvest Grape'}</DialogTitle>
-            <DialogDescription className="text-xs font-normal">
-              {phase === 'selected' ? 'Tap the card to reveal the character traits' : 'Choose a card and harvest the character'}
-            </DialogDescription>
-          </div>
-          <DialogClose>
-            <X size={24} />
-          </DialogClose>
-        </DialogHeader>
+        <div>
+          <DialogTitle className="font-bold text-base">{phase === 'selected' ? 'Reveal Traits' : 'Harvest Grape'}</DialogTitle>
+          <DialogDescription className="text-xs font-normal">
+            {phase === 'selected' ? 'Tap the card to reveal the character traits' : 'Choose a card and harvest the character'}
+          </DialogDescription>
+        </div>
+        <DialogClose>
+          <X size={24} />
+        </DialogClose>
+      </DialogHeader>
         <div className="flex flex-col items-center justify-between mt-6 min-h-66 h-fit">
       <div className="relative flex items-center justify-center h-fit w-fit">
-        <AnimatePresence>
-          {phase !== "selected" &&
-            cards.map((card, index) => {
+        {isLoading && cards.length === 0 ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+          </div>
+        ) : (
+          <AnimatePresence>
+            {phase !== "selected" &&
+              cards.map((card, index) => {
               const total = cards.length;
               const center = (total - 1) / 2;
 
@@ -159,7 +187,8 @@ const PfpSelection = () => {
                 </motion.div>
               );
             })}
-        </AnimatePresence>
+          </AnimatePresence>
+        )}
 
         <AnimatePresence mode="wait">
           {phase === "selected" && selectedCardId && !isRevealed && (
@@ -202,7 +231,7 @@ const PfpSelection = () => {
 
           {phase === "selected" && selectedCardId && isRevealed && (
             <motion.div
-              key="actual-card"
+              key="mascot-reveal"
               initial={{ opacity: 0, y: 200, scale: 0.7 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{
@@ -212,27 +241,7 @@ const PfpSelection = () => {
                 damping: 14,
               }}
             >
-              {/* <div
-                className="p-[2px] rounded-[8px]"
-                style={{
-                  background:
-                    "linear-gradient(to bottom, #FF0075 0%, #FF4A15 50%, #FFCB45 100%)",
-                }}
-              > */}
-                <div className="w-[221px] h-[326px] mt-2 mb-8 rounded-[8px] flex flex-col items-center justify-between">
-                  <Image
-                    src={cards.find((c) => c.id === selectedCardId)?.img || ""}
-                    alt="selected"
-                    className="w-[173px] h-[273px] object-contain"
-                    width={173}
-                    height={273}
-                  />
-                  <div className="flex items-center gap-2">
-                    <Button className="cta-gradient w-26.5 rounded-lg font-medium text-[14px] text-white h-[36px]">Upload pfp</Button>
-                    <Button className="rounded-lg w-26.5 border-[0.2px] border-[#FFFFFF20] font-medium text-[14px]  text-[#FFFFFF50]">Save <Save size={13} color="#FFFFFF50" /></Button>
-                  </div>
-                </div>
-              {/* </div> */}
+              <CardReveal selectedCardId={selectedCardId} />
             </motion.div>
           )}
         </AnimatePresence>

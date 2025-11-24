@@ -46,9 +46,9 @@ export default function NavBar() {
                     <NavigationMenuLink className="px-0" asChild>
                       <Link href="/faq">FAQ</Link>
                     </NavigationMenuLink>
-                    <NavigationMenuLink className="px-0" asChild>
+                    {/* <NavigationMenuLink className="px-0" asChild>
                       <Link href="#">Docs</Link>
-                    </NavigationMenuLink>
+                    </NavigationMenuLink> */}
                   </div>
                 </div>
               </DropdownMenuContent>
@@ -62,14 +62,14 @@ export default function NavBar() {
                 <Link className="text-base" href="#">FAQ</Link>
               </NavigationMenuLink>
             </NavigationMenuItem>
-            <NavigationMenuItem>
+            {/* <NavigationMenuItem>
               <NavigationMenuLink
                 asChild
                 className={navigationMenuTriggerStyle()}
               >
                 <Link className="text-base" href="#">Docs</Link>
               </NavigationMenuLink>
-            </NavigationMenuItem>
+            </NavigationMenuItem> */}
           </NavigationMenuList>
         </NavigationMenu>
       </div>
@@ -86,15 +86,15 @@ export default function NavBar() {
             <Menu size={24} />
           </DropdownMenuTrigger>
           <DropdownMenuContent className="bg-[#010101] text-white !border-2 !border-[#86868630] p-4 mr-4">
-            <DropdownMenuItem asChild>
+            {/* <DropdownMenuItem asChild>
               <Link href="#" className="text-base py-2 cursor-pointer">Community</Link>
-            </DropdownMenuItem>
+            </DropdownMenuItem> */}
             <DropdownMenuItem asChild>
               <Link href="/faq" className="text-base py-2 cursor-pointer">FAQ</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
+            {/* <DropdownMenuItem asChild>
               <Link href="#" className="text-base py-2 cursor-pointer">Docs</Link>
-            </DropdownMenuItem>
+            </DropdownMenuItem> */}
             <DropdownMenuItem asChild>
               {/* <Link 
                 href="/listing" 

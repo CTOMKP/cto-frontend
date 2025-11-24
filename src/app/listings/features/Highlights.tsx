@@ -18,9 +18,6 @@ export default function Highlights({
 }) {
   const [isHidden, setIsHidden] = useState(false);
   
-  console.log('Highlights: Received apiData:', apiData?.length || 0, 'items');
-  console.log('Highlights: isLoading:', isLoading);
-  
   const toggleVisibility = () => {
     setIsHidden(!isHidden);
   };
@@ -54,9 +51,13 @@ export default function Highlights({
       </div>
 
       {!isHidden && (
-        <div className='flex flex-col lg:flex-row items-center gap-2 lg:gap-4 w-full overflow-x-auto pb-5'>
-            <TrendingCoins apiData={apiData} isLoading={isLoading} />
-            <TrendingCommunity apiData={apiData} isLoading={isLoading} />
+        <div className='flex flex-col lg:flex-row items-center gap-2 w-full overflow-x-auto pb-5'>
+            <div className='w-full lg:w-1/2'>
+              <TrendingCoins apiData={apiData} isLoading={isLoading} />
+            </div>
+            <div className='w-full lg:w-1/2'>
+              <TrendingCommunity apiData={apiData} isLoading={isLoading} />
+            </div>
             {/* <Breadcrumbs /> */}
         </div>
       )}

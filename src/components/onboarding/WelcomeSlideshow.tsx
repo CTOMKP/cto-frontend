@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { usePrivy } from "@privy-io/react-auth";
 
 const slides = [
   {
@@ -33,6 +34,7 @@ export default function WelcomeSlideshow() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const pathname = usePathname();
+  const { login } = usePrivy();
 
   const isLastSlide = currentIndex === slides.length - 1;
 
@@ -49,7 +51,7 @@ export default function WelcomeSlideshow() {
   // };
 
   useEffect(() => {
-    if (pathname === "/") {
+    if (pathname === "/" || pathname === "/faq") {
       setShowOnboarding(false);
       return;
     }
@@ -67,7 +69,7 @@ export default function WelcomeSlideshow() {
   //   console.log("Finished onboarding");
   // };
 
-  if (pathname === "/" || !showOnboarding) return null;
+  if (pathname === "/" || pathname === "/faq" || !showOnboarding) return null;
 
   return (
     <Dialog open={showOnboarding} onOpenChange={setShowOnboarding}>
@@ -120,7 +122,16 @@ export default function WelcomeSlideshow() {
               </Button> */}
               <Image src="/nav-bar/logo.svg" alt="logo" width={131} height={31}/>
               {isLastSlide ? (
-                <Button className='h-[37px] w-[66px] rounded-lg cta-gradient text-base text-white focus-visible:!border-none'>
+                <Button 
+                  className='h-[37px] w-[66px] rounded-lg cta-gradient text-base text-white focus-visible:!border-none'
+                  onClick={async () => {
+                    setShowOnboarding(false);
+                    // Small delay to ensure dialog closes before opening Privy
+                    setTimeout(() => {
+                      login();
+                    }, 100);
+                  }}
+                >
                     Login
                 </Button>
               ) : (

@@ -217,11 +217,8 @@ export default function TrendingCoins({
   // Convert API data to the format expected by the component
   const trendingData = useMemo(() => {
     if (!apiData || apiData.length === 0) {
-      console.log('TrendingCoins: No API data available');
       return [];
     }
-    
-    console.log('TrendingCoins: Processing API data:', apiData.length, 'items');
     
     // Calculate trending score for each coin
     const coinsWithScores = apiData.map((item) => {
@@ -243,11 +240,6 @@ export default function TrendingCoins({
     const sortedCoins = coinsWithScores
       .sort((a, b) => b.trendingScore - a.trendingScore)
       .slice(0, 6);
-    
-    console.log('TrendingCoins: Top trending coins:', sortedCoins.map(c => ({ 
-      name: c.item.name, 
-      score: c.trendingScore 
-    })));
     
     return sortedCoins.map(({ item, ageStr }) => {
       
@@ -290,14 +282,13 @@ export default function TrendingCoins({
         riskScore: typeof item.riskScore === "number" ? item.riskScore : (item?.metadata?.market?.riskScore ?? 0),
       };
       
-      console.log('TrendingCoins: Converted item:', convertedItem);
       return convertedItem;
     });
   }, [apiData]);
 
   if (isLoading) {
     return (
-      <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[0.7px] w-full rounded-xl lg:w-fit">
+      <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[1px] w-full rounded-xl lg:flex-1">
         <Card className="border-none p-3 bg-[#010101] w-full">
           <CardHeader className="flex justify-between items-center px-0">
             <CardTitle className="flex items-center gap-1 text-base">
@@ -328,7 +319,7 @@ export default function TrendingCoins({
   // If no data available, show empty state
   if (trendingData.length === 0) {
     return (
-      <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[0.7px] w-full rounded-xl xl:w-auto xl:flex-1">
+      <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[1px] w-full rounded-xl xl:w-auto xl:flex-1">
         <Card className="border-none p-3 bg-[#010101] w-full">
           <CardHeader className="flex justify-between items-center px-0">
             <CardTitle className="flex items-center gap-1 text-base">
@@ -359,7 +350,7 @@ export default function TrendingCoins({
   }
 
   return (
-    <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[0.7px] w-full rounded-xl lg:w-fit">
+    <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[1px] w-full rounded-xl lg:flex-1">
       <Card className="border-none p-3 bg-[#010101] w-full">
         <CardHeader className="flex justify-between items-center px-0">
           <CardTitle className="flex items-center gap-1 text-base">

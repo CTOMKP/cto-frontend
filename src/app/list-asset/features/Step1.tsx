@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import Image from 'next/image'
 import { Check, Ellipsis, Search, Zap } from 'lucide-react'
-import { useCircleAuth } from '@/hooks/useCircleAuth'
+import { usePrivyAuth } from '@/hooks/usePrivyAuth'
 import {
     Select,
     SelectContent,
@@ -65,7 +65,14 @@ export default function Step1({
   const [progress, setProgress] = useState(0);
   const [contractAddress, setContractAddress] = useState('');
   
-  const { isAuthenticated, token } = useCircleAuth();
+  const { isAuthenticated, getAccessToken } = usePrivyAuth();
+  const [token, setToken] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      getAccessToken().then(t => setToken(t || null)).catch(() => setToken(null));
+    }
+  }, [isAuthenticated, getAccessToken]);
 
   const startScan = async () => {
     if (!contractAddress.trim()) {
@@ -94,8 +101,10 @@ export default function Step1({
         });
       }, 100);
 
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+
       // Make API call to scan token with authentication
-      const response = await fetch('https://cto-backend-production-28e3.up.railway.app/api/scan/scan', {
+      const response = await fetch(`${backendUrl}/api/scan/scan`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

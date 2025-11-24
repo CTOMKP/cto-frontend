@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import WalletProvider from "@/components/WalletProvider";
-import { GoogleOAuthProviderWrapper } from "@/components/GoogleOAuthProvider";
+import PrivyProvider from "@/components/PrivyProvider";
 import "./globals.css";
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
@@ -37,9 +36,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} ${grotesqueArabicPro.className} antialiased`}>
-        <GoogleOAuthProviderWrapper>
+        <PrivyProvider>
           <Dialog>
-            <WalletProvider>
               <HeaderAd />
               <NavBar />
               <MarketTrends />
@@ -48,9 +46,8 @@ export default function RootLayout({
               <div className="fixed bottom-15 right-20 z-50">
                 <TokenSwapCard />
               </div>
-            </WalletProvider>
           </Dialog>
-        </GoogleOAuthProviderWrapper>
+        </PrivyProvider>
         <ToastContainer
           position="top-right"
           autoClose={3000}

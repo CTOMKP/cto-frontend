@@ -117,11 +117,8 @@ export default function TrendingCommunity({
   // Convert API data to the format expected by the component
   const communityData = useMemo(() => {
     if (!apiData || apiData.length === 0) {
-      console.log('TrendingCommunity: No API data available');
       return [];
     }
-    
-    console.log('TrendingCommunity: Processing API data:', apiData.length, 'items');
     
     // Calculate community score for each coin and filter out coins with no community score
     const coinsWithCommunityScore = apiData
@@ -142,11 +139,6 @@ export default function TrendingCommunity({
       .sort((a, b) => b.communityScore - a.communityScore)
       .slice(0, 6);
     
-    console.log('TrendingCommunity: Top community coins:', sortedCoins.map(c => ({ 
-      name: c.item.name, 
-      score: c.communityScore 
-    })));
-    
     return sortedCoins.map(({ item, communityScore }) => {
       const createdAt = item.createdAt ? new Date(item.createdAt) : null;
       const ageStr = createdAt ? formatRelativeAge(createdAt) : item.age || "1h";
@@ -164,7 +156,7 @@ export default function TrendingCommunity({
 
   if (isLoading) {
     return (
-      <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[0.7px] w-full rounded-xl lg:w-auto lg:flex-1">
+      <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[1px] w-full rounded-xl lg:w-auto lg:flex-1">
         <Card className="border-none p-3 bg-[#010101] w-full">
           <CardHeader className="px-0">
             <CardTitle className="flex items-center gap-1 text-base font-bold">
@@ -189,7 +181,7 @@ export default function TrendingCommunity({
   // If no data available, show empty state
   if (communityData.length === 0) {
     return (
-      <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[0.7px] w-full rounded-xl xl:w-auto xl:flex-1">
+      <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[1px] w-full rounded-xl xl:w-auto xl:flex-1">
         <Card className="border-none p-3 bg-[#010101] w-full">
           <CardHeader className="px-0">
             <CardTitle className="flex items-center gap-1 text-base font-bold">
@@ -213,7 +205,7 @@ export default function TrendingCommunity({
     );
   }
   return (
-    <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[0.7px] w-full rounded-xl xl:w-auto xl:flex-1">
+    <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[1px] w-full rounded-xl xl:w-auto xl:flex-1">
       <Card className="border-none p-3 bg-[#010101] w-full">
         <CardHeader className="px-0">
           <CardTitle className="flex items-center gap-1 text-base font-bold">

@@ -20,7 +20,7 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="mt-8 border-t border-neutral-800 pt-4 text-base text-[#FFFFFF99] hidden sm:flex flex-col sm:flex-row justify-between items-center gap-2">
+      <div className="my-8 px-2 border-t border-neutral-800 pt-4 text-base text-[#FFFFFF99] hidden sm:flex flex-col sm:flex-row justify-between items-center gap-2">
         <p>© 2025 CTO Marketplace, Inc.</p>
         <p className='text-[#FFFFFF99] text-center'>
           Listing your project? <a href="hello@CTOmarketplace.com" className="underline text-white">hello@CTOmarketplace.com</a>

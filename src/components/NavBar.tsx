@@ -15,7 +15,7 @@ import WatchList from "./WatchList";
 import Notifications from "./Notifications";
 import LoginButton from "./LoginButton";
 import HarvestGrape from "./HarvestGrape";
-import { useCircleAuth } from "@/hooks/useCircleAuth";
+import { usePrivyAuth } from "@/hooks/usePrivyAuth";
 // import { useWallet } from "@aptos-labs/wallet-adapter-react";
 // import { useKeylessAccounts } from "../core/useKeylessAccounts";
 import {
@@ -40,7 +40,7 @@ const ExploreCategoryLinks = [
 ]
 
 export default function NavBar() {
-  const { isAuthenticated } = useCircleAuth();
+  const { isAuthenticated } = usePrivyAuth();
   // const { connected } = useWallet();
   // const { activeAccount } = useKeylessAccounts();
   const [isDropdownOpen, setDropdownOpen] = useState(false);
@@ -73,7 +73,7 @@ export default function NavBar() {
                     }].map((item) => (
                       <NavigationMenuLink key={item.label} className="px-0">
                         <div
-                          className="rounded-lg p-[0.8px] transition-all duration-300"
+                          className="rounded-lg p-[1px] transition-all duration-300"
                           style={{ background: "transparent" }}
                           onMouseEnter={(e) => {
                             e.currentTarget.style.background =
@@ -99,7 +99,7 @@ export default function NavBar() {
                     ))}
                     <NavigationMenuLink className="px-0">
                       <div
-                        className="rounded-lg p-[0.8px] transition-all duration-300"
+                        className="rounded-lg p-[1px] transition-all duration-300"
                         style={{ background: "transparent" }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.background =
@@ -134,7 +134,7 @@ export default function NavBar() {
                       {ExploreCategoryLinks.map((category, index) => (
                         <NavigationMenuLink key={index} asChild>
                           <div
-                            className="rounded-lg group p-[0.8px] transition-all duration-300"
+                            className="rounded-lg group p-[1px] transition-all duration-300"
                             style={{
                               background: "transparent",
                               borderRadius: "8px",

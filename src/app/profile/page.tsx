@@ -1,47 +1,98 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useCircleAuth } from '../../hooks/useCircleAuth';
-import { useCircleWallet } from '../../hooks/useCircleWallet';
-import { BalanceSection } from '../../components/Profile/BalanceSection';
-import { WalletInfo } from '../../components/Profile/WalletInfo';
-import { QRCodeDisplay } from '../../components/Wallet/QRCodeDisplay';
-import { TopUpSection } from '../../components/Profile/TopUpSection';
-import { WithdrawSection } from '@/components/Profile/WithdrawSection';
-import { ActivitiesSection } from '../../components/Profile/ActivitiesSection';
+import { usePrivy } from '@privy-io/react-auth';
+import { usePrivyAuth } from '@/hooks/usePrivyAuth';
+import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
+import { getMovementWallet } from '@/lib/movement-wallet';
+import axios from 'axios';
+import { BackendWallet, PrivyWalletAccount, PrivyUser } from '@/types/privy';
+
+// Helper function to get wallet chain info
+function getWalletChainInfo(wallet: BackendWallet | PrivyWalletAccount) {
+  const chainType = 'chainType' in wallet ? wallet.chainType : undefined;
+  const blockchain = 'blockchain' in wallet ? wallet.blockchain : undefined;
+  return { chainType, blockchain };
+}
 
 export default function ProfilePage() {
-  const { user, logout, isLoading: authLoading, isAuthenticated } = useCircleAuth();
-  const { 
-    wallet, 
-    balances, 
-    isLoading: walletLoading, 
-    refreshBalances,
-    error: walletError,
-    clearError
-  } = useCircleWallet(user?.id);
+  const router = useRouter();
+  const { user, authenticated, ready } = usePrivy();
+  const { logout } = usePrivyAuth();
+  const [allWallets, setAllWallets] = useState<BackendWallet[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [showQRModal, setShowQRModal] = useState(false);
-
-  // Check if user is actually authenticated
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      // Force redirect to login if not authenticated
-      window.location.href = '/';
+    if (ready && !authenticated) {
+      router.push('/');
     }
-  }, [authLoading, isAuthenticated]);
+  }, [ready, authenticated, router]);
 
-  const handleRefreshBalances = async () => {
+  useEffect(() => {
+    if (authenticated && user) {
+      loadWallets();
+    }
+  }, [authenticated, user]);
+
+  const loadWallets = async () => {
+    setIsLoading(true);
     try {
-      await refreshBalances();
-      toast.success('Balances refreshed!');
-    } catch {
-      toast.error('Failed to refresh balances');
+      // First, try to load from localStorage
+      const walletsJson = localStorage.getItem('cto_user_wallets');
+      if (walletsJson) {
+        try {
+          const wallets = JSON.parse(walletsJson);
+          setAllWallets(wallets);
+          setIsLoading(false);
+          return;
+        } catch (parseError) {
+          console.error('Failed to parse wallets from localStorage:', parseError);
+        }
+      }
+
+      // Fallback: Fetch from backend
+      const token = localStorage.getItem('cto_auth_token');
+      const userId = localStorage.getItem('cto_user_id');
+      
+      if (!token || !userId) {
+        setIsLoading(false);
+        return;
+      }
+
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await axios.get(
+        `${backendUrl}/api/auth/privy/wallets`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (response.data.success && response.data.wallets) {
+        const wallets = response.data.wallets;
+        setAllWallets(wallets);
+        localStorage.setItem('cto_user_wallets', JSON.stringify(wallets));
+      }
+    } catch (error) {
+      console.error('Failed to load wallets:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  if (authLoading) {
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
+  if (!ready || isLoading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
@@ -52,16 +103,25 @@ export default function ProfilePage() {
     );
   }
 
-  if (!isAuthenticated || !user) {
+  if (!authenticated || !user) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto"></div>
-          <p className="mt-4 text-white">Redirecting to login...</p>
+          <p className="text-white">Please login to view your profile</p>
         </div>
       </div>
     );
   }
+
+  // Combine Privy wallets with backend wallets
+  // Privy's user.linkedAccounts is LinkedAccountWithMetadata[], so we need to filter and cast
+  const privyWallets = user?.linkedAccounts?.filter(
+    (account) => account.type === 'wallet'
+  ) as PrivyWalletAccount[] || [];
+  const displayWallets = allWallets.length > 0 ? allWallets : privyWallets;
+  const email = user?.email?.address || user?.wallet?.address || 'Privy User';
+  // Cast user to PrivyUser for getMovementWallet
+  const movementWallet = getMovementWallet(user as PrivyUser);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -71,104 +131,109 @@ export default function ProfilePage() {
           <div className="flex justify-between items-center py-6">
             <div>
               <h1 className="text-3xl font-bold text-white">Profile</h1>
-              <p className="text-gray-400">Welcome back, {user.email}</p>
+              <p className="text-gray-400">Welcome back, {email}</p>
+              <p className="text-sm text-gray-500 mt-1">Privy ID: {user?.id}</p>
             </div>
-            <div className="flex space-x-3">
-              <button
-                onClick={() => setShowQRModal(true)}
-                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
-              >
-                Show QR Code
-              </button>
-              <button
-                onClick={handleRefreshBalances}
-                disabled={walletLoading}
-                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors disabled:opacity-50"
-              >
-                {walletLoading ? 'Refreshing...' : 'Refresh Balances'}
-              </button>
-              <button
-                onClick={logout}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-              >
-                Logout
-              </button>
-            </div>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+            >
+              Logout
+            </button>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Wallet Info & QR Code */}
-          <div className="lg:col-span-1 space-y-6">
-            <WalletInfo wallet={wallet} onShowQR={() => setShowQRModal(true)} />
-            
-            {/* QR Code Button */}
-            {wallet && (
-              <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
-                <button
-                  onClick={() => setShowQRModal(true)}
-                  className="w-full cta-gradient text-white py-3 px-4 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105"
-                >
-                  Show QR Code
-                </button>
-              </div>
-            )}
-          </div>
+        {/* Wallets Section */}
+        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
+          <h2 className="text-2xl font-bold text-white mb-4">💼 Your Wallets</h2>
+          
+          {displayWallets.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-400 mb-4">No wallets found</p>
+              <p className="text-sm text-gray-500">Wallets should be created automatically on login</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {displayWallets.map((wallet: BackendWallet | PrivyWalletAccount, index: number) => {
+                const { chainType, blockchain } = getWalletChainInfo(wallet);
+                const chain = (chainType || blockchain || '').toLowerCase();
+                const chainUpper = (chainType || blockchain || '').toUpperCase();
+                
+                return (
+                <div key={index} className="border border-gray-700 rounded-lg p-4 hover:border-purple-500 transition-colors">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-2xl">
+                          {(chain === 'ethereum' || chainUpper === 'ETHEREUM') && '⟠'}
+                          {(chain === 'solana' || chainUpper === 'SOLANA') && '◎'}
+                          {(chain === 'base' || chainUpper === 'BASE') && '🔵'}
+                          {(chain === 'polygon' || chainUpper === 'POLYGON') && '🟣'}
+                          {(chain === 'aptos' || chainUpper === 'APTOS' || chainUpper === 'MOVEMENT') && '🅰️'}
+                        </span>
+                        <span className="font-semibold text-white capitalize">
+                          {chainUpper === 'MOVEMENT' 
+                            ? 'Movement Wallet' 
+                            : (chain || 'Unknown') + ' Wallet'}
+                        </span>
+                        {index === 0 && (
+                          <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                            Primary
+                          </span>
+                        )}
+                      </div>
+                      <div className="font-mono text-sm text-gray-400 break-all">
+                        {wallet.address}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(wallet.address);
+                        toast.success('Address copied!');
+                      }}
+                      className="bg-gray-800 text-white px-3 py-2 rounded-lg hover:bg-gray-700 transition-colors text-sm ml-4"
+                    >
+                      📋 Copy
+                    </button>
+                  </div>
+                </div>
+                );
+              })}
+            </div>
+          )}
 
-          {/* Right Column - Balances & Actions */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Balance Section */}
-            <BalanceSection 
-              balances={balances} 
-              isLoading={walletLoading}
-              onRefresh={handleRefreshBalances}
-              walletError={walletError}
-              clearError={clearError}
-            />
+          {/* Movement Wallet Info */}
+          {movementWallet && (
+            <div className="mt-6 p-4 bg-gradient-to-r from-green-900/20 to-emerald-900/20 border border-green-700 rounded-lg">
+              <h3 className="font-semibold text-green-400 mb-2 flex items-center gap-2">
+                <span className="text-2xl">🅰️</span>
+                <span>Movement Wallet</span>
+              </h3>
+              <p className="text-sm text-green-300 mb-2">
+                ✅ Your Movement wallet is ready!
+              </p>
+              <p className="text-xs text-green-400 font-mono break-all bg-black/50 p-2 rounded">
+                {movementWallet.address}
+              </p>
+            </div>
+          )}
+        </div>
 
-            {/* Top Up Section */}
-            {wallet && <TopUpSection wallet={wallet} />}
-
-            {/* Withdraw Section */}
-            {wallet && <WithdrawSection wallet={wallet} balances={balances} />}
-
-            {/* Activities Section */}
-            {wallet && <ActivitiesSection wallet={wallet} />}
-          </div>
+        {/* Info Section */}
+        <div className="bg-blue-900/20 border border-blue-800 rounded-lg p-6">
+          <h3 className="font-semibold text-blue-300 mb-2">💡 About Your Wallets</h3>
+          <ul className="text-sm text-gray-300 space-y-2">
+            <li>✅ All wallets are managed securely by Privy</li>
+            <li>✅ Embedded wallets work across all devices</li>
+            <li>✅ You can also connect external wallets (MetaMask, Phantom, etc.)</li>
+            <li>✅ Private keys are never stored on our servers</li>
+            <li>✅ Multi-chain support: Ethereum, Solana, Base, Polygon, Movement</li>
+          </ul>
         </div>
       </div>
-
-      {/* QR Code Modal */}
-      {showQRModal && wallet && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border border-gray-800 w-96 shadow-lg rounded-md bg-gray-900">
-            <div className="mt-3">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-white">
-                  Fund Your Wallet
-                </h3>
-                <button
-                  onClick={() => setShowQRModal(false)}
-                  className="text-gray-400 hover:text-white"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              
-              <QRCodeDisplay
-                data={{ address: wallet.address }}
-                title="Your Wallet Address"
-                description="Scan this QR code or copy the address to send funds to your wallet"
-              />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

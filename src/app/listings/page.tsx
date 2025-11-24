@@ -19,7 +19,7 @@ export default function Listings() {
   useEffect(() => {
     const fetchListings = async () => {
       setIsLoading(true);
-      const base = process.env.NEXT_PUBLIC_BACKEND_URL || "https://cto-backend-production-28e3.up.railway.app";
+      const base = process.env.NEXT_PUBLIC_BACKEND_URL;
       
       // Fetch from all chains initially
       const url = `${base}/api/listing/listings?category=MEME&sort=updatedAt%3Adesc&limit=10000&chain=SOLANA`;
@@ -31,10 +31,6 @@ export default function Listings() {
           return;
         }
         const data: ApiListingResponse = await res.json();
-
-        console.log('API Response:', data);
-        console.log('API Items count:', data.items?.length || 0);
-        console.log('First few items:', data.items?.slice(0, 3));
         setApiData(data.items || []);
         setIsLoading(false);
       } catch (e) {

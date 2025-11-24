@@ -19,7 +19,7 @@ export default function NavDropdownMenu() {
       <DropdownMenuContent align="start" className="bg-[#010101] text-sm font-normal text-[#FFFFFFB2] w-76 !border-2 !border-[#86868630] p-4">
         <div>
           <div
-            className="rounded-lg group p-[0.8px] transition-all duration-300"
+            className="rounded-lg group p-[1px] transition-all duration-300"
             style={{
               background: "transparent",
               borderRadius: "8px",
@@ -40,15 +40,15 @@ export default function NavDropdownMenu() {
                 transition: "all 0.3s ease-in-out",
               }}
             >
-              <Link href="#" className="block w-full">
+              {/* <Link href="#" className="block w-full">
                 Docs
-              </Link>
+              </Link> */}
             </div>
           </div>
         </div>
         <div>
           <div
-            className="rounded-lg group p-[0.8px] transition-all duration-300"
+            className="rounded-lg group p-[1px] transition-all duration-300"
             style={{
               background: "transparent",
               borderRadius: "8px",
@@ -80,7 +80,7 @@ export default function NavDropdownMenu() {
         </div>
         <div>
           <div
-            className="rounded-lg group p-[0.8px] transition-all duration-300"
+            className="rounded-lg group p-[1px] transition-all duration-300"
             style={{
               background: "transparent",
               borderRadius: "8px",
@@ -112,7 +112,7 @@ export default function NavDropdownMenu() {
         </div>
         <div>
           <div
-            className="rounded-lg group p-[0.8px] transition-all duration-300"
+            className="rounded-lg group p-[1px] transition-all duration-300"
             style={{
               background: "transparent",
               borderRadius: "8px",
@@ -145,7 +145,7 @@ export default function NavDropdownMenu() {
         
         <div>
           <div
-            className="rounded-lg group p-[0.8px] transition-all duration-300"
+            className="rounded-lg group p-[1px] transition-all duration-300"
             style={{
               background: "transparent",
               borderRadius: "8px",
@@ -178,7 +178,7 @@ export default function NavDropdownMenu() {
 
         <div>
           <div
-            className="rounded-lg group p-[0.8px] transition-all duration-300"
+            className="rounded-lg group p-[1px] transition-all duration-300"
             style={{
               background: "transparent",
               borderRadius: "8px",

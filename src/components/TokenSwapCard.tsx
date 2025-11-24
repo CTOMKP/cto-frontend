@@ -21,7 +21,7 @@ export default function TokenSwapCard() {
   const pathname = usePathname();
 
   return (
-    <div className={`${pathname === '/' ? 'hidden' : ''}`}>
+    <div className={`${pathname === '/' || pathname === '/faq' ? 'hidden' : ''}`}>
       <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[1px] rounded-2xl inline-block">
         <DialogTrigger className="bg-black cursor-pointer text-white size-15 text-sm rounded-2xl flex items-center justify-center hover:opacity-90 transition">
           <Image src="/emoji-icons/grape.svg" className="size-6.5" alt="grape icon" width={26} height={26} />

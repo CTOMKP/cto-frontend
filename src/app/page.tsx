@@ -56,7 +56,7 @@ export default function Home() {
   React.useEffect(() => {
     const fetchStats = async () => {
       try {
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://cto-backend-production-28e3.up.railway.app';
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
         const response = await fetch(`${backendUrl}/api/stats/memecoin`);
         
         if (response.ok) {
@@ -94,7 +94,7 @@ export default function Home() {
     setIsSubmitting(true);
 
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://cto-backend-production-28e3.up.railway.app';
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
       
       const response = await fetch(`${backendUrl}/api/waitlist`, {
         method: 'POST',
@@ -158,7 +158,7 @@ export default function Home() {
       </div>
     <section className='mb-[300px]'>
       <div className='relative px-5 sm:px-0 sm:max-w-[80%] mx-auto bg-center bg-no-repeat bg-contain'>
-        <Image src="/line-group.png" alt="line group" width={1024} height={1024} className='absolute px-5 sm:px-0 top-60 sm:top-50 left-0' />
+        <Image src="/line-group.png" alt="line group" width={1024} height={1024} className='absolute px-5 sm:px-0 top-60 sm:top-50 left-0 w-full' />
       <div className='max-w-[557px] text-wrap pt-14 sm:pt-[117px]'>
         <h3 className='leading-[140%] text-2xl sm:text-[40px]'>Liquidity In, Liquidity Out. Communities Left Behind.</h3>
         <p className='text-white/80 mt-4 mb-7 sm:mb-[70px]'>Launchpads are built for launches, not longterm growth</p>
@@ -183,7 +183,7 @@ export default function Home() {
     <section>
       <h2 className='text-[24px] max-w-[258px] sm:max-w-none mb-3 mx-auto leading-[120%] sm:text-[40px] text-center'>Why the community deserves its own market</h2>
       <p className='leading-[150%] text-[#D1D1D1] text-center max-w-[831px] mx-auto'>We enable communities mature in DeFi by providing the platform that boost your visibility, empowering communities to grow. Discover driven communities with value and thrive.</p>
-      <Image src="/why-img.png" alt="why ctomarkelplace" width={672} height={1280} className='mx-auto w-[90%] hidden sm:block mt-20 mb-25' />
+      <Image src="/why-img.svg" alt="why ctomarkelplace" width={672} height={1280} className='mx-auto w-[90%] hidden sm:block mb-25' />
       <Image src="/why-img-mobile.png" alt="why ctomarkelplace" width={350} height={1210} className='mx-auto mt-22 mb-12 block sm:hidden' />
     </section>
 
@@ -207,13 +207,13 @@ export default function Home() {
     </div>
     </section>
 
-    <section className='flex flex-col-reverse sm:flex-row justify-center items-center gap-10 mx-5 sm:mx-[50px] md:mx-[105px] my-16'>
+    <section className='flex flex-col-reverse sm:flex-row justify-between items-center gap-10 mx-5 sm:mx-[50px] md:mx-[105px] my-16'>
       <div>
-        <h3 className='font-semibold text-[42px] mx-w-[663px] mb-6 text-wrap'>Every grape has a role. Together, we build the vine.</h3>
+        <h3 className='font-semibold text-[42px] max-w-[663px] mb-6 text-wrap'>Every grape has a role. Together, we build the vine.</h3>
         <Button className='font-medium py-3.5 px-5 cta-gradient rounded-[25px]'>Join the community</Button>
       </div>
       
-      <div className="bg-gradient-to-br from-[#FF9631] via-[#F04866] to-[#FF9631] rounded-3xl p-[0.7px]">
+      <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] rounded-3xl p-[1px]">
         <div className="bg-black rounded-3xl p-2 size-[350px] md:size-[350px] lg:size-[500px] sm:size-[300px]">
           <Image src="/card-stack.png" alt="cto marketplace cards" width={478} height={235} className='rounded-2xl' />
         </div>

@@ -20,7 +20,7 @@ const images = [
 
 export default function Breadcrumbs() {
   return (
-    <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[0.7px] w-full rounded-xl lg:max-w-[300px]">
+    <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[1px] w-full rounded-xl lg:max-w-[300px]">
       <Card className="w-full border-none p-3 bg-[#010101]">
         <CardHeader className="px-0">
           <CardTitle className="flex items-center gap-1 text-base font-bold">
