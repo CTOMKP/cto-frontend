@@ -43,6 +43,13 @@ const cardData = [
   },
 ];
 
+// Removed unused forProjectsData - can be restored if needed later
+
+const backendBaseUrl =
+  process.env.NEXT_PUBLIC_API_URL ||
+  process.env.NEXT_PUBLIC_BACKEND_URL ||
+  'https://api.ctomarketplace.com';
+
 export default function Home() {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,6 +57,8 @@ export default function Home() {
     dailyTokensDeployed: 10000,
     dailyGraduates: 80,
     topTokensLast7Days: 8,
+    lastUpdated: '',
+    timeframe: '24 hours',
   });
 
   // Fetch memecoin stats on component mount and every 30 seconds
@@ -65,27 +74,26 @@ export default function Home() {
             dailyTokensDeployed: data.dailyTokensDeployed || 10000,
             dailyGraduates: data.dailyGraduates || 80,
             topTokensLast7Days: data.topTokensLast7Days || 8,
+            lastUpdated: data.lastUpdated || new Date().toISOString(),
+            timeframe: data.timeframe || '24 hours',
           });
         }
       } catch (error) {
         console.error('Failed to fetch stats:', error);
-        // Keep fallback values
       }
     };
 
     fetchStats(); // Initial fetch
-    
+
     // Auto-refresh Dune stats every 30 seconds
-    const interval = setInterval(() => {
-      fetchStats();
-    }, 30000);
+    const interval = setInterval(fetchStats, 30000);
 
     return () => clearInterval(interval); // Cleanup on unmount
   }, []);
 
   const handleWaitlistSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !email.includes('@')) {
       toast.error('Please enter a valid email address');
       return;
@@ -131,7 +139,7 @@ export default function Home() {
       <div className='text-center m-5 mt-20 flex flex-col items-center justify-center'>
         <h1 className='text-[50px] sm:text-[70px] text-left sm:text-center text-wrap max-w-[606px] mx-auto leading-[120%]'>Revive. Rebuild. Rememe</h1>
         <p className='text-lg text-left md:text-center text-[#FFFFFFCC] text-wrap max-w-[606px] mx-auto'>Discover, explore, and build with high value communities</p>
-        <form onSubmit={handleWaitlistSubmit} className="flex relative z-100 justify-center items-center gap-4 max-w-md mx-auto mt-[30px]">
+        <form onSubmit={handleWaitlistSubmit} className="flex justify-center items-center gap-4 max-w-md mx-auto mt-[30px]">
         <div>
         <Input
           type="email"
@@ -216,8 +224,8 @@ export default function Home() {
       <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] rounded-3xl p-[1px]">
         <div className="bg-black rounded-3xl p-2 size-[350px] md:size-[350px] lg:size-[500px] sm:size-[300px]">
           <Image src="/card-stack.png" alt="cto marketplace cards" width={478} height={235} className='rounded-2xl' />
-        </div>
       </div>
+    </div>
     </section>
 
     <section className='relative sm:overflow-hidden'>
@@ -229,8 +237,8 @@ export default function Home() {
         <Button className='bg-[#222222] text-white rounded-full h-11 w-[114px]'>Get started</Button>
         <Button className='bg-white text-[#222222] rounded-full h-11 w-[114px]'>Learn more</Button>
       </div>
-    </div>
       </div>
+    </div>
       <Image src="/Frame 1618869528.png" alt="cto marketplace" width={600} height={600} className='absolute h-full ml-16 top-0 right-0 hidden sm:block' />
       <Image src="/cta-mobile bg v1.png" alt="cto marketplace" width={300} height={300} className='absolute w-full right-0 left-0  -top-10  sm:hidden' />
     </section>
