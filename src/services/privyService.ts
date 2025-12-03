@@ -10,9 +10,25 @@ class PrivyService {
   /**
    * Sync Privy user with CTO backend
    * @param privyToken - Privy authentication token from frontend
+   * @param retryCount - Current retry attempt (for wallet creation timing)
    * @returns User data and CTO JWT token
    */
-  async syncUser(privyToken: string) {
+  async syncUser(privyToken: string, retryCount: number = 0): Promise<{
+    success: boolean;
+    token: string;
+    user: {
+      id: number;
+      email: string;
+      walletAddress?: string;
+      walletsCount: number;
+    };
+    wallets: Array<{
+      address: string;
+      chainType: string;
+      walletClient: string;
+      isPrimary: boolean;
+    }>;
+  }> {
     try {
       const response = await axios.post(
         `${API_BASE}/api/auth/privy/sync`,
@@ -37,10 +53,24 @@ class PrivyService {
         // Store wallets if available
         if (response.data.wallets && response.data.wallets.length > 0) {
           localStorage.setItem('cto_user_wallets', JSON.stringify(response.data.wallets));
+          console.log('✅ Privy user synced with CTO backend');
+          return response.data;
+        } else {
+          // No wallets yet - Privy might still be creating them
+          console.log(`⏳ User synced but no wallets yet (attempt ${retryCount + 1}/5)`);
+          
+          // Retry up to 5 times with exponential backoff
+          if (retryCount < 5) {
+            const delay = Math.min(1000 * Math.pow(2, retryCount), 8000); // Max 8 seconds
+            console.log(`Retrying in ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return this.syncUser(privyToken, retryCount + 1);
+          } else {
+            // After 5 retries, accept the user without wallets
+            console.warn('⚠️ User synced but Privy has not created wallets yet. User can continue but may need to refresh.');
+            return response.data;
+          }
         }
-
-        console.log('✅ Privy user synced with CTO backend');
-        return response.data;
       }
 
       throw new Error('Failed to sync user');
