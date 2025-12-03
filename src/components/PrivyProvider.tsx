@@ -53,16 +53,6 @@ export default function PrivyProvider({ children }: PrivyProviderProps) {
           logo: '/logo.png',
           showWalletLoginFirst: true,
         },
-        embeddedWallets: {
-          createOnLogin: 'all-users', // Automatically create embedded wallets for all users
-          requireUserPasswordOnCreate: false, // Don't require password for wallet creation
-        },
-        supportedChains: [
-          // Ethereum mainnet
-          { id: 1, name: 'Ethereum' },
-          // Solana mainnet
-          { id: 900, name: 'Solana' },
-        ],
       }}
     >
       {children}
