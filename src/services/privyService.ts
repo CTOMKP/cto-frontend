@@ -67,10 +67,24 @@ class PrivyService {
           if (currentWallets !== newWalletsJson) {
             localStorage.setItem('cto_user_wallets', newWalletsJson);
           }
+          console.log('✅ Privy user synced with CTO backend');
+          return response.data;
+        } else {
+          // No wallets yet - Privy might still be creating them
+          console.log(`⏳ User synced but no wallets yet (attempt ${retryCount + 1}/5)`);
+          
+          // Retry up to 5 times with exponential backoff
+          if (retryCount < 5) {
+            const delay = Math.min(1000 * Math.pow(2, retryCount), 8000); // Max 8 seconds
+            console.log(`Retrying in ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return this.syncUser(privyToken, retryCount + 1);
+          } else {
+            // After 5 retries, accept the user without wallets
+            console.warn('⚠️ User synced but Privy has not created wallets yet. User can continue but may need to refresh.');
+            return response.data;
+          }
         }
-
-        console.log('✅ Privy user synced with CTO backend');
-        return response.data;
       }
 
       throw new Error('Failed to sync user');
