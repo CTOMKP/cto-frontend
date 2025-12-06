@@ -235,7 +235,7 @@ export default function WatchList() {
     <DropdownMenu>
       <DropdownMenuTrigger className="flex justify-center items-center rounded-lg size-13 border-[0.2px] border-[#FFFFFF20]">
         <span className="bg-[#FFFFFF0D] rounded-sm size-7 flex items-center justify-center">
-          <Image src="/watchlist.svg" alt="watchlist" width={15} height={15} />
+          <Image loading="lazy" src="/watchlist.svg" alt="watchlist" width={15} height={15} />
         </span>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="bg-[#010101] text-white p-6 w-[534px] border-2 border-[#86868630]">
@@ -282,6 +282,7 @@ export default function WatchList() {
                   <div className="flex justify-end">
                     <Button className="p-1">
                       <Image
+                        loading="lazy"
                         src="/watchlist-active.svg"
                         alt="watchlist"
                         className="bg-transparent"
@@ -300,9 +301,11 @@ export default function WatchList() {
                         alt="default-coin"
                         width={40}
                         height={40}
+                        loading="lazy"
                       />
                       <Image
                         className="absolute bottom-0 left-0 size-[19px]"
+                        loading="lazy"
                         src="/homepage/trending-coins/default-chain.png"
                         alt="trending-coins"
                         width={19}
@@ -316,18 +319,21 @@ export default function WatchList() {
                           {coin.name}
                         </span>
                         <Image
+                          loading="lazy"
                           src="/homepage/trending-coins/whale.svg"
                           alt="whale"
                           width={10}
                           height={8.5}
                         />
                         <Image
+                          loading="lazy"
                           src="/homepage/trending-coins/age.svg"
                           alt="age"
                           height={9.5}
                           width={9}
                         />
                         <Image
+                          loading="lazy"
                           src="/homepage/trending-coins/mindshare.svg"
                           alt="mindshare"
                           height={10.79}
@@ -340,6 +346,7 @@ export default function WatchList() {
                         </span>
                         <Button className="p-0 h-fit w-fit">
                           <Image
+                            loading="lazy"
                             src="/copy.svg"
                             alt="copy"
                             width={7.85}
@@ -347,7 +354,7 @@ export default function WatchList() {
                           />
                         </Button>
                         <Link href="#">
-                          <Image src="/x.svg" alt="x" height={8} width={8} />
+                          <Image loading="lazy"src="/x.svg" alt="x" height={8} width={8} />
                         </Link>
                         <Link href="#">
                           <Image
@@ -355,6 +362,7 @@ export default function WatchList() {
                             alt="website"
                             width={7.5}
                             height={7.5}
+                            loading="lazy"
                           />
                         </Link>
                       </div>
@@ -405,13 +413,14 @@ export default function WatchList() {
                     <span className={`text-xs font-medium`}>
                       ${compactNumber(coin.marketCap)}
                     </span>
-                    <span className="flex font-medium items-center text-[10px] text-[#FF9631]">
+                    <span className="flex font-medium items-center text-[10px]">
                       <span>${compactNumber(coin.liquidity)}</span>
                       <Image
-                        src="/emoji-icons/gaining-traction.svg"
+                        src="/lock.svg"
                         alt="gaining-traction"
                         width={8}
                         height={8}
+                        loading="lazy"
                       />
                     </span>
                   </div>

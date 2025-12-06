@@ -24,7 +24,7 @@ export default function TokenSwapCard() {
     <div className={`${pathname === '/' || pathname === '/faq' ? 'hidden' : ''}`}>
       <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[1px] rounded-2xl inline-block">
         <DialogTrigger className="bg-black cursor-pointer text-white size-15 text-sm rounded-2xl flex items-center justify-center hover:opacity-90 transition">
-          <Image src="/emoji-icons/grape.svg" className="size-6.5" alt="grape icon" width={26} height={26} />
+          <Image loading="lazy" src="/emoji-icons/grape.svg" className="size-6.5" alt="grape icon" width={26} height={26} />
         </DialogTrigger>
       </div>
       <DialogContent className="bg-[#010101] border-2 border-[#86868630]">
@@ -70,6 +70,7 @@ export default function TokenSwapCard() {
                   />
                   <div className="flex rounded-[26px] bg-white/2 p-2 justify-center items-center gap-2">
                     <Image
+                      loading="lazy"
                       width={24}
                       height={24}
                       className="size-6 rounded-full"
@@ -121,6 +122,7 @@ export default function TokenSwapCard() {
 
                   <Button className="p-0 bg-[#FF4A15005] py-[5px] w-10 px-[13px] rounded-full">
                     <Image
+                      loading="lazy"
                       src={"/convert.svg"}
                       alt={"convert"}
                       width={14}
@@ -134,6 +136,7 @@ export default function TokenSwapCard() {
                 <Button className="absolute -top-3.5 z-10 bg-[#010101] border-[0.2px] border-white/20 size-13 p-0 rounded-full">
                   <span className="size-7 rounded-full flex justify-center items-center">
                     <Image
+                      loading="lazy"
                       src={"/switch-diagonal.svg"}
                       alt={"switch"}
                       width={16}
@@ -173,6 +176,7 @@ export default function TokenSwapCard() {
                   />
                   <div className="flex rounded-[26px] bg-white/2 p-2 justify-center items-center gap-2">
                     <Image
+                      loading="lazy"
                       width={24}
                       height={24}
                       className="size-6 rounded-full"
@@ -198,6 +202,7 @@ export default function TokenSwapCard() {
                   alt={"panora-logo"}
                   width={13}
                   height={13}
+                  loading="lazy"
                 />
                 <p className="text-xs text-white/70">
                   Powered by Panora Exchange

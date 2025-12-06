@@ -44,6 +44,7 @@ export default function HarvestGrape() {
           } hover:scale-125 hover:rotate-3 cursor-pointer`}
         >
           <Image 
+            loading="lazy"
             src="/kurator.png" 
             alt="kurator" 
             className='size-[36px] transition-transform duration-300 hover:scale-110' 

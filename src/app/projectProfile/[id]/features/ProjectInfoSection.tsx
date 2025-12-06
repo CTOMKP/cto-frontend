@@ -43,7 +43,7 @@ export default function ProjectInfoSection({
                         projectData?.metadata?.market?.liquidityUsd ||
                         3000000
                     )}{" "}
-                    <Image src="/lock.svg" alt="lock" width={24} height={24} />
+                    <Image loading="lazy" src="/lock.svg" alt="lock" width={24} height={24} />
                   </>
                 }
               />
@@ -65,6 +65,7 @@ export default function ProjectInfoSection({
                       projectData?.metadata?.market?.riskScore ||
                       0}{" "}
                     <Image
+                      loading="lazy"
                       src={`${
                         (projectData?.riskScore ||
                           projectData?.metadata?.market?.riskScore ||
@@ -90,6 +91,7 @@ export default function ProjectInfoSection({
                 value={
                   <>
                     <Image
+                      loading="lazy"
                       src={
                         (projectData?.communityScore ||
                           projectData?.metadata?.market?.communityScore ||
@@ -160,6 +162,7 @@ export default function ProjectInfoSection({
                   <>
                     Burned
                     <Image
+                      loading="lazy"
                       src="/degen-audit/3.svg"
                       alt="good"
                       width={24}
@@ -184,6 +187,7 @@ export default function ProjectInfoSection({
                   <>
                     Low risk{" "}
                     <Image
+                      loading="lazy"
                       src="/degen-audit/3.svg"
                       alt="good"
                       width={24}

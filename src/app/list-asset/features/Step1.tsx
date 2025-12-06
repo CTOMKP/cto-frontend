@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { Check, Ellipsis, Search, Zap } from 'lucide-react'
 import { usePrivyAuth } from '@/hooks/usePrivyAuth'
@@ -66,9 +66,9 @@ export default function Step1({
   const [contractAddress, setContractAddress] = useState('');
   
   const { isAuthenticated, getAccessToken } = usePrivyAuth();
-  const [token, setToken] = React.useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (isAuthenticated) {
       getAccessToken().then(t => setToken(t || null)).catch(() => setToken(null));
     }
@@ -238,7 +238,7 @@ export default function Step1({
             // Scanning UI
             <>
               <DialogHeader>
-                <div className='flex justify-center mb-6'><span className='size-[100px] flex justify-center items-center rounded-full bg-[#FBA43A]/20'><Image src={'/analyze-token.svg'} alt={'analyze-token'} width={34} height={44}/></span></div>
+                <div className='flex justify-center mb-6'><span className='size-[100px] flex justify-center items-center rounded-full bg-[#FBA43A]/20'><Image loading="lazy" src={'/analyze-token.svg'} alt={'analyze-token'} width={34} height={44}/></span></div>
                 <DialogTitle className="font-bold text-center text-[22.5px] mb-2">Analysing token</DialogTitle>
                 <DialogDescription className="text-xs text-center text-white/70 mb-6">
                 Running comprehensive security and risk assessment  
@@ -249,7 +249,7 @@ export default function Step1({
                     {info.map((info, index) => (
                       <div className="flex items-center justify-between" key={index}>
                         <div className='flex items-center gap-3'>
-                          <Image src={info.image} alt={info.description} width={28} height={28} />
+                          <Image loading="lazy" src={info.image} alt={info.description} width={28} height={28} />
                           <p className='text-xs '>{info.description}</p>
                         </div>
 
@@ -294,7 +294,7 @@ export default function Step1({
                       <p className='text-[19px] font-bold text-[#FF5900]'>Sprout </p>
                     </div>
                     <span className='size-7 rounded-lg bg-[#FF5900]/20 flex justify-center items-center'>
-                      <Image src={'/project-categories/sprout.svg'} alt={'sprout'} width={16} height={16} />
+                      <Image loading="lazy" src={'/project-categories/sprout.svg'} alt={'sprout'} width={16} height={16} />
                     </span>
                   </div>
                   
@@ -304,7 +304,7 @@ export default function Step1({
                       <p className='text-[19px] font-bold'><span className='text-[#0B8700]'>85</span>/100</p>
                     </div>
                     <span className='size-7 rounded-lg bg-[#15FF00]/20 flex justify-center items-center'>
-                      <Image src={'/risk-score/good.svg'} alt={'sprout'} width={12} height={12} />
+                      <Image loading="lazy" src={'/risk-score/good.svg'} alt={'sprout'} width={12} height={12} />
                     </span>
                   </div>
                 </div>
@@ -340,7 +340,7 @@ export default function Step1({
                     <h3 className='text-white/50 font-bold text-xs'>Lp security</h3>
                     <div className='flex items-center gap-1 justify-center'>
                       <span className='font-bold text-[24px]'>$3.4M</span>
-                      <Image src={'/lock.svg'} alt={'lock'} width={23} height={23} />
+                      <Image loading="lazy" src={'/lock.svg'} alt={'lock'} width={23} height={23} />
                     </div>
                     <p className='text-white/50 font-bold text-xs'>locked: 95%</p>
                     </div>
@@ -361,7 +361,7 @@ export default function Step1({
                     <h3 className='text-white/50 font-bold text-xs'>Security</h3>
                     <div className='flex items-center gap-1 justify-center'>
                       <span className='font-bold text-[24px]'>Low risk</span>
-                      <Image src={'/degen-audit/3.svg'} alt={'degen-audit'} width={22} height={22} />
+                      <Image loading="lazy" src={'/degen-audit/3.svg'} alt={'degen-audit'} width={22} height={22} />
                     </div>
                     <p className='text-white/50 font-bold text-xs'>Score: 85/100</p>
                     </div>

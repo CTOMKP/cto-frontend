@@ -34,9 +34,10 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
             }}
           >
             <Image
+              loading="lazy"
               src="/white-watchlist.svg"
               alt="watchlist"
-              className="bg-transparent"
+              className="bg-transparent size-4 min-w-fit"
               width={16}
               height={16}
             />
@@ -48,13 +49,15 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
           <div className="flex items-center h-full gap-1">
             <div className="relative">
               <Image
-                className="size-7 rounded-full border-[0.36px] border-white"
+                loading="lazy"
+                className="size-7 min-w-fit rounded-full border-[0.36px] border-white"
                 src={coin.image && coin.image.trim() !== "" ? coin.image : "/homepage/trending-coins/default-coin.png"}
                 alt="default-coin"
                 width={28}
                 height={28}
               />
               <Image
+                loading="lazy"
                 className="absolute bottom-0 left-0 size-[14px] rounded-full"
                 src={getChainImage(coin.chain || "solana")}
                 alt={`${coin.chain || "solana"}-chain`}
@@ -72,6 +75,7 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
                   className={`bg-[#15FF00]/20 rounded-[4px] p-[3px]`}
                 >
                   <Image
+                    loading="lazy"
                     src="/project-categories/bloom.svg"
                     width={8.36}
                     height={8.36}
@@ -91,6 +95,7 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
                   }}
                 >
                   <Image
+                    loading="lazy"
                     src="/copy.svg"
                     alt="copy"
                     width={7.85}
@@ -102,6 +107,7 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
                   onClick={(e) => e.stopPropagation()}
                 >
                   <Image
+                    loading="lazy"
                     src="/x.svg"
                     alt="x"
                     height={8}
@@ -113,6 +119,7 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
                   onClick={(e) => e.stopPropagation()}
                 >
                   <Image
+                    loading="lazy"
                     src="/globe.svg"
                     alt="website"
                     width={7.5}
@@ -124,7 +131,7 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
           </div>
 
           <Button 
-            className="bg-[#FF4A15]/21 p-0 h-fit px-1 py-1 ml-5 rounded-[5.5px] font-bold"
+            className="bg-[#FF4A15]/21 text-[#FF4A15] p-0 h-fit px-1 py-1 ml-5 rounded-[5.5px] font-bold"
             onClick={(e) => {
               e.stopPropagation();
               // Add your buy logic here
@@ -142,13 +149,14 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
           <span className={`font-medium`}>
             ${compactNumber(coin.marketCap)}
           </span>
-          <span className="flex font-medium items-center text-xs text-[#FF9631]">
+          <span className="flex gap-1 font-medium items-center text-xs">
             <span>${compactNumber(coin.liquidity)}</span>
             <Image
-              src="/emoji-icons/gaining-traction.svg"
+              loading="lazy"
+              src="/lock.svg"
               alt="gaining-traction"
-              width={8}
-              height={8}
+              width={9}
+              height={9}
             />
           </span>
         </div>
@@ -291,6 +299,7 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
       <TableCell className="text-center">
         <div className="flex justify-center gap-1">
           <Image
+            loading="lazy"
             src={
               coin.communityScore < 50
                 ? "/communitry-score-icons/bad-red.svg"
@@ -320,6 +329,7 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
           {coin.degenAudit}
           <span>
             <Image
+              loading="lazy"
               src={`${
                 coin.degenAudit >= 70
                   ? "/risk-score/good.svg"

@@ -82,14 +82,11 @@ export default function Categories() {
           {CategoriesFilter.map((category, index) => (
             <div
             key={index}
-              className={`p-px rounded-[8px] ${category.value === 'all' ? 'hidden' : ''}`}
-              style={{
-                background:
-                  "linear-gradient(to right, #FF0075 0%, #FF4A15 50%, #FFCB45 100%)",
-              }}
+              className={`bg-gradient-to-r from-[rgba(236,72,153,0.5)] to-[rgba(250,204,21,0.5)] p-[1px] rounded-[8px] ${category.value === 'all' ? 'hidden' : ''}`}
             >
               <div className="rounded-lg w-[392px] h-[328px] bg-[#010101]">
                 <Image
+                  loading="lazy"
                   src={`/categories/${category.value}.png`}
                   alt={category.name}
                   className="object-contain h-[218px] w-full"

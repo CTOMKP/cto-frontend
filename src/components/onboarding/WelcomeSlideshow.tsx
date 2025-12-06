@@ -19,14 +19,14 @@ const slides = [
     description: "Real-time insights for community-taken-over tokens.",
   },
   {
-    image: "/welcome-slideshow/default.png",
-    title: "Discover Community-Driven Crypto Projects",
-    description: "Real-time insights for community-taken-over tokens.",
+    image: "/welcome-slideshow/default2.png",
+    title: "Discover. Connect. Build. Trust.",
+    description: "Find and connect with talent, you need to rebuid",
   },
   {
     image: "/welcome-slideshow/default.png",
-    title: "Discover Community-Driven Crypto Projects",
-    description: "Real-time insights for community-taken-over tokens.",
+    title: "Smart AI filtering",
+    description: "BawsAi a personalized, dynamic, and intelligent way to find gems",
   },
 ];
 
@@ -44,11 +44,11 @@ export default function WelcomeSlideshow() {
     }
   };
 
-  // const handleBack = () => {
-  //   if (currentIndex > 0) {
-  //     setCurrentIndex((prev) => prev - 1);
-  //   }
-  // };
+  const handleBack = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex((prev) => prev - 1);
+    }
+  };
 
   useEffect(() => {
     if (pathname === "/" || pathname === "/faq") {
@@ -90,6 +90,7 @@ export default function WelcomeSlideshow() {
                     className="w-full border-[0.5px] rounded-lg border-[#FFFFFF33]"
                     width={800}
                     height={400}
+                    loading="lazy"
                   />
                 </div>
               ))}
@@ -112,15 +113,15 @@ export default function WelcomeSlideshow() {
             </div>
 
             <div className="mt-6 flex justify-between border-t-[0.5px] border-[#FFFFFF20] pt-4">
-              {/* <Button
+              <Button
                 variant="outline"
                 className="bg-[#1c1c1c] text-white border-gray-700"
                 onClick={handleBack}
                 disabled={currentIndex === 0}
               >
                 Back
-              </Button> */}
-              <Image src="/nav-bar/logo.svg" alt="logo" width={131} height={31}/>
+              </Button>
+              <Image loading="lazy" src="/nav-bar/logo.svg" alt="logo" width={131} height={31}/>
               {isLastSlide ? (
                 <Button 
                   className='h-[37px] w-[66px] rounded-lg cta-gradient text-base text-white focus-visible:!border-none'

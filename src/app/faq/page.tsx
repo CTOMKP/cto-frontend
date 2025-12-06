@@ -147,10 +147,11 @@ export default function Faq() {
             </p>
             <div className="flex gap-4 text-lg">
               <Link href="#">
-                <Image src="/x-white-bg.png" alt="x" width={24} height={24} />
+                <Image loading="lazy" src="/x-white-bg.png" alt="x" width={24} height={24} />
               </Link>
               <Link href="#">
                 <Image
+                  loading="lazy"
                   src="/discord-white-bg.png"
                   alt="discord"
                   width={24}
@@ -159,6 +160,7 @@ export default function Faq() {
               </Link>
               <Link href="#">
                 <Image
+                  loading="lazy"
                   src="/telegram-white-bg.png"
                   alt="telegram"
                   width={24}
@@ -166,10 +168,10 @@ export default function Faq() {
                 />
               </Link>
               <Link href="#">
-                <Image src="/medium.png" alt="medium" width={24} height={24} />
+                <Image loading="lazy" src="/medium.png" alt="medium" width={24} height={24} />
               </Link>
               <Link href="#">
-                <Image src="/github.png" alt="github" width={24} height={24} />
+                <Image loading="lazy" src="/github.png" alt="github" width={24} height={24} />
               </Link>
             </div>
           </div>

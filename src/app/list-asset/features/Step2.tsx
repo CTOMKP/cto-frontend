@@ -145,11 +145,11 @@ export default function Step2({
         
         <div className='grid grid-cols-2 gap-2 w-full'>
           <span className='flex items-center justify-center h-12 gap-2 rounded-lg border-[0.2px] border-white/20'>
-            <Image src="/x-white.svg" alt="twitter" width={16} height={16} />
+            <Image loading="lazy" src="/x-white.svg" alt="twitter" width={16} height={16} />
             <p className='text-white/50'>Link X</p>
           </span>
           <span className='flex items-center justify-center h-12 gap-2 rounded-lg border-[0.2px] border-white/20'>
-            <Image src="/telegram.svg" alt="twitter" width={16} height={16} />
+            <Image loading="lazy" src="/telegram.svg" alt="twitter" width={16} height={16} />
             <p className='text-white/50'>Link Telegram</p>
           </span>
           <span className='flex items-center justify-center h-12 gap-2 rounded-lg border-[0.2px] border-white/20'>
@@ -157,7 +157,7 @@ export default function Step2({
             <p className='text-white/50'>Link website</p>
           </span>
           <span className='flex items-center justify-center h-12 gap-2 rounded-lg border-[0.2px] border-white/20'>
-            <Image src="/discord.svg" alt="twitter" width={16} height={16} />
+            <Image loading="lazy" src="/discord.svg" alt="twitter" width={16} height={16} />
             <p className='text-white/50'>Link Discord</p>
           </span>
         </div>

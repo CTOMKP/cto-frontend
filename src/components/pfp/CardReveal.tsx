@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Save } from 'lucide-react';
 import { pfpService } from '@/services/pfpService';
 import { toast } from 'react-toastify';
+import { usePrivy } from '@privy-io/react-auth';
 
 interface CardRevealProps {
   selectedCardId: number | null;
@@ -43,8 +44,74 @@ const getTraitImage = (traitName: string, cardId: number): string => {
   return `/mascots/TRAITS/${selectedVariant}.png`;
 };
 
+/**
+ * Composite mascot layers into a single canvas image (without stage layer)
+ */
+const compositeMascotImage = async (
+  baseSkinPath: string,
+  traitPath: string
+): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      reject(new Error('Could not get canvas context'));
+      return;
+    }
+
+    // Set canvas size (matching the display size)
+    canvas.width = 221;
+    canvas.height = 326;
+
+    const images: HTMLImageElement[] = [];
+    let loadedCount = 0;
+    const totalImages = 2;
+
+    const checkAllLoaded = () => {
+      loadedCount++;
+      if (loadedCount === totalImages) {
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Draw layers in order: base skin (background), trait (foreground)
+        ctx.drawImage(images[0], 0, 0, canvas.width, canvas.height); // Base skin
+        ctx.drawImage(images[1], 0, 0, canvas.width, canvas.height); // Trait
+
+        // Convert canvas to blob, then to File
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            reject(new Error('Failed to create image blob'));
+            return;
+          }
+          const file = new File([blob], 'mascot-pfp.png', { type: 'image/png' });
+          resolve(file);
+        }, 'image/png');
+      }
+    };
+
+    const loadImage = (src: string, index: number) => {
+      const img = new window.Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        images[index] = img;
+        checkAllLoaded();
+      };
+      img.onerror = () => {
+        reject(new Error(`Failed to load image: ${src}`));
+      };
+      img.src = src;
+    };
+
+    // Load images (base skin and trait only, no stage)
+    loadImage(baseSkinPath, 0);
+    loadImage(traitPath, 1);
+  });
+};
+
 export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose }) => {
   const [isSaving, setIsSaving] = useState(false);
+  const { user } = usePrivy();
+  const containerRef = useRef<HTMLDivElement>(null);
 
   if (!selectedCardId) return null;
 
@@ -53,28 +120,30 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
   const stagePath = '/mascots/STAGE/STAGE.png';
   const traitPath = getTraitImage(traitName, selectedCardId);
 
-  // Create composite image URL (this would ideally be done server-side or with canvas)
-  // For now, we'll use the trait image as the main image
-  const compositeImage = traitPath;
-
   const handleSavePFP = async () => {
-    if (!compositeImage) {
-      toast.error('No image to save');
-      return;
-    }
-
     setIsSaving(true);
     try {
-      const result = await pfpService.savePFP(compositeImage);
+      // Composite the mascot layers into a single image file (without stage)
+      const compositeFile = await compositeMascotImage(baseSkinPath, traitPath);
+      
+      // Get user ID
+      const userId = user?.id || localStorage.getItem('cto_user_id') || '';
+      if (!userId) {
+        throw new Error('User ID not found');
+      }
+
+      // Upload and save the PFP
+      const result = await pfpService.savePFP(compositeFile, userId);
+      
       if (result.success) {
-        toast.success(result.message || 'PFP saved successfully!');
+        toast.success(result.message || 'Profile picture uploaded successfully!');
         if (onClose) {
           setTimeout(() => onClose(), 1000);
         }
       }
     } catch (error: unknown) {
       console.error('Failed to save PFP:', error);
-      let message = 'Failed to save PFP';
+      let message = 'Failed to save profile picture';
       if (error instanceof Error) {
         message = error.message || message;
       }
@@ -85,7 +154,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
   };
 
   return (
-    <div className="flex flex-col items-center justify-center">
+    <div className="flex flex-col items-center justify-center" ref={containerRef}>
       <motion.div
         initial={{ opacity: 0, scale: 0.8, y: 50 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -95,22 +164,24 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
         {/* Composite Mascot Image */}
         <div className="relative w-[221px] h-[326px] mb-6 flex items-center justify-center">
           {/* Base Skin Layer (background) */}
-          <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0 z-10">
             <Image
               src={baseSkinPath}
               alt="Base Skin"
               fill
               className="object-contain"
+              loading="lazy"
             />
           </div>
           
           {/* Stage Layer (middle) */}
-          <div className="absolute inset-0 z-10">
+          <div className="absolute inset-0 z-0">
             <Image
               src={stagePath}
               alt="Stage"
               fill
               className="object-contain"
+              loading="lazy"
             />
           </div>
           
@@ -121,6 +192,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
               alt={traitName}
               fill
               className="object-contain"
+              loading="lazy"
             />
           </div>
         </div>

@@ -25,18 +25,32 @@ class PrivyService {
       );
 
       if (response.data.success) {
-        // Store CTO JWT token
-        localStorage.setItem('cto_auth_token', response.data.token);
+        // Only update localStorage if values have changed to prevent unnecessary updates
+        const currentToken = localStorage.getItem('cto_auth_token');
+        const currentUserId = localStorage.getItem('cto_user_id');
+        const newToken = response.data.token;
+        const newUserId = response.data.user.id.toString();
+
+        // Store CTO JWT token (only if different)
+        if (currentToken !== newToken) {
+          localStorage.setItem('cto_auth_token', newToken);
+        }
+        if (currentUserId !== newUserId) {
+          localStorage.setItem('cto_user_id', newUserId);
+        }
         localStorage.setItem('cto_user_email', response.data.user.email);
-        localStorage.setItem('cto_user_id', response.data.user.id.toString());
         
         if (response.data.user.walletAddress) {
           localStorage.setItem('cto_wallet_address', response.data.user.walletAddress);
         }
 
-        // Store wallets if available
+        // Store wallets if available (only if different)
         if (response.data.wallets && response.data.wallets.length > 0) {
-          localStorage.setItem('cto_user_wallets', JSON.stringify(response.data.wallets));
+          const currentWallets = localStorage.getItem('cto_user_wallets');
+          const newWalletsJson = JSON.stringify(response.data.wallets);
+          if (currentWallets !== newWalletsJson) {
+            localStorage.setItem('cto_user_wallets', newWalletsJson);
+          }
         }
 
         console.log('✅ Privy user synced with CTO backend');

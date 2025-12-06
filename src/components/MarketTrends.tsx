@@ -25,6 +25,7 @@ export default function MarketTrends() {
         <div key={index} className="flex items-center gap-1 ml-3 shrink-0">
           <span className="text-[#393939]">#{index + 1}</span>
           <Image
+            loading="lazy"
             src="/default-trending-coin-img.png"
             alt="default-trending-coin-img"
             width={16}
@@ -54,6 +55,7 @@ export default function MarketTrends() {
         {/* static left section */}
         <span className="w-[98px] flex justify-center">
           <Image
+            loading="lazy"
             src="/market-trends-heart.svg"
             alt="market-trends-heart"
             width={16}
@@ -64,6 +66,7 @@ export default function MarketTrends() {
         <span className="flex items-center mr-2">
           <p className="text-[#FC461D]">Gaining traction</p>
           <Image
+            loading="lazy"
             src="/emoji-icons/gaining-traction.svg"
             alt="/gaining-traction"
             width={16}

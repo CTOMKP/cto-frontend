@@ -9,13 +9,13 @@ export default function Footer() {
 
         <div className="flex flex-col sm:justify-center items-center">
           <div className="flex items-center gap-2 mb-12.5 sm:mb-1">
-            <Image src="/nav-bar/logo.svg" alt="Logo" className="h-12 w-[188px]" width={188} height={51}/>
+            <Image loading="lazy" src="/nav-bar/logo.svg" alt="Logo" className="h-12 w-[188px]" width={188} height={51}/>
           </div>
           <p className="text-base sm:text-left text-center text-white mb-3">Where Memecoins go to live again</p>
           <div className="flex gap-4 text-lg">
-            <Link target='_blank' href='https://x.com/CTOMarketplace'><Image src="/x-white-bg.png" alt="x" width={24} height={24} /></Link>
-            <Link target='_blank' href='#'><Image src="/telegram-white-bg.png" alt="telegram" width={24} height={24} /></Link>
-            <Link target='_blank' href='https://github.com/CTOMKP'><Image src="/github.png" alt="github" width={24} height={24} /></Link>
+            <Link target='_blank' href='https://x.com/CTOMarketplace'><Image loading="lazy" src="/x-white-bg.png" alt="x" width={24} height={24} /></Link>
+            <Link target='_blank' href='#'><Image loading="lazy" src="/telegram-white-bg.png" alt="telegram" width={24} height={24} /></Link>
+            <Link target='_blank' href='https://github.com/CTOMKP'><Image loading="lazy" src="/github.png" alt="github" width={24} height={24} /></Link>
           </div>
         </div>
       </div>

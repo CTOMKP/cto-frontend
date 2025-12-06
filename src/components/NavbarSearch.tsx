@@ -259,6 +259,7 @@ export default function NavbarSearch() {
       <DialogTrigger>
         <div className="relative flex items-center">
           <Image
+            loading="lazy"
             className="absolute left-2"
             src="/search.svg"
             alt="search"
@@ -287,6 +288,7 @@ export default function NavbarSearch() {
           <form className="flex-1" onSubmit={handleSubmit}>
           <div className="relative w-full flex items-center">
             <Image
+              loading="lazy"
               className="absolute left-2"
               src="/search.svg"
               alt="search"
@@ -309,7 +311,7 @@ export default function NavbarSearch() {
         <div className="flex gap-2 items-center my-6">
           <span className="mr-3 text-sm text-[#FFFFFFB2]">History:</span>
           {history.map((history, index) => (
-            <span className="py-1 uppercase flex items-center rounded-lg text-base font-medium text-white gap-1 px-2 bg-[#17171C]" key={index}><Image className="size-4 border-[0.2px] border-[#FFFFFF] rounded-full" src={history.img} alt={history.coin} width={16} height={16} />{history.coin}</span>
+            <span className="py-1 uppercase flex items-center rounded-lg text-base font-medium text-white gap-1 px-2 bg-[#17171C]" key={index}><Image loading="lazy" className="size-4 border-[0.2px] border-[#FFFFFF] rounded-full" src={history.img} alt={history.coin} width={16} height={16} />{history.coin}</span>
           ))}
         </div>
 
@@ -352,6 +354,7 @@ export default function NavbarSearch() {
                   <div className="flex justify-end">
                     <Button className="p-1">
                       <Image
+                        loading="lazy"
                         src="/white-watchlist.svg"
                         alt="watchlist"
                         className="bg-transparent"
@@ -365,6 +368,7 @@ export default function NavbarSearch() {
                   <div className="flex items-center h-full gap-1">
                     <div className="relative">
                       <Image
+                        loading="lazy"
                         className="size-10 rounded-full border-[0.5px] border-white"
                         src="/homepage/trending-coins/default-coin.png"
                         alt="default-coin"
@@ -373,6 +377,7 @@ export default function NavbarSearch() {
                       />
                       <Image
                         className="absolute bottom-0 left-0 size-[19px]"
+                        loading="lazy"
                         src="/homepage/trending-coins/default-chain.png"
                         alt="trending-coins"
                         width={19}
@@ -386,18 +391,21 @@ export default function NavbarSearch() {
                           {coin.name}
                         </span>
                         <Image
+                          loading="lazy"
                           src="/homepage/trending-coins/whale.svg"
                           alt="whale"
                           width={10}
                           height={8.5}
                         />
                         <Image
+                          loading="lazy"
                           src="/homepage/trending-coins/age.svg"
                           alt="age"
                           height={9.5}
                           width={9}
                         />
                         <Image
+                          loading="lazy"
                           src="/homepage/trending-coins/mindshare.svg"
                           alt="mindshare"
                           height={10.79}
@@ -410,6 +418,7 @@ export default function NavbarSearch() {
                         </span>
                         <Button className="p-0 h-fit w-fit">
                           <Image
+                            loading="lazy"
                             src="/copy.svg"
                             alt="copy"
                             width={7.85}
@@ -417,10 +426,11 @@ export default function NavbarSearch() {
                           />
                         </Button>
                         <Link href="#">
-                          <Image src="/x.svg" alt="x" height={8} width={8} />
+                          <Image loading="lazy" src="/x.svg" alt="x" height={8} width={8} />
                         </Link>
                         <Link href="#">
                           <Image
+                            loading="lazy"
                             src="/globe.svg"
                             alt="website"
                             width={7.5}
@@ -475,10 +485,11 @@ export default function NavbarSearch() {
                     <span className={`text-xs font-medium`}>
                       ${compactNumber(coin.marketCap)}
                     </span>
-                    <span className="flex font-medium items-center text-[10px] text-[#FF9631]">
+                    <span className="flex font-medium items-center text-[10px]">
                       <span>${compactNumber(coin.liquidity)}</span>
                       <Image
-                        src="/emoji-icons/gaining-traction.svg"
+                        loading="lazy"
+                        src="/lock.svg"
                         alt="gaining-traction"
                         width={8}
                         height={8}

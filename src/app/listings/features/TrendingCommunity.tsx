@@ -304,7 +304,7 @@ export default function TrendingCommunity({
                             />
                           </Button>
                           <Link href="#" onClick={(e) => e.stopPropagation()}>
-                            <Image src="/x.svg" alt="x" height={8} width={8} />
+                            <Image loading="lazy" src="/x.svg" alt="x" height={8} width={8} />
                           </Link>
                         </div>
                       </div>

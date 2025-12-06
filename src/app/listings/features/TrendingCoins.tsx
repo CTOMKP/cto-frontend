@@ -472,10 +472,11 @@ export default function TrendingCoins({
                             />
                           </Button>
                           <Link href="#" onClick={(e) => e.stopPropagation()}>
-                            <Image src="/x.svg" alt="x" height={8} width={8} />
+                            <Image loading="lazy" src="/x.svg" alt="x" height={8} width={8} />
                           </Link>
                           <Link href="#" onClick={(e) => e.stopPropagation()}>
                             <Image
+                              loading="lazy"
                               src="/globe.svg"
                               alt="website"
                               width={7.5}
@@ -492,10 +493,10 @@ export default function TrendingCoins({
                       <span className={`text-xs font-medium`}>
                         ${compactNumber(data.marketCap)}
                       </span>
-                      <span className="flex font-medium items-center text-[10px] text-[#FF9631]">
+                      <span className="flex font-medium items-center text-[10px]">
                         <span>${compactNumber(data.liquidity)}</span>
                         <Image
-                          src="/emoji-icons/gaining-traction.svg"
+                          src="/lock.svg"
                           alt="gaining-traction"
                           width={8}
                           height={8}

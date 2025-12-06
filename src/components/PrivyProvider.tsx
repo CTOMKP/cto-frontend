@@ -48,7 +48,7 @@ export default function PrivyProvider({ children }: PrivyProviderProps) {
       config={{
         loginMethods: ['email', 'wallet', 'google', 'twitter', 'discord'],
         appearance: {
-          theme: 'dark',
+          theme: '#010101',
           accentColor: '#8B5CF6',
           logo: '/logo.png',
           showWalletLoginFirst: true,

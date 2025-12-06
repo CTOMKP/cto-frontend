@@ -12,8 +12,8 @@ import { ChevronRight, MoveUpRight } from "lucide-react";
 export default function NavDropdownMenu() {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="mx-12 p-0">
-        <Image src="/nav-bar/menu.svg" alt="menu" width={18} height={19} />
+      <DropdownMenuTrigger className="mx-12 size-6 min-w-fit p-0">
+        <Image loading="lazy" src="/nav-bar/menu.svg" alt="menu" width={24} height={24} />
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="start" className="bg-[#010101] text-sm font-normal text-[#FFFFFFB2] w-76 !border-2 !border-[#86868630] p-4">
@@ -219,10 +219,10 @@ export default function NavDropdownMenu() {
 
         <div className="flex justify-center items-center gap-4 mt-6">
           <span className="flex justify-center items-center size-9.5 bg-[#1A1A1A] rounded-full">
-              <Image src="/globe2.svg" alt="globe" className="size-5.5" width={22} height={22} />
+              <Image loading="lazy" src="/globe2.svg" alt="globe" className="size-5.5" width={22} height={22} />
           </span>
           <span className="flex justify-center items-center size-9.5 bg-[#1A1A1A] rounded-full">
-              <Image src="/x-white.svg" alt="x" className="size-3.5" width={14} height={14} />
+              <Image loading="lazy" src="/x-white.svg" alt="x" className="size-3.5" width={14} height={14} />
           </span>
         </div>
       </DropdownMenuContent>

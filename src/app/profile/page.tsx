@@ -29,11 +29,18 @@ export default function ProfilePage() {
     }
   }, [ready, authenticated, router]);
 
+  const walletsLoadedRef = React.useRef<string | null>(null);
+
   useEffect(() => {
-    if (authenticated && user) {
-      loadWallets();
+    if (authenticated && user && ready) {
+      const userId = user.id;
+      // Only load wallets once per user, or if user changed
+      if (walletsLoadedRef.current !== userId) {
+        loadWallets();
+        walletsLoadedRef.current = userId;
+      }
     }
-  }, [authenticated, user]);
+  }, [authenticated, user?.id, ready]);
 
   const loadWallets = async () => {
     setIsLoading(true);

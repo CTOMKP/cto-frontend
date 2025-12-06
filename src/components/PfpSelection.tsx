@@ -7,6 +7,7 @@ import Image from "next/image";
 import { pfpService, PFPCard } from "@/services/pfpService";
 import { toast } from "react-toastify";
 import { CardReveal } from "./pfp/CardReveal";
+import { MoonLoader } from "react-spinners";
 
 const sharelinks = [
   {
@@ -106,7 +107,7 @@ const PfpSelection = () => {
       <div className="relative flex items-center justify-center h-fit w-fit">
         {isLoading && cards.length === 0 ? (
           <div className="flex items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+            <MoonLoader color="#FFFFFF" size={24} />
           </div>
         ) : (
           <AnimatePresence>
@@ -176,6 +177,7 @@ const PfpSelection = () => {
                     {/* Inner card */}
                     <div className="w-[108px] h-[171px] cursor-pointer rounded-[8px] bg-[#0D0D0D] shadow-xl flex items-center justify-center">
                       <Image
+                        loading="lazy"
                         src="/cto-logo-small.png"
                         alt="cto-logo"
                         className="w-[45px] h-[49px] object-contain"
@@ -218,6 +220,7 @@ const PfpSelection = () => {
               >
                 <div onClick={handleReveal} className="w-[173px] h-[274px] rounded-[8px] bg-[#0D0D0D] shadow-xl flex items-center justify-center">
                   <Image
+                    loading="lazy"
                     src="/cto-logo-small.png"
                     alt="placeholder"
                     className="w-[45px] h-[49px] object-contain"
@@ -256,7 +259,7 @@ const PfpSelection = () => {
               key={index}
               className="border-[0.4px] border-[#FFFFFF20] social-link-bg  justify-between size-12 rounded-lg"
             >
-              <Image className="size-[25.3px]" height={25.3} width={25.3} src={link.icon} alt={link.name} />
+              <Image loading="lazy" className="size-[25.3px]" height={25.3} width={25.3} src={link.icon} alt={link.name} />
             </Button>
         ))}
       </div>

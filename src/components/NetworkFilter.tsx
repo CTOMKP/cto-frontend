@@ -71,6 +71,7 @@ export default function NetworkFilter({
                   : ''
               }`}>
                 <Image
+                  loading="lazy"
                   className="size-4 rounded-full border-[0.3px] border-[#FFFFFF] w-full h-full"
                   src={network.src}
                   alt={`${network.name}-img`}
@@ -97,6 +98,7 @@ export default function NetworkFilter({
                   : ''
               }`}>
                 <Image
+                  loading="lazy"
                   className="size-4 rounded-full border-[0.3px] border-[#FFFFFF] w-full h-full"
                   src={network.src}
                   alt={`${network.name}-img`}
@@ -123,6 +125,7 @@ export default function NetworkFilter({
                   : ''
               }`}>
                 <Image
+                  loading="lazy"
                   className="size-4 rounded-full border-[0.3px] border-[#FFFFFF] w-full h-full"
                   src={network.src}
                   alt={`${network.name}-img`}
@@ -149,6 +152,7 @@ export default function NetworkFilter({
                   : ''
               }`}>
                 <Image
+                  loading="lazy"
                   className="size-4 rounded-full border-[0.3px] border-[#FFFFFF] w-full h-full"
                   src={network.src}
                   alt={`${network.name}-img`}
@@ -195,6 +199,7 @@ export default function NetworkFilter({
               >
                 <div className="flex items-center gap-2">
                   <Image
+                    loading="lazy"
                     className="size-6 rounded-full border-[0.3px] border-[#FFFFFF]"
                     src={network.src}
                     alt={`${network.name}-img`}

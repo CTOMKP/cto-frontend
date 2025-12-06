@@ -16,6 +16,7 @@ export default function SearchBar() {
       <form onSubmit={handleSubmit}>
         <div className="relative flex items-center w-fit">
           <Image
+            loading="lazy"
             className="absolute left-2"
             src="/search.svg"
             alt="search"

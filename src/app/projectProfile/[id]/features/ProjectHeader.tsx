@@ -13,6 +13,7 @@ export default function ProjectHeader({ projectData, formatJoinedDate }: Project
     <div className="px-[100px] border-b border-b-[#8686864D]">
       <div className='mt-6.5 bg-[url("/project-profile/default-project-bg-img.png")] bg-cover bg-center bg-no-repeat h-[167px] rounded-t-lg'></div>
       <Image
+        loading="lazy"
         src={
           projectData?.logoUrl ||
           projectData?.metadata?.market?.logoUrl ||
@@ -42,6 +43,7 @@ export default function ProjectHeader({ projectData, formatJoinedDate }: Project
               </h1>{" "}
               <span className="p-1 mt-1 rounded-[5px] bg-[#15FF00]/20">
                 <Image
+                  loading="lazy"
                   src="/project-categories/bloom.svg"
                   alt="green"
                   width={14}
@@ -57,6 +59,7 @@ export default function ProjectHeader({ projectData, formatJoinedDate }: Project
                 </span>
                 <span className="size-6 flex justify-center items-center rounded-full bg-[#FFFFFF0D]">
                   <Image
+                    loading="lazy"
                     src="/copy.svg"
                     alt="green"
                     width={12}
@@ -66,6 +69,7 @@ export default function ProjectHeader({ projectData, formatJoinedDate }: Project
                 </span>
                 <span className="size-6 flex justify-center items-center rounded-full bg-[#FFFFFF0D]">
                   <Image
+                    loading="lazy"
                     src="/go-to.svg"
                     alt="go-to"
                     width={12}
@@ -137,6 +141,7 @@ export default function ProjectHeader({ projectData, formatJoinedDate }: Project
 
             <span className="bg-[#FFFFFF0D] rounded-[26px] flex gap-1.5 items-center justify-center px-1.5 h-6">
               <Image
+                loading="lazy"
                 src="/x.svg"
                 alt="twitter"
                 width={12}

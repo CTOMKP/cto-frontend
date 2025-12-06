@@ -1,7 +1,7 @@
 "use client";
 
 import { usePrivy } from '@privy-io/react-auth';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { privyService } from '@/services/privyService';
 
 export function usePrivyAuth() {
@@ -16,6 +16,8 @@ export function usePrivyAuth() {
   
   const [isSyncing, setIsSyncing] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const syncedUserIdRef = useRef<string | null>(null);
+  const hasSyncedRef = useRef(false);
 
   // Update isAuthenticated based on Privy state and localStorage
   useEffect(() => {
@@ -23,29 +25,51 @@ export function usePrivyAuth() {
     setIsAuthenticated(authenticated && !!token);
   }, [authenticated]);
 
-  const handleSync = useCallback(async () => {
-    if (isSyncing) return;
-    
-    setIsSyncing(true);
-    try {
-      const token = await getAccessToken();
-      if (token) {
-        await privyService.syncUser(token);
-        setIsAuthenticated(true);
-      }
-    } catch (error) {
-      console.error('Failed to sync with backend:', error);
-    } finally {
-      setIsSyncing(false);
-    }
-  }, [getAccessToken, isSyncing]);
-
-  // Sync with backend when authenticated
+  // Sync with backend when authenticated - only once per user
   useEffect(() => {
-    if (authenticated && user && ready && !isSyncing) {
-      handleSync();
+    // Don't sync if already syncing, not ready, not authenticated, or no user
+    if (!ready || !authenticated || !user || isSyncing) {
+      return;
     }
-  }, [authenticated, user, ready, isSyncing, handleSync]);
+
+    const userId = user.id;
+    const existingToken = localStorage.getItem('cto_auth_token');
+    const existingUserId = localStorage.getItem('cto_user_id');
+
+    // Skip sync if:
+    // 1. We've already synced for this user ID
+    // 2. We have a valid token and it matches the current user
+    if (syncedUserIdRef.current === userId || (existingToken && existingUserId === userId)) {
+      setIsAuthenticated(true);
+      return;
+    }
+
+    // Only sync once per session unless user changes
+    if (hasSyncedRef.current && syncedUserIdRef.current === userId) {
+      return;
+    }
+
+    const performSync = async () => {
+      if (isSyncing) return;
+      
+      setIsSyncing(true);
+      try {
+        const token = await getAccessToken();
+        if (token) {
+          await privyService.syncUser(token);
+          syncedUserIdRef.current = userId;
+          hasSyncedRef.current = true;
+          setIsAuthenticated(true);
+        }
+      } catch (error) {
+        console.error('Failed to sync with backend:', error);
+      } finally {
+        setIsSyncing(false);
+      }
+    };
+
+    performSync();
+  }, [authenticated, user?.id, ready, getAccessToken, isSyncing]);
 
   const handleLogin = useCallback(async () => {
     try {

@@ -21,6 +21,7 @@ export default function NavBar() {
           width={188} 
           height={51} 
           className="hidden md:block"
+          loading="lazy"
         />
         <Image 
           src="/logo.png" 
@@ -28,6 +29,7 @@ export default function NavBar() {
           width={40} 
           height={40} 
           className="block md:hidden"
+          loading="lazy"
         />
       </Link>
 

@@ -42,6 +42,7 @@ export default function SwapWidget() {
             />
             <div className="flex rounded-[26px] bg-white/2 p-2 justify-center items-center gap-2">
               <Image
+                loading="lazy"
                 width={24}
                 height={24}
                 className="size-6 rounded-full"
@@ -93,6 +94,7 @@ export default function SwapWidget() {
 
             <Button className="p-0 bg-[#FF4A15005] py-[5px] w-10 px-[13px] rounded-full">
               <Image
+                loading="lazy"
                 src={"/convert.svg"}
                 alt={"convert"}
                 width={14}
@@ -106,6 +108,7 @@ export default function SwapWidget() {
           <Button className="absolute -top-3.5 z-10 bg-[#010101] border-[0.2px] border-white/20 size-13 p-0 rounded-full">
             <span className="size-7 rounded-full flex justify-center items-center">
               <Image
+                loading="lazy"
                 src={"/switch-diagonal.svg"}
                 alt={"switch"}
                 width={16}
@@ -145,6 +148,7 @@ export default function SwapWidget() {
             />
             <div className="flex rounded-[26px] bg-white/2 p-2 justify-center items-center gap-2">
               <Image
+                loading="lazy"
                 width={24}
                 height={24}
                 className="size-6 rounded-full"
@@ -165,6 +169,7 @@ export default function SwapWidget() {
 
         <div className="flex bg-white/3 rounded-lg justify-center mt-4 py-4.5 items-center gap-1">
           <Image
+            loading="lazy"
             className="rounded-full"
             src={"/panora-logo.jpg"}
             alt={"panora-logo"}
