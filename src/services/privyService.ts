@@ -10,9 +10,25 @@ class PrivyService {
   /**
    * Sync Privy user with CTO backend
    * @param privyToken - Privy authentication token from frontend
+   * @param retryCount - Current retry attempt (for wallet creation timing)
    * @returns User data and CTO JWT token
    */
-  async syncUser(privyToken: string) {
+  async syncUser(privyToken: string, retryCount: number = 0): Promise<{
+    success: boolean;
+    token: string;
+    user: {
+      id: number;
+      email: string;
+      walletAddress?: string;
+      walletsCount: number;
+    };
+    wallets: Array<{
+      address: string;
+      chainType: string;
+      walletClient: string;
+      isPrimary: boolean;
+    }>;
+  }> {
     try {
       const response = await axios.post(
         `${API_BASE}/api/auth/privy/sync`,
