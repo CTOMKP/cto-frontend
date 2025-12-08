@@ -60,6 +60,14 @@ class PrivyService {
           localStorage.setItem('cto_wallet_address', response.data.user.walletAddress);
         }
 
+        // Store avatarUrl if available (only if different)
+        if (response.data.user.avatarUrl) {
+          const currentAvatarUrl = localStorage.getItem('cto_user_avatar_url');
+          if (currentAvatarUrl !== response.data.user.avatarUrl) {
+            localStorage.setItem('cto_user_avatar_url', response.data.user.avatarUrl);
+          }
+        }
+
         // Store wallets if available (only if different)
         if (response.data.wallets && response.data.wallets.length > 0) {
           const currentWallets = localStorage.getItem('cto_user_wallets');
@@ -152,14 +160,27 @@ class PrivyService {
   }
 
   /**
-   * Logout user (clear tokens)
+   * Logout user (clear all tokens and user data)
    */
   logout() {
+    // Clear authentication tokens
     localStorage.removeItem('cto_auth_token');
     localStorage.removeItem('cto_user_email');
     localStorage.removeItem('cto_user_id');
     localStorage.removeItem('cto_wallet_address');
     localStorage.removeItem('cto_user_wallets');
+    
+    // Clear avatar/profile data
+    localStorage.removeItem('cto_user_avatar_url');
+    localStorage.removeItem('profile_avatar_url');
+    localStorage.removeItem('profile_avatar_meta');
+    localStorage.removeItem('profile_banner_url');
+    
+    // Clear any other user-related data
+    localStorage.removeItem('cto_token');
+    localStorage.removeItem('cto_user');
+    
+    console.log('✅ User logged out - all localStorage cleared');
   }
 }
 

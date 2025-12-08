@@ -252,8 +252,15 @@ export default function NavBar() {
           </div>
         )}
 
-        <div className="border-l-[0.2px] ml-4 border-[#FFFFFF20] h-full flex items-center justify-center">
-          {isAuthenticated ? <HarvestGrape /> : <LoginButton />}
+        <div className="border-l-[0.2px] ml-4 border-[#FFFFFF20] h-full flex items-center justify-center gap-2">
+          {isAuthenticated ? (
+            <>
+              <HarvestGrape />
+              <LoginButton />
+            </>
+          ) : (
+            <LoginButton />
+          )}
         </div>
       </div>
     </div>

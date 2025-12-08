@@ -82,11 +82,21 @@ export function usePrivyAuth() {
 
   const handleLogout = useCallback(async () => {
     try {
+      // Clear Privy session
       await privyLogout();
+      
+      // Clear all localStorage data
       privyService.logout();
+      
+      // Reset authentication state
       setIsAuthenticated(false);
+      
+      console.log('✅ Logout successful');
     } catch (error) {
       console.error('Logout failed:', error);
+      // Even if Privy logout fails, clear localStorage
+      privyService.logout();
+      setIsAuthenticated(false);
       throw error;
     }
   }, [privyLogout]);
