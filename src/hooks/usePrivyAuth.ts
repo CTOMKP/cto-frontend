@@ -86,6 +86,7 @@ export function usePrivyAuth() {
                 // Check if user already has an embedded wallet (Privy limitation)
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const hasEmbeddedWallet = (user as any).linkedAccounts?.some(
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   (account: any) => account.type === 'wallet' && 
                                    (account.walletClientType === 'privy' || account.connectorType === 'embedded')
                 );
@@ -96,8 +97,8 @@ export function usePrivyAuth() {
                   console.warn('⚠️ Continuing with authentication - existing wallets will be synced.');
                 } else {
                   try {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const newWallet = await Promise.race([
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       createMovementWallet(user as any, createWallet as any),
                       new Promise((_, reject) => 
                         setTimeout(() => reject(new Error('Wallet creation timeout')), 5000)

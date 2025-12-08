@@ -42,10 +42,12 @@ export default function LoginPage() {
     if (!authenticated && !isOAuthCallback && !hasTriggeredLogin && ready) {
       setHasTriggeredLogin(true);
       console.log('🔄 User navigated to /login - triggering Privy login modal');
-      login().catch((error) => {
+      try {
+        login();
+      } catch (error) {
         console.error('Failed to trigger login:', error);
         // Don't redirect on error - let user try again or use the LoginButton
-      });
+      }
       return;
     }
 
@@ -91,7 +93,7 @@ export default function LoginPage() {
       <div className="text-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto"></div>
         <p className="mt-4 text-white">Opening login...</p>
-        <p className="mt-2 text-gray-400 text-sm">If the login modal didn't open, click the Login button in the navbar</p>
+        <p className="mt-2 text-gray-400 text-sm">If the login modal didn&apos;t open, click the Login button in the navbar</p>
       </div>
     </div>
   );
