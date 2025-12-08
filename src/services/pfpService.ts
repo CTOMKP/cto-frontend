@@ -158,8 +158,9 @@ class PFPService {
       );
 
       if (response.data.success) {
-        // Store in localStorage for quick access
+        // Store in localStorage for quick access (both keys for compatibility)
         localStorage.setItem('profile_avatar_url', imageUrl);
+        localStorage.setItem('cto_user_avatar_url', imageUrl);
         
         return {
           success: true,

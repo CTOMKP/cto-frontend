@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -110,15 +110,55 @@ const compositeMascotImage = async (
 
 export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose }) => {
   const [isSaving, setIsSaving] = useState(false);
+  const [isAutoSaved, setIsAutoSaved] = useState(false);
   const { user } = usePrivy();
   const containerRef = useRef<HTMLDivElement>(null);
 
-  if (!selectedCardId) return null;
-
-  const traitName = TRAIT_MAP[selectedCardId] || 'CTO';
+  const traitName = selectedCardId ? (TRAIT_MAP[selectedCardId] || 'CTO') : 'CTO';
   const baseSkinPath = '/mascots/SKIN/BASE SKIN.png';
   const stagePath = '/mascots/STAGE/STAGE.png';
-  const traitPath = getTraitImage(traitName, selectedCardId);
+  const traitPath = getTraitImage(traitName, selectedCardId || 0);
+
+  // Auto-save when component mounts (card is revealed)
+  useEffect(() => {
+    if (!selectedCardId) return;
+    const autoSavePFP = async () => {
+      if (isAutoSaved || isSaving) return; // Prevent duplicate saves
+      
+      setIsSaving(true);
+      try {
+        // Composite the mascot layers into a single image file (without stage)
+        const compositeFile = await compositeMascotImage(baseSkinPath, traitPath);
+        
+        // Get user ID
+        const userId = user?.id || localStorage.getItem('cto_user_id') || '';
+        if (!userId) {
+          throw new Error('User ID not found');
+        }
+
+        // Upload and save the PFP automatically
+        const result = await pfpService.savePFP(compositeFile, userId);
+        
+        if (result.success) {
+          setIsAutoSaved(true);
+          toast.success('Profile picture set automatically!', { autoClose: 2000 });
+        }
+      } catch (error: unknown) {
+        console.error('Failed to auto-save PFP:', error);
+        // Don't show error toast on auto-save failure - user can manually save
+        // Only log it for debugging
+      } finally {
+        setIsSaving(false);
+      }
+    };
+
+    // Auto-save after a short delay to ensure images are loaded
+    const timer = setTimeout(() => {
+      autoSavePFP();
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [selectedCardId, baseSkinPath, traitPath, user?.id, isAutoSaved, isSaving]);
 
   const handleSavePFP = async () => {
     setIsSaving(true);
@@ -136,7 +176,8 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
       const result = await pfpService.savePFP(compositeFile, userId);
       
       if (result.success) {
-        toast.success(result.message || 'Profile picture uploaded successfully!');
+        setIsAutoSaved(true);
+        toast.success(result.message || 'Profile picture saved successfully!');
         if (onClose) {
           setTimeout(() => onClose(), 1000);
         }
@@ -205,19 +246,34 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2 mb-2">
-          <Button 
-            className="cta-gradient w-26.5 rounded-lg font-medium text-[14px] text-white h-[36px]"
-            disabled={isSaving}
-          >
-            Upload pfp
-          </Button>
-          <Button 
-            onClick={handleSavePFP}
-            disabled={isSaving}
-            className="rounded-lg w-26.5 border-[0.2px] border-[#FFFFFF20] font-medium text-[14px] text-[#FFFFFF50] disabled:opacity-50"
-          >
-            {isSaving ? 'Saving...' : 'Save'} <Save size={13} color="#FFFFFF50" />
-          </Button>
+          {isAutoSaved ? (
+            <div className="w-full text-center">
+              <p className="text-sm text-green-400 mb-2">✓ Profile picture set!</p>
+              <Button 
+                onClick={handleSavePFP}
+                disabled={isSaving}
+                className="rounded-lg w-full border-[0.2px] border-[#FFFFFF20] font-medium text-[14px] text-[#FFFFFF50] disabled:opacity-50"
+              >
+                {isSaving ? 'Updating...' : 'Update Again'} <Save size={13} color="#FFFFFF50" />
+              </Button>
+            </div>
+          ) : (
+            <>
+              <Button 
+                className="cta-gradient w-26.5 rounded-lg font-medium text-[14px] text-white h-[36px]"
+                disabled={isSaving}
+              >
+                {isSaving ? 'Setting...' : 'Set as Profile'}
+              </Button>
+              <Button 
+                onClick={handleSavePFP}
+                disabled={isSaving}
+                className="rounded-lg w-26.5 border-[0.2px] border-[#FFFFFF20] font-medium text-[14px] text-[#FFFFFF50] disabled:opacity-50"
+              >
+                {isSaving ? 'Saving...' : 'Save'} <Save size={13} color="#FFFFFF50" />
+              </Button>
+            </>
+          )}
         </div>
       </motion.div>
     </div>

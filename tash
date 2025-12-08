@@ -1,0 +1,62 @@
+[1mdiff --git a/src/services/privyService.ts b/src/services/privyService.ts[m
+[1mindex 39ae3e2..d00889f 100644[m
+[1m--- a/src/services/privyService.ts[m
+[1m+++ b/src/services/privyService.ts[m
+[36m@@ -41,36 +41,36 @@[m [mclass PrivyService {[m
+       );[m
+ [m
+       if (response.data.success) {[m
+[31m-        // Only update localStorage if values have changed to prevent unnecessary updates[m
+[31m-        const currentToken = localStorage.getItem('cto_auth_token');[m
+[31m-        const currentUserId = localStorage.getItem('cto_user_id');[m
+[31m-        const newToken = response.data.token;[m
+[31m-        const newUserId = response.data.user.id.toString();[m
+[31m-[m
+[31m-        // Store CTO JWT token (only if different)[m
+[31m-        if (currentToken !== newToken) {[m
+[31m-          localStorage.setItem('cto_auth_token', newToken);[m
+[31m-        }[m
+[31m-        if (currentUserId !== newUserId) {[m
+[31m-          localStorage.setItem('cto_user_id', newUserId);[m
+[31m-        }[m
+[32m+[m[32m        // Store CTO JWT token[m
+[32m+[m[32m        localStorage.setItem('cto_auth_token', response.data.token);[m
+         localStorage.setItem('cto_user_email', response.data.user.email);[m
+[32m+[m[32m        localStorage.setItem('cto_user_id', response.data.user.id.toString());[m
+         [m
+         if (response.data.user.walletAddress) {[m
+           localStorage.setItem('cto_wallet_address', response.data.user.walletAddress);[m
+         }[m
+ [m
+[31m-        // Store wallets if available (only if different)[m
+[32m+[m[32m        // Store wallets if available[m
+         if (response.data.wallets && response.data.wallets.length > 0) {[m
+[31m-          const currentWallets = localStorage.getItem('cto_user_wallets');[m
+[31m-          const newWalletsJson = JSON.stringify(response.data.wallets);[m
+[31m-          if (currentWallets !== newWalletsJson) {[m
+[31m-            localStorage.setItem('cto_user_wallets', newWalletsJson);[m
+[32m+[m[32m          localStorage.setItem('cto_user_wallets', JSON.stringify(response.data.wallets));[m
+[32m+[m[32m          console.log('✅ Privy user synced with CTO backend');[m
+[32m+[m[32m          return response.data;[m
+[32m+[m[32m        } else {[m
+[32m+[m[32m          // No wallets yet - Privy might still be creating them[m
+[32m+[m[32m          console.log(`⏳ User synced but no wallets yet (attempt ${retryCount + 1}/5)`);[m
+[32m+[m[41m          [m
+[32m+[m[32m          // Retry up to 5 times with exponential backoff[m
+[32m+[m[32m          if (retryCount < 5) {[m
+[32m+[m[32m            const delay = Math.min(1000 * Math.pow(2, retryCount), 8000); // Max 8 seconds[m
+[32m+[m[32m            console.log(`Retrying in ${delay}ms...`);[m
+[32m+[m[32m            await new Promise(resolve => setTimeout(resolve, delay));[m
+[32m+[m[32m            return this.syncUser(privyToken, retryCount + 1);[m
+[32m+[m[32m          } else {[m
+[32m+[m[32m            // After 5 retries, accept the user without wallets[m
+[32m+[m[32m            console.warn('⚠️ User synced but Privy has not created wallets yet. User can continue but may need to refresh.');[m
+[32m+[m[32m            return response.data;[m
+           }[m
+         }[m
+[31m-[m
+[31m-        console.log('✅ Privy user synced with CTO backend');[m
+[31m-        return response.data;[m
+       }[m
+ [m
+       throw new Error('Failed to sync user');[m

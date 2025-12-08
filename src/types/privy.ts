@@ -63,8 +63,11 @@ export interface PrivyUser {
 
 /**
  * CreateWallet function type from Privy's useCreateWallet hook
+ * Privy's createWallet can accept CreateWalletOptions or MouseEvent (for button clicks)
+ * We use a more flexible type to match Privy's actual implementation
+ * Note: This type is not used directly - we use 'any' in the actual implementation to match test frontend
  */
-export type CreateWalletFunction = (options: { chainType: string }) => Promise<PrivyWalletAccount>;
+export type CreateWalletFunction = (options?: { chainType: string } | MouseEvent | undefined) => Promise<PrivyWalletAccount>;
 
 /**
  * Hash type for signing (can be Uint8Array, string, or Buffer)

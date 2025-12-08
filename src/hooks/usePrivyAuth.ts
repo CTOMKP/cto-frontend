@@ -4,7 +4,6 @@ import { usePrivy, useCreateWallet } from '@privy-io/react-auth';
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { privyService } from '@/services/privyService';
 import { createMovementWallet, getMovementWallet } from '@/lib/movement-wallet';
-import { PrivyUser } from '@/types/privy';
 
 export function usePrivyAuth() {
   const { 
@@ -63,13 +62,16 @@ export function usePrivyAuth() {
           // First, check if user needs a Movement wallet and create it if needed
           // This should happen BEFORE sync to avoid retry loops
           if (user && createWallet && walletCreationAttemptedRef.current !== userId) {
-            const movementWallet = getMovementWallet(user as PrivyUser);
+            // Use 'any' types to match test frontend implementation
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const movementWallet = getMovementWallet(user as any);
             
             if (!movementWallet) {
               walletCreationAttemptedRef.current = userId;
               console.log('🔄 No Movement wallet found in Privy, creating one...');
               try {
-                await createMovementWallet(user as PrivyUser, createWallet);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                await createMovementWallet(user as any, createWallet as any);
                 console.log('✅ Movement wallet created');
                 // Give Privy a moment to register the wallet
                 await new Promise(resolve => setTimeout(resolve, 1000));
