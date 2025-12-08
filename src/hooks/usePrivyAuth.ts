@@ -69,29 +69,60 @@ export function usePrivyAuth() {
             if (!movementWallet) {
               walletCreationAttemptedRef.current = userId;
               console.log('🔄 No Movement wallet found in Privy, creating one...');
+              console.log('🔄 createWallet function available:', !!createWallet);
+              console.log('🔄 User linkedAccounts:', user.linkedAccounts?.length || 0);
+              
               try {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                await createMovementWallet(user as any, createWallet as any);
-                console.log('✅ Movement wallet created');
-                // Give Privy a moment to register the wallet
-                await new Promise(resolve => setTimeout(resolve, 1000));
-              } catch (walletError) {
-                console.error('⚠️ Failed to create Movement wallet:', walletError);
+                const newWallet = await createMovementWallet(user as any, createWallet as any);
+                console.log('✅ Movement wallet creation returned:', newWallet);
+                
+                // Verify wallet was actually created by checking Privy user again
+                // Wait a bit for Privy to update the user object
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Re-check if wallet exists (user object might have updated)
+                // Note: user object might not update immediately, so we continue anyway
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const verifyWallet = getMovementWallet(user as any);
+                if (verifyWallet) {
+                  console.log('✅ Movement wallet verified in Privy:', verifyWallet.address);
+                } else {
+                  console.warn('⚠️ Movement wallet created but not yet visible in Privy user object');
+                  console.warn('⚠️ This is normal - wallet may take a few seconds to appear in Privy');
+                  console.warn('⚠️ Continuing with authentication - wallet will sync on next login');
+                }
+              } catch (walletError: any) {
+                console.error('❌ Failed to create Movement wallet:', walletError);
+                console.error('Error message:', walletError?.message);
+                console.error('Error stack:', walletError?.stack);
                 // Continue anyway - wallet creation is not critical for authentication
+                // User can manually create wallet later if needed
               }
+            } else {
+              console.log('✅ Movement wallet already exists:', movementWallet.address);
             }
+          } else if (!createWallet) {
+            console.warn('⚠️ createWallet function not available from useCreateWallet hook');
           }
           
           // Now sync with backend (this will include the newly created wallet if it was created)
-          await privyService.syncUser(token);
+          console.log('🔄 Syncing with backend...');
+          await privyService.syncUser(token, 0);
+          console.log('✅ Backend sync completed');
+          
           syncedUserIdRef.current = userId;
           hasSyncedRef.current = true;
           setIsAuthenticated(true);
+          console.log('✅ Authentication flow completed, isAuthenticated set to true');
         }
       } catch (error) {
-        console.error('Failed to sync with backend:', error);
+        console.error('❌ Failed to sync with backend:', error);
+        // Even if sync fails, clear the loading state so user isn't stuck
+        setIsAuthenticated(false);
       } finally {
         setIsSyncing(false);
+        console.log('✅ isSyncing set to false');
       }
     };
 

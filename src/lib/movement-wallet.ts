@@ -36,11 +36,17 @@ export async function createMovementWallet(privyUser: any, createWallet: any) {
 
     // Create Movement wallet using Privy
     // Movement Network uses Aptos-compatible wallet format
-    const wallet = await createWallet({
-      chainType: 'aptos',
-    });
-    
-    return wallet;
+    console.log('🔄 Calling Privy createWallet with chainType: aptos');
+    try {
+      const wallet = await createWallet({
+        chainType: 'aptos',
+      });
+      console.log('✅ Privy createWallet returned:', wallet);
+      return wallet;
+    } catch (createError) {
+      console.error('❌ Privy createWallet failed:', createError);
+      throw createError;
+    }
   } catch (error) {
     console.error('Error creating Movement wallet:', error);
     throw error;
