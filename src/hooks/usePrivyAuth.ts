@@ -81,7 +81,7 @@ export function usePrivyAuth() {
           }
           
           // Now sync with backend (this will include the newly created wallet if it was created)
-          const syncResult = await privyService.syncUser(token);
+          await privyService.syncUser(token);
           syncedUserIdRef.current = userId;
           hasSyncedRef.current = true;
           setIsAuthenticated(true);

@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { getMovementWallet } from '@/lib/movement-wallet';
 import axios from 'axios';
+import Image from 'next/image';
 import { BackendWallet, PrivyWalletAccount, PrivyUser } from '@/types/privy';
 
 // Helper function to get wallet chain info
@@ -40,7 +41,7 @@ export default function ProfilePage() {
         walletsLoadedRef.current = userId;
       }
     }
-  }, [authenticated, user?.id, ready]);
+  }, [authenticated, user, ready]);
 
   const loadWallets = async () => {
     setIsLoading(true);
@@ -129,6 +130,11 @@ export default function ProfilePage() {
   const email = user?.email?.address || user?.wallet?.address || 'Privy User';
   // Cast user to PrivyUser for getMovementWallet
   const movementWallet = getMovementWallet(user as PrivyUser);
+  
+  // Get avatar URL from localStorage (set by sync or PFP save)
+  const avatarUrl = typeof window !== 'undefined' 
+    ? localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url')
+    : null;
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -136,10 +142,23 @@ export default function ProfilePage() {
       <div className="bg-gradient-to-r from-gray-900 to-black border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-white">Profile</h1>
-              <p className="text-gray-400">Welcome back, {email}</p>
-              <p className="text-sm text-gray-500 mt-1">Privy ID: {user?.id}</p>
+            <div className="flex items-center gap-4">
+              {avatarUrl && (
+                <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-purple-500">
+                  <Image 
+                    src={avatarUrl} 
+                    alt="Profile" 
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                </div>
+              )}
+              <div>
+                <h1 className="text-3xl font-bold text-white">Profile</h1>
+                <p className="text-gray-400">Welcome back, {email}</p>
+                <p className="text-sm text-gray-500 mt-1">Privy ID: {user?.id}</p>
+              </div>
             </div>
             <button
               onClick={handleLogout}
