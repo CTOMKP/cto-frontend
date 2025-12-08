@@ -97,13 +97,14 @@ export function usePrivyAuth() {
                   console.warn('⚠️ Continuing with authentication - existing wallets will be synced.');
                 } else {
                   try {
+                    /* eslint-disable @typescript-eslint/no-explicit-any */
                     const newWallet = await Promise.race([
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       createMovementWallet(user as any, createWallet as any),
                       new Promise((_, reject) => 
                         setTimeout(() => reject(new Error('Wallet creation timeout')), 5000)
                       )
                     ]);
+                    /* eslint-enable @typescript-eslint/no-explicit-any */
                     console.log('✅ Movement wallet creation returned:', newWallet);
                   } catch (walletError: unknown) {
                     const errorMessage = walletError instanceof Error ? walletError.message : 'Unknown error';
