@@ -71,54 +71,64 @@ export function usePrivyAuth() {
         const token = await getAccessToken();
         if (token) {
           // First, check if user needs a Movement wallet and create it if needed
-          // This should happen BEFORE sync to avoid retry loops
-          // Use Promise.race to ensure we don't wait forever for wallet creation
-          const walletCreationPromise = user && typeof createWallet === 'function' && walletCreationAttemptedRef.current !== userId
-            ? (async () => {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const movementWallet = getMovementWallet(user as any);
+          // Only attempt once per user ID to prevent multiple attempts
+          if (user && typeof createWallet === 'function' && walletCreationAttemptedRef.current !== userId) {
+            try {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const movementWallet = getMovementWallet(user as any);
+              
+              if (!movementWallet) {
+                walletCreationAttemptedRef.current = userId;
+                console.log('🔄 No Movement wallet found in Privy, attempting to create one...');
+                console.log('🔄 createWallet function available:', !!createWallet);
+                console.log('🔄 User linkedAccounts:', user.linkedAccounts?.length || 0);
                 
-                if (!movementWallet) {
-                  walletCreationAttemptedRef.current = userId;
-                  console.log('🔄 No Movement wallet found in Privy, creating one...');
-                  console.log('🔄 createWallet function available:', !!createWallet);
-                  console.log('🔄 User linkedAccounts:', user.linkedAccounts?.length || 0);
-                  
+                // Check if user already has an embedded wallet (Privy limitation)
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const hasEmbeddedWallet = (user as any).linkedAccounts?.some(
+                  (account: any) => account.type === 'wallet' && 
+                                   (account.walletClientType === 'privy' || account.connectorType === 'embedded')
+                );
+
+                if (hasEmbeddedWallet) {
+                  console.warn('⚠️ User already has an embedded wallet. Privy only allows one embedded wallet per user.');
+                  console.warn('⚠️ Movement wallet cannot be created via createWallet. This is a Privy limitation.');
+                  console.warn('⚠️ Continuing with authentication - existing wallets will be synced.');
+                } else {
                   try {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const newWallet = await createMovementWallet(user as any, createWallet as any);
+                    const newWallet = await Promise.race([
+                      createMovementWallet(user as any, createWallet as any),
+                      new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Wallet creation timeout')), 5000)
+                      )
+                    ]);
                     console.log('✅ Movement wallet creation returned:', newWallet);
-                    
-                    // Don't wait too long for verification - just continue
-                    setTimeout(() => {
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      const verifyWallet = getMovementWallet(user as any);
-                      if (verifyWallet) {
-                        console.log('✅ Movement wallet verified in Privy:', verifyWallet.address);
-                      } else {
-                        console.warn('⚠️ Movement wallet created but not yet visible in Privy user object');
-                        console.warn('⚠️ This is normal - wallet may take a few seconds to appear in Privy');
-                      }
-                    }, 2000);
                   } catch (walletError: unknown) {
-                    console.error('❌ Failed to create Movement wallet:', walletError);
                     const errorMessage = walletError instanceof Error ? walletError.message : 'Unknown error';
-                    console.error('Error message:', errorMessage);
+                    
+                    // If error is "User already has an embedded wallet", that's expected
+                    if (errorMessage.includes('already has an embedded wallet') || 
+                        errorMessage.includes('embedded wallet')) {
+                      console.warn('⚠️ User already has an embedded wallet - Privy limitation');
+                      console.warn('⚠️ Continuing with authentication - existing wallets will be synced');
+                    } else {
+                      console.error('❌ Failed to create Movement wallet:', walletError);
+                      console.error('Error message:', errorMessage);
+                    }
                     // Continue anyway - wallet creation is not critical for authentication
                   }
-                } else {
-                  console.log('✅ Movement wallet already exists:', movementWallet.address);
                 }
-              })()
-            : Promise.resolve();
+              } else {
+                console.log('✅ Movement wallet already exists:', movementWallet.address);
+              }
+            } catch (error) {
+              console.error('❌ Error checking for Movement wallet:', error);
+              // Continue with sync anyway
+            }
+          }
           
-          // Wait for wallet creation with a timeout (max 5 seconds)
-          await Promise.race([
-            walletCreationPromise,
-            new Promise(resolve => setTimeout(resolve, 5000))
-          ]);
-          
-          // Now sync with backend (this will include the newly created wallet if it was created)
+          // Now sync with backend (this will include any existing wallets)
           console.log('🔄 Syncing with backend...');
           await privyService.syncUser(token);
           console.log('✅ Backend sync completed');
@@ -150,7 +160,8 @@ export function usePrivyAuth() {
     };
 
     performSync();
-  }, [authenticated, user?.id, ready, getAccessToken, isSyncing, user, createWallet]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authenticated, user?.id, ready]);
 
   const handleLogin = useCallback(async () => {
     try {

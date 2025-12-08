@@ -12,6 +12,8 @@ import { SignableHash } from '@/types/privy';
 /**
  * Create a Movement wallet using Privy
  * Movement wallets are created with chainType: 'aptos' (Aptos-compatible)
+ * NOTE: Privy may only allow one embedded wallet per user. If user already has an embedded wallet,
+ * we cannot create another one. Movement wallets may need to be created through a different method.
  * @param privyUser - The authenticated Privy user
  * @param createWallet - The createWallet function from useCreateWallet hook
  * Using 'any' types to match test frontend implementation and avoid TypeScript issues with Privy's types
@@ -21,17 +23,31 @@ export async function createMovementWallet(privyUser: any, createWallet: any) {
   try {
     // First check if user already has a Movement wallet
     // Movement wallets are detected as chainType === 'aptos'
-    const existingWallet = privyUser.linkedAccounts?.find(
+    const existingMovementWallet = privyUser.linkedAccounts?.find(
       (account: any) => account.type === 'wallet' && account.chainType === 'aptos'
     );
     
-    if (existingWallet) {
+    if (existingMovementWallet) {
+      console.log('✅ Movement wallet already exists:', existingMovementWallet.address);
       return {
-        id: existingWallet.id,
-        address: existingWallet.address,
-        public_key: existingWallet.publicKey,
-        chain_type: existingWallet.chainType
+        id: existingMovementWallet.id,
+        address: existingMovementWallet.address,
+        public_key: existingMovementWallet.publicKey,
+        chain_type: existingMovementWallet.chainType
       };
+    }
+
+    // Check if user already has ANY embedded wallet
+    // Privy only allows one embedded wallet per user
+    const hasEmbeddedWallet = privyUser.linkedAccounts?.some(
+      (account: any) => account.type === 'wallet' && 
+                       (account.walletClientType === 'privy' || account.connectorType === 'embedded')
+    );
+
+    if (hasEmbeddedWallet) {
+      console.warn('⚠️ User already has an embedded wallet. Privy only allows one embedded wallet per user.');
+      console.warn('⚠️ Cannot create Movement wallet via createWallet. Movement wallet may need to be created differently.');
+      throw new Error('User already has an embedded wallet. Privy only supports one embedded wallet per user.');
     }
 
     // Create Movement wallet using Privy
@@ -43,8 +59,16 @@ export async function createMovementWallet(privyUser: any, createWallet: any) {
       });
       console.log('✅ Privy createWallet returned:', wallet);
       return wallet;
-    } catch (createError) {
+    } catch (createError: any) {
+      const errorMessage = createError?.message || String(createError);
       console.error('❌ Privy createWallet failed:', createError);
+      
+      // If error is about already having an embedded wallet, provide helpful message
+      if (errorMessage.includes('already has an embedded wallet') || 
+          errorMessage.includes('embedded wallet')) {
+        throw new Error('User already has an embedded wallet. Privy only supports one embedded wallet per user.');
+      }
+      
       throw createError;
     }
   } catch (error) {
