@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { usePrivyAuth } from '@/hooks/usePrivyAuth';
 
 /**
- * Login page to handle OAuth callbacks from Privy
- * This page is required for OAuth redirects to work properly
+ * Inner component that uses useSearchParams - MUST be wrapped in Suspense for Next.js 15
+ * This is a hard requirement - the build will fail without it
  */
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { authenticated, ready } = usePrivy();
@@ -60,6 +60,30 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+/**
+ * Login page to handle OAuth callbacks from Privy
+ * This page is required for OAuth redirects to work properly
+ * 
+ * CRITICAL: Wrapped in Suspense to satisfy Next.js 15 requirement for useSearchParams()
+ * DO NOT REMOVE - the build will fail without this wrapper
+ */
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-black flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto"></div>
+            <p className="mt-4 text-white">Loading...</p>
+          </div>
+        </div>
+      }
+    >
+      <LoginPageContent />
+    </Suspense>
   );
 }
 
