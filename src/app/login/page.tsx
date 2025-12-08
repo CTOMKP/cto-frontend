@@ -28,11 +28,17 @@ function LoginPageContent() {
                             searchParams.get('privy_oauth_code') ||
                             searchParams.get('privy_oauth_provider');
 
-    // If user is authenticated and sync is complete, redirect to profile
-    if (authenticated && isAuthenticated && !isLoading && !hasRedirected) {
-      setHasRedirected(true);
-      router.replace('/profile');
-      return;
+    // If user is authenticated (from Privy), redirect to profile
+    // Don't wait for isAuthenticated from our hook - that depends on backend sync
+    // which might take time. Privy authentication is enough to proceed.
+    if (authenticated && !hasRedirected) {
+      // Give it a moment for the sync to start, then redirect
+      const redirectTimer = setTimeout(() => {
+        setHasRedirected(true);
+        router.replace('/profile');
+      }, 1000); // Small delay to let sync start
+      
+      return () => clearTimeout(redirectTimer);
     }
 
     // If NOT authenticated and NOT an OAuth callback, trigger login modal
@@ -48,35 +54,62 @@ function LoginPageContent() {
       return;
     }
 
-    // For OAuth callbacks, just wait - don't redirect away
-    // The usePrivyAuth hook will handle the sync and redirect
+    // For OAuth callbacks, wait for authentication with a timeout
     if (isOAuthCallback && !authenticated) {
       console.log('⏳ OAuth callback detected - waiting for authentication...');
-      return;
+      
+      // Set a timeout - if authentication doesn't complete in 30 seconds, show error
+      const timeout = setTimeout(() => {
+        if (!authenticated) {
+          console.error('❌ OAuth callback timeout - authentication did not complete');
+          // Could redirect to home with an error message, or show error on page
+        }
+      }, 30000);
+      
+      return () => clearTimeout(timeout);
     }
   }, [ready, authenticated, isAuthenticated, isLoading, router, searchParams, hasRedirected, hasTriggeredLogin, login]);
 
-  // Show loading state while Privy initializes or during OAuth callback
-  if (!ready || (searchParams.get('privy_oauth_state') && !authenticated)) {
+  // Check if this is an OAuth callback
+  const isOAuthCallback = searchParams.get('privy_oauth_state') || 
+                          searchParams.get('privy_oauth_code') ||
+                          searchParams.get('privy_oauth_provider');
+
+  // Show loading state while Privy initializes
+  if (!ready) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto"></div>
+          <p className="mt-4 text-white">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If authenticated (from Privy), show redirecting message
+  // Don't wait for isAuthenticated from our hook - backend sync happens in background
+  if (authenticated) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto"></div>
           <p className="mt-4 text-white">
-            {isLoading ? 'Completing login...' : 'Loading...'}
+            {isOAuthCallback ? 'Completing login...' : 'Redirecting to profile...'}
           </p>
         </div>
       </div>
     );
   }
 
-  // If authenticated, show brief loading while redirecting
-  if (authenticated && isAuthenticated) {
+  // OAuth callback but not authenticated yet - show processing message
+  if (isOAuthCallback && !authenticated) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto"></div>
-          <p className="mt-4 text-white">Redirecting to profile...</p>
+          <p className="mt-4 text-white">Completing login...</p>
+          <p className="mt-2 text-gray-400 text-sm">Please wait while we finish setting up your account</p>
         </div>
       </div>
     );
