@@ -92,10 +92,12 @@ export function usePrivyAuth() {
                   console.warn('⚠️ This is normal - wallet may take a few seconds to appear in Privy');
                   console.warn('⚠️ Continuing with authentication - wallet will sync on next login');
                 }
-              } catch (walletError: any) {
+              } catch (walletError: unknown) {
                 console.error('❌ Failed to create Movement wallet:', walletError);
-                console.error('Error message:', walletError?.message);
-                console.error('Error stack:', walletError?.stack);
+                const errorMessage = walletError instanceof Error ? walletError.message : 'Unknown error';
+                const errorStack = walletError instanceof Error ? walletError.stack : undefined;
+                console.error('Error message:', errorMessage);
+                console.error('Error stack:', errorStack);
                 // Continue anyway - wallet creation is not critical for authentication
                 // User can manually create wallet later if needed
               }
@@ -108,7 +110,7 @@ export function usePrivyAuth() {
           
           // Now sync with backend (this will include the newly created wallet if it was created)
           console.log('🔄 Syncing with backend...');
-          await privyService.syncUser(token, 0);
+          await privyService.syncUser(token);
           console.log('✅ Backend sync completed');
           
           syncedUserIdRef.current = userId;

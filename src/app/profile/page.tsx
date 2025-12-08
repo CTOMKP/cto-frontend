@@ -22,7 +22,6 @@ export default function ProfilePage() {
   const { user, authenticated, ready } = usePrivy();
   const { logout } = usePrivyAuth();
   const [allWallets, setAllWallets] = useState<BackendWallet[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (ready && !authenticated) {
@@ -44,7 +43,6 @@ export default function ProfilePage() {
   }, [authenticated, user, ready]);
 
   const loadWallets = async () => {
-    setIsLoading(true);
     try {
       // First, try to load from localStorage
       const walletsJson = localStorage.getItem('cto_user_wallets');
@@ -52,7 +50,6 @@ export default function ProfilePage() {
         try {
           const wallets = JSON.parse(walletsJson);
           setAllWallets(wallets);
-          setIsLoading(false);
           return;
         } catch (parseError) {
           console.error('Failed to parse wallets from localStorage:', parseError);
@@ -64,7 +61,6 @@ export default function ProfilePage() {
       const userId = localStorage.getItem('cto_user_id');
       
       if (!token || !userId) {
-        setIsLoading(false);
         return;
       }
 
@@ -86,8 +82,6 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error('Failed to load wallets:', error);
-    } finally {
-      setIsLoading(false);
     }
   };
 

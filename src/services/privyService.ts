@@ -10,10 +10,9 @@ class PrivyService {
   /**
    * Sync Privy user with CTO backend
    * @param privyToken - Privy authentication token from frontend
-   * @param retryCount - Current retry attempt (for wallet creation timing)
    * @returns User data and CTO JWT token
    */
-  async syncUser(privyToken: string, retryCount: number = 0): Promise<{
+  async syncUser(privyToken: string): Promise<{
     success: boolean;
     token: string;
     user: {
