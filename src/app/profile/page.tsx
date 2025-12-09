@@ -124,6 +124,12 @@ export default function ProfilePage() {
     (account) => account.type === 'wallet'
   ) as PrivyWalletAccount[] || [];
   const displayWallets = allWallets.length > 0 ? allWallets : privyWallets;
+  
+  // Deduplicate wallets by address to prevent duplicate display
+  const uniqueWallets = displayWallets.filter((wallet, index, self) => 
+    index === self.findIndex((w) => w.address.toLowerCase() === wallet.address.toLowerCase())
+  );
+  
   const email = user?.email?.address || user?.wallet?.address || 'Privy User';
   // Cast user to PrivyUser for getMovementWallet
   const movementWallet = getMovementWallet(user as PrivyUser);
@@ -173,14 +179,14 @@ export default function ProfilePage() {
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
           <h2 className="text-2xl font-bold text-white mb-4">💼 Your Wallets</h2>
           
-          {displayWallets.length === 0 ? (
+          {uniqueWallets.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-gray-400 mb-4">No wallets found</p>
               <p className="text-sm text-gray-500">Wallets should be created automatically on login</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {displayWallets.map((wallet: BackendWallet | PrivyWalletAccount, index: number) => {
+              {uniqueWallets.map((wallet: BackendWallet | PrivyWalletAccount, index: number) => {
                 const { chainType, blockchain } = getWalletChainInfo(wallet);
                 const chain = (chainType || blockchain || '').toLowerCase();
                 const chainUpper = (chainType || blockchain || '').toUpperCase();
@@ -228,8 +234,10 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* Movement Wallet Info */}
-          {movementWallet && (
+          {/* Movement Wallet Info - Only show if not already in the list */}
+          {movementWallet && !uniqueWallets.some(w => 
+            w.address.toLowerCase() === movementWallet.address.toLowerCase()
+          ) && (
             <div className="mt-6 p-4 bg-gradient-to-r from-green-900/20 to-emerald-900/20 border border-green-700 rounded-lg">
               <h3 className="font-semibold text-green-400 mb-2 flex items-center gap-2">
                 <span className="text-2xl">🅰️</span>
