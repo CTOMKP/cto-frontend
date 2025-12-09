@@ -64,9 +64,19 @@ export function usePrivyAuth() {
 
     const userId = user.id;
     
+    // CRITICAL: Check if we've already processed this user ID (set immediately, before async)
+    // This prevents multiple parallel runs from all starting at once
+    if (syncedUserIdRef.current === userId) {
+      // Already processing or processed this user - skip
+      const token = localStorage.getItem('cto_auth_token');
+      if (token) {
+        setIsAuthenticated(true);
+      }
+      return;
+    }
+    
     // CRITICAL DIFFERENCE: Test frontend doesn't check token first, but navigates away after sync
     // Since we can't navigate away, we MUST check token FIRST to prevent re-runs when user object updates
-    // This is the ONLY difference - everything else matches test frontend exactly
     const existingToken = localStorage.getItem('cto_auth_token');
     const existingUserId = localStorage.getItem('cto_user_id');
     if (existingToken && existingUserId === userId) {
@@ -83,8 +93,10 @@ export function usePrivyAuth() {
       return;
     }
 
-    // Mark as processing IMMEDIATELY (synchronously) to prevent duplicate runs
-    isProcessingRef.current = true;
+    // CRITICAL: Mark user ID and processing IMMEDIATELY (synchronously) BEFORE any async operations
+    // This prevents multiple parallel runs from all starting
+    syncedUserIdRef.current = userId; // Set FIRST to prevent other runs
+    isProcessingRef.current = true; // Then set processing flag
 
     const performSync = async () => {
       if (isSyncing) {
@@ -234,7 +246,7 @@ export function usePrivyAuth() {
         }
         
         clearTimeout(timeoutId);
-        // Mark as synced (already set at start, but ensure it's set here too)
+        // Mark as synced (syncedUserIdRef already set at start to prevent parallel runs)
         hasSyncedRef.current = true;
         setIsAuthenticated(true);
         console.log('✅ Authentication flow completed, isAuthenticated set to true');
