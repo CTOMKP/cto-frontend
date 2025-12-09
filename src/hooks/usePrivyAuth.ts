@@ -134,11 +134,14 @@ export function usePrivyAuth() {
         // STEP 5: Only create wallet if BOTH backend and Privy don't have it
         // Only attempt once per user ID to prevent multiple attempts
         // Also check if wallet creation is already in progress
+        // CRITICAL: Set the refs BEFORE starting creation to prevent concurrent attempts
         if (!backendHasMovementWallet && !privyHasMovementWallet && 
             typeof createWallet === 'function' && 
             walletCreationAttemptedRef.current !== userId &&
-            !walletCreationInProgressRef.current) {
+            !walletCreationInProgressRef.current &&
+            !isCreatingMovementWallet) {
           
+          // Set refs IMMEDIATELY to prevent concurrent attempts
           walletCreationAttemptedRef.current = userId;
           walletCreationInProgressRef.current = true;
           setIsCreatingMovementWallet(true);
@@ -163,10 +166,18 @@ export function usePrivyAuth() {
             // Give Privy a moment to finish internal setup (match test frontend: 1 second)
             await new Promise(resolve => setTimeout(resolve, 1000));
             
-            // Double-check wallet exists in user.linkedAccounts (match test frontend: simple check)
-            // This is the authoritative source - don't rely on returned wallet's chainType
+            // Wait a bit longer and re-check to ensure wallet appears in user.linkedAccounts
+            // This prevents the effect from running again and creating duplicate wallets
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const verifyWallet = getMovementWallet(user as any);
+            let verifyWallet = getMovementWallet(user as any);
+            if (!verifyWallet) {
+              // Wait a bit more and check again
+              console.log('⏳ Wallet not immediately visible, waiting a bit longer...');
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              verifyWallet = getMovementWallet(user as any);
+            }
+            
             if (verifyWallet) {
               console.log('✅ Wallet verified:', verifyWallet.address);
             } else {
@@ -253,8 +264,10 @@ export function usePrivyAuth() {
     };
 
     performSync();
+    // Match test frontend: only depend on authenticated and user, use guards for isSyncing/isCreatingMovementWallet
+    // We intentionally exclude isSyncing/isCreatingMovementWallet from deps to prevent re-runs when they change
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authenticated, user?.id, ready, isSyncing, isCreatingMovementWallet]);
+  }, [authenticated, user?.id, ready]);
 
   const handleLogin = useCallback(async () => {
     try {
