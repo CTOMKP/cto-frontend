@@ -67,17 +67,26 @@ export function usePrivyAuth() {
     }
 
     const userId = user.id;
+    
+    // CRITICAL: Check if user already has Movement wallet BEFORE any async operations
+    // This prevents the effect from running multiple times when user object updates
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const existingMovementWallet = getMovementWallet(user as any);
+    const hasMovementWallet = !!existingMovementWallet;
+    
     const existingToken = localStorage.getItem('cto_auth_token');
     const existingUserId = localStorage.getItem('cto_user_id');
 
-    // Skip if already synced for this user
-    if (syncedUserIdRef.current === userId || (existingToken && existingUserId === userId)) {
+    // Skip if already synced for this user AND they have a Movement wallet
+    // This is the key difference - we check wallet existence, not just user ID
+    if ((syncedUserIdRef.current === userId && hasMovementWallet) || 
+        (existingToken && existingUserId === userId && hasMovementWallet)) {
       setIsAuthenticated(true);
       return;
     }
 
     // Only sync once per session unless user changes
-    if (hasSyncedRef.current && syncedUserIdRef.current === userId) {
+    if (hasSyncedRef.current && syncedUserIdRef.current === userId && hasMovementWallet) {
       return;
     }
 
