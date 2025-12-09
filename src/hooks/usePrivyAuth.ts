@@ -22,6 +22,7 @@ export function usePrivyAuth() {
   const [isCreatingMovementWallet, setIsCreatingMovementWallet] = useState(false);
   const syncedUserIdRef = useRef<string | null>(null);
   const hasSyncedRef = useRef(false);
+  const isProcessingRef = useRef(false);
 
   // Update isAuthenticated based on Privy state and localStorage
   useEffect(() => {
@@ -58,6 +59,13 @@ export function usePrivyAuth() {
       return;
     }
 
+    // CRITICAL: Check ref to prevent concurrent processing
+    // This must be checked BEFORE any async operations
+    if (isProcessingRef.current) {
+      console.log('⏭️ Already processing, skipping duplicate run');
+      return;
+    }
+
     const userId = user.id;
     const existingToken = localStorage.getItem('cto_auth_token');
     const existingUserId = localStorage.getItem('cto_user_id');
@@ -73,8 +81,14 @@ export function usePrivyAuth() {
       return;
     }
 
+    // Set processing flag IMMEDIATELY, synchronously, before any async operations
+    isProcessingRef.current = true;
+
     const performSync = async () => {
-      if (isSyncing) return;
+      if (isSyncing) {
+        isProcessingRef.current = false;
+        return;
+      }
       
       setIsSyncing(true);
       
@@ -233,6 +247,7 @@ export function usePrivyAuth() {
         }
       } finally {
         setIsSyncing(false);
+        isProcessingRef.current = false; // Reset processing flag
         console.log('✅ isSyncing set to false');
       }
     };
