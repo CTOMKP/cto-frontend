@@ -23,54 +23,26 @@ export async function createMovementWallet(privyUser: any, createWallet: any) {
   try {
     // First check if user already has a Movement wallet
     // Movement wallets are detected as chainType === 'aptos'
-    const existingMovementWallet = privyUser.linkedAccounts?.find(
+    const existingWallet = privyUser.linkedAccounts?.find(
       (account: any) => account.type === 'wallet' && account.chainType === 'aptos'
     );
     
-    if (existingMovementWallet) {
-      console.log('✅ Movement wallet already exists:', existingMovementWallet.address);
+    if (existingWallet) {
       return {
-        id: existingMovementWallet.id,
-        address: existingMovementWallet.address,
-        public_key: existingMovementWallet.publicKey,
-        chain_type: existingMovementWallet.chainType
+        id: existingWallet.id,
+        address: existingWallet.address,
+        public_key: existingWallet.publicKey,
+        chain_type: existingWallet.chainType
       };
-    }
-
-    // Check if user already has ANY embedded wallet
-    // Privy only allows one embedded wallet per user
-    const hasEmbeddedWallet = privyUser.linkedAccounts?.some(
-      (account: any) => account.type === 'wallet' && 
-                       (account.walletClientType === 'privy' || account.connectorType === 'embedded')
-    );
-
-    if (hasEmbeddedWallet) {
-      console.warn('⚠️ User already has an embedded wallet. Privy only allows one embedded wallet per user.');
-      console.warn('⚠️ Cannot create Movement wallet via createWallet. Movement wallet may need to be created differently.');
-      throw new Error('User already has an embedded wallet. Privy only supports one embedded wallet per user.');
     }
 
     // Create Movement wallet using Privy
     // Movement Network uses Aptos-compatible wallet format
-    console.log('🔄 Calling Privy createWallet with chainType: aptos');
-    try {
-      const wallet = await createWallet({
-        chainType: 'aptos',
-      });
-      console.log('✅ Privy createWallet returned:', wallet);
-      return wallet;
-    } catch (createError: any) {
-      const errorMessage = createError?.message || String(createError);
-      console.error('❌ Privy createWallet failed:', createError);
-      
-      // If error is about already having an embedded wallet, provide helpful message
-      if (errorMessage.includes('already has an embedded wallet') || 
-          errorMessage.includes('embedded wallet')) {
-        throw new Error('User already has an embedded wallet. Privy only supports one embedded wallet per user.');
-      }
-      
-      throw createError;
-    }
+    const wallet = await createWallet({
+      chainType: 'aptos',
+    });
+    
+    return wallet;
   } catch (error) {
     console.error('Error creating Movement wallet:', error);
     throw error;
