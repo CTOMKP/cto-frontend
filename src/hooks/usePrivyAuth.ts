@@ -23,6 +23,7 @@ export function usePrivyAuth() {
   const syncedUserIdRef = useRef<string | null>(null);
   const hasSyncedRef = useRef(false);
   const isProcessingRef = useRef(false);
+  const walletCreationAttemptedRef = useRef<string | null>(null);
 
   // Update isAuthenticated based on Privy state and localStorage
   useEffect(() => {
@@ -67,20 +68,54 @@ export function usePrivyAuth() {
     }
 
     const userId = user.id;
+    const existingToken = localStorage.getItem('cto_auth_token');
+    const existingUserId = localStorage.getItem('cto_user_id');
+    
+    // CRITICAL: Match test frontend - check if we already have a token for THIS user
+    // If we do, we've already synced, so skip entirely
+    if (existingToken && existingUserId === userId) {
+      // We already have a token for this user - check if wallet exists
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const existingMovementWallet = getMovementWallet(user as any);
+      if (existingMovementWallet) {
+        // Wallet exists, we're done
+        syncedUserIdRef.current = userId;
+        hasSyncedRef.current = true;
+        setIsAuthenticated(true);
+        return;
+      }
+      // Token exists but wallet might not be visible yet - still skip to prevent duplicate syncs
+      // The wallet will appear in user.linkedAccounts eventually
+      syncedUserIdRef.current = userId;
+      hasSyncedRef.current = true;
+      setIsAuthenticated(true);
+      return;
+    }
+    
+    // CRITICAL: Check if we've already attempted wallet creation for this user
+    // This prevents multiple creation attempts even if wallet isn't visible yet
+    if (walletCreationAttemptedRef.current === userId) {
+      // Check if wallet exists now
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const existingMovementWallet = getMovementWallet(user as any);
+      if (existingMovementWallet) {
+        // Wallet exists now, mark as synced and skip
+        syncedUserIdRef.current = userId;
+        hasSyncedRef.current = true;
+        setIsAuthenticated(true);
+        return;
+      }
+      // Wallet creation was attempted but not visible yet - skip this run
+      return;
+    }
     
     // CRITICAL: Check if user already has Movement wallet BEFORE any async operations
-    // This prevents the effect from running multiple times when user object updates
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const existingMovementWallet = getMovementWallet(user as any);
     const hasMovementWallet = !!existingMovementWallet;
-    
-    const existingToken = localStorage.getItem('cto_auth_token');
-    const existingUserId = localStorage.getItem('cto_user_id');
 
     // Skip if already synced for this user AND they have a Movement wallet
-    // This is the key difference - we check wallet existence, not just user ID
-    if ((syncedUserIdRef.current === userId && hasMovementWallet) || 
-        (existingToken && existingUserId === userId && hasMovementWallet)) {
+    if (syncedUserIdRef.current === userId && hasMovementWallet) {
       setIsAuthenticated(true);
       return;
     }
@@ -150,8 +185,13 @@ export function usePrivyAuth() {
         console.log(`  - Privy has Movement wallet: ${privyHasMovementWallet}`);
         
         // STEP 5: Only create wallet if BOTH backend and Privy don't have it
-        // Match test frontend EXACTLY: simple check, no complex refs
-        if (!backendHasMovementWallet && !privyHasMovementWallet && typeof createWallet === 'function') {
+        // CRITICAL: Also check if we've already attempted creation for this user
+        if (!backendHasMovementWallet && !privyHasMovementWallet && 
+            typeof createWallet === 'function' &&
+            walletCreationAttemptedRef.current !== userId) {
+          
+          // Mark that we're attempting wallet creation for this user
+          walletCreationAttemptedRef.current = userId;
           setIsCreatingMovementWallet(true);
           console.log('🔄 Creating Movement wallet (missing in both backend and Privy)...');
           
@@ -262,9 +302,10 @@ export function usePrivyAuth() {
     };
 
     performSync();
-    // Match test frontend EXACTLY: depend on authenticated and user
+    // CRITICAL FIX: Use user?.id instead of user to prevent re-runs when user object reference changes
+    // The test frontend navigates away, so this isn't an issue there, but our hook stays mounted
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authenticated, user]);
+  }, [authenticated, user?.id]);
 
   const handleLogin = useCallback(async () => {
     try {
