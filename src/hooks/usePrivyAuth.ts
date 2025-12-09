@@ -22,6 +22,7 @@ export function usePrivyAuth() {
   const syncedUserIdRef = useRef<string | null>(null);
   const hasSyncedRef = useRef(false);
   const walletCreationAttemptedRef = useRef<string | null>(null);
+  const walletCreationInProgressRef = useRef(false);
 
   // Update isAuthenticated based on Privy state and localStorage
   useEffect(() => {
@@ -131,11 +132,14 @@ export function usePrivyAuth() {
         
         // STEP 5: Only create wallet if BOTH backend and Privy don't have it
         // Only attempt once per user ID to prevent multiple attempts
+        // Also check if wallet creation is already in progress
         if (!backendHasMovementWallet && !privyHasMovementWallet && 
             typeof createWallet === 'function' && 
-            walletCreationAttemptedRef.current !== userId) {
+            walletCreationAttemptedRef.current !== userId &&
+            !walletCreationInProgressRef.current) {
           
           walletCreationAttemptedRef.current = userId;
+          walletCreationInProgressRef.current = true;
           setIsCreatingMovementWallet(true);
           console.log('🔄 Creating Movement wallet (missing in both backend and Privy)...');
           
@@ -211,6 +215,7 @@ export function usePrivyAuth() {
             // Continue anyway - wallet creation is not critical for authentication
           } finally {
             setIsCreatingMovementWallet(false);
+            walletCreationInProgressRef.current = false;
           }
         } else {
           if (movementWallet) {
