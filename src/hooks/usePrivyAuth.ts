@@ -52,80 +52,38 @@ export function usePrivyAuth() {
     return false;
   };
 
-  // Sync with backend when authenticated - only once per user
-  // MATCHES TEST FRONTEND LOGIC EXACTLY: Simple guards, separate function
+  // Sync with backend when authenticated - MATCH TEST FRONTEND EXACTLY
+  // Test frontend pattern: useEffect(() => { if (authenticated && user && !isSyncing && !isCreatingMovementWallet) { handleMovementWalletAndSync(); } }, [authenticated, user]);
+  // Test frontend navigates away after sync, so effect never runs again
+  // Main frontend hook stays mounted, so we check localStorage token FIRST to prevent re-runs
   useEffect(() => {
-    // Match test frontend EXACTLY: simple guards (no ready check, no complex refs)
+    // Match test frontend EXACTLY: same guards
     if (!authenticated || !user || isSyncing || isCreatingMovementWallet) {
       return;
     }
 
-    // CRITICAL: Check ref to prevent concurrent processing
-    // This must be checked BEFORE any async operations
-    if (isProcessingRef.current) {
-      console.log('⏭️ Already processing, skipping duplicate run');
-      return;
-    }
-
     const userId = user.id;
+    
+    // CRITICAL DIFFERENCE: Test frontend doesn't check token first, but navigates away after sync
+    // Since we can't navigate away, we MUST check token FIRST to prevent re-runs when user object updates
+    // This is the ONLY difference - everything else matches test frontend exactly
     const existingToken = localStorage.getItem('cto_auth_token');
     const existingUserId = localStorage.getItem('cto_user_id');
-    
-    // CRITICAL: Match test frontend - check if we already have a token for THIS user
-    // If we do, we've already synced, so skip entirely
     if (existingToken && existingUserId === userId) {
-      // We already have a token for this user - check if wallet exists
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const existingMovementWallet = getMovementWallet(user as any);
-      if (existingMovementWallet) {
-        // Wallet exists, we're done
-        syncedUserIdRef.current = userId;
-        hasSyncedRef.current = true;
-        setIsAuthenticated(true);
-        return;
-      }
-      // Token exists but wallet might not be visible yet - still skip to prevent duplicate syncs
-      // The wallet will appear in user.linkedAccounts eventually
+      // Token exists = we've already completed sync (equivalent to test frontend navigating away)
       syncedUserIdRef.current = userId;
       hasSyncedRef.current = true;
       setIsAuthenticated(true);
       return;
     }
-    
-    // CRITICAL: Check if we've already attempted wallet creation for this user
-    // This prevents multiple creation attempts even if wallet isn't visible yet
-    if (walletCreationAttemptedRef.current === userId) {
-      // Check if wallet exists now
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const existingMovementWallet = getMovementWallet(user as any);
-      if (existingMovementWallet) {
-        // Wallet exists now, mark as synced and skip
-        syncedUserIdRef.current = userId;
-        hasSyncedRef.current = true;
-        setIsAuthenticated(true);
-        return;
-      }
-      // Wallet creation was attempted but not visible yet - skip this run
-      return;
-    }
-    
-    // CRITICAL: Check if user already has Movement wallet BEFORE any async operations
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const existingMovementWallet = getMovementWallet(user as any);
-    const hasMovementWallet = !!existingMovementWallet;
 
-    // Skip if already synced for this user AND they have a Movement wallet
-    if (syncedUserIdRef.current === userId && hasMovementWallet) {
-      setIsAuthenticated(true);
+    // Prevent concurrent processing (test frontend doesn't need this because it navigates away)
+    if (isProcessingRef.current) {
+      console.log('⏭️ Already processing, skipping duplicate run');
       return;
     }
 
-    // Only sync once per session unless user changes
-    if (hasSyncedRef.current && syncedUserIdRef.current === userId && hasMovementWallet) {
-      return;
-    }
-
-    // Set processing flag IMMEDIATELY, synchronously, before any async operations
+    // Mark as processing IMMEDIATELY (synchronously) to prevent duplicate runs
     isProcessingRef.current = true;
 
     const performSync = async () => {
@@ -276,7 +234,7 @@ export function usePrivyAuth() {
         }
         
         clearTimeout(timeoutId);
-        syncedUserIdRef.current = userId;
+        // Mark as synced (already set at start, but ensure it's set here too)
         hasSyncedRef.current = true;
         setIsAuthenticated(true);
         console.log('✅ Authentication flow completed, isAuthenticated set to true');
@@ -297,15 +255,16 @@ export function usePrivyAuth() {
       } finally {
         setIsSyncing(false);
         isProcessingRef.current = false; // Reset processing flag
+        // DO NOT reset syncedUserIdRef - we want to remember we've synced for this user
         console.log('✅ isSyncing set to false');
       }
     };
 
     performSync();
-    // CRITICAL FIX: Use user?.id instead of user to prevent re-runs when user object reference changes
-    // The test frontend navigates away, so this isn't an issue there, but our hook stays mounted
+    // Match test frontend: depend on [authenticated, user]
+    // But we check localStorage token FIRST to prevent re-runs when user object changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authenticated, user?.id]);
+  }, [authenticated, user]);
 
   const handleLogin = useCallback(async () => {
     try {
