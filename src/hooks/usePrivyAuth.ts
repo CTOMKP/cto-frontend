@@ -18,6 +18,7 @@ export function usePrivyAuth() {
   const { createWallet } = useCreateWallet();
   const [isSyncing, setIsSyncing] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isCreatingMovementWallet, setIsCreatingMovementWallet] = useState(false);
   const syncedUserIdRef = useRef<string | null>(null);
   const hasSyncedRef = useRef(false);
   const walletCreationAttemptedRef = useRef<string | null>(null);
@@ -53,7 +54,8 @@ export function usePrivyAuth() {
   // MATCHES TEST FRONTEND LOGIC: Sync backend FIRST, then check for wallet
   useEffect(() => {
     // Don't sync if already syncing, not ready, not authenticated, or no user
-    if (!ready || !authenticated || !user || isSyncing) {
+    // Match test frontend: also check isCreatingMovementWallet
+    if (!ready || !authenticated || !user || isSyncing || isCreatingMovementWallet) {
       return;
     }
 
@@ -134,6 +136,7 @@ export function usePrivyAuth() {
             walletCreationAttemptedRef.current !== userId) {
           
           walletCreationAttemptedRef.current = userId;
+          setIsCreatingMovementWallet(true);
           console.log('🔄 Creating Movement wallet (missing in both backend and Privy)...');
           
           try {
@@ -149,6 +152,31 @@ export function usePrivyAuth() {
             const newWallet = await Promise.race([walletCreationPromise, timeoutPromise]);
             /* eslint-enable @typescript-eslint/no-explicit-any */
             console.log('✅ Movement wallet created:', newWallet);
+            
+            // Verify the wallet is actually Aptos type (not Ethereum)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const walletChainType = (newWallet as any)?.chainType;
+            if (walletChainType && walletChainType !== 'aptos') {
+              console.warn(`⚠️ Created wallet chainType is '${walletChainType}', expected 'aptos'`);
+              console.warn('⚠️ This might be an Ethereum wallet. Checking user.linkedAccounts for Aptos wallet...');
+              
+              // Wait a bit for Privy to update user object
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              
+              // Check if user now has an Aptos wallet in linkedAccounts
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const aptosWallet = (user as any).linkedAccounts?.find(
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (account: any) => account.type === 'wallet' && account.chainType === 'aptos'
+              );
+              
+              if (aptosWallet) {
+                console.log('✅ Aptos wallet found in linkedAccounts:', aptosWallet.address);
+              } else {
+                console.warn('⚠️ No Aptos wallet found in linkedAccounts. Privy may have created Ethereum wallet instead.');
+                console.warn('⚠️ This could be due to Privy limitation - user may already have an embedded wallet.');
+              }
+            }
             
             // Give Privy a moment to finish internal setup (match test frontend: 1 second)
             await new Promise(resolve => setTimeout(resolve, 1000));
@@ -202,6 +230,8 @@ export function usePrivyAuth() {
               }
             }
             // Continue anyway - wallet creation is not critical for authentication
+          } finally {
+            setIsCreatingMovementWallet(false);
           }
         } else {
           if (movementWallet) {
@@ -239,7 +269,7 @@ export function usePrivyAuth() {
 
     performSync();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authenticated, user?.id, ready]);
+  }, [authenticated, user?.id, ready, isSyncing, isCreatingMovementWallet]);
 
   const handleLogin = useCallback(async () => {
     try {

@@ -38,9 +38,25 @@ export async function createMovementWallet(privyUser: any, createWallet: any) {
 
     // Create Movement wallet using Privy
     // Movement Network uses Aptos-compatible wallet format
+    console.log('🔄 Calling Privy createWallet with chainType: aptos');
     const wallet = await createWallet({
       chainType: 'aptos',
     });
+    
+    // Log the wallet details to verify chainType
+    console.log('🔄 Wallet returned from createWallet:', {
+      id: wallet?.id,
+      address: wallet?.address,
+      chainType: (wallet as any)?.chainType,
+      type: (wallet as any)?.type,
+      walletClientType: (wallet as any)?.walletClientType
+    });
+    
+    // Verify it's actually an Aptos wallet
+    if ((wallet as any)?.chainType && (wallet as any).chainType !== 'aptos') {
+      console.warn(`⚠️ WARNING: Wallet chainType is '${(wallet as any).chainType}', expected 'aptos'`);
+      console.warn('⚠️ This might be an Ethereum wallet. Privy may have returned existing wallet instead of creating Aptos wallet.');
+    }
     
     return wallet;
   } catch (error) {
