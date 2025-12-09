@@ -273,10 +273,11 @@ export function usePrivyAuth() {
     };
 
     performSync();
-    // Match test frontend: depend on [authenticated, user]
-    // But we check localStorage token FIRST to prevent re-runs when user object changes
+    // CRITICAL FIX: Use user?.id instead of user to prevent re-runs when user object reference changes
+    // Test frontend uses [authenticated, user] but navigates away, so it doesn't matter
+    // Main frontend hook stays mounted, so we MUST use user?.id to prevent re-runs when wallets are added
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authenticated, user]);
+  }, [authenticated, user?.id]);
 
   const handleLogin = useCallback(async () => {
     try {
