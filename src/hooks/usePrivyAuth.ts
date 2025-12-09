@@ -153,41 +153,20 @@ export function usePrivyAuth() {
             /* eslint-enable @typescript-eslint/no-explicit-any */
             console.log('✅ Movement wallet created:', newWallet);
             
-            // Verify the wallet is actually Aptos type (not Ethereum)
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const walletChainType = (newWallet as any)?.chainType;
-            if (walletChainType && walletChainType !== 'aptos') {
-              console.warn(`⚠️ Created wallet chainType is '${walletChainType}', expected 'aptos'`);
-              console.warn('⚠️ This might be an Ethereum wallet. Checking user.linkedAccounts for Aptos wallet...');
-              
-              // Wait a bit for Privy to update user object
-              await new Promise(resolve => setTimeout(resolve, 2000));
-              
-              // Check if user now has an Aptos wallet in linkedAccounts
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const aptosWallet = (user as any).linkedAccounts?.find(
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                (account: any) => account.type === 'wallet' && account.chainType === 'aptos'
-              );
-              
-              if (aptosWallet) {
-                console.log('✅ Aptos wallet found in linkedAccounts:', aptosWallet.address);
-              } else {
-                console.warn('⚠️ No Aptos wallet found in linkedAccounts. Privy may have created Ethereum wallet instead.');
-                console.warn('⚠️ This could be due to Privy limitation - user may already have an embedded wallet.');
-              }
-            }
-            
+            // Match test frontend: Don't verify returned wallet's chainType
+            // Privy may return existing Ethereum wallet, but Aptos wallet will appear in user.linkedAccounts
             // Give Privy a moment to finish internal setup (match test frontend: 1 second)
             await new Promise(resolve => setTimeout(resolve, 1000));
             
-            // Double-check wallet exists (match test frontend: simple check, no retries)
+            // Double-check wallet exists in user.linkedAccounts (match test frontend: simple check)
+            // This is the authoritative source - don't rely on returned wallet's chainType
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const verifyWallet = getMovementWallet(user as any);
             if (verifyWallet) {
               console.log('✅ Wallet verified:', verifyWallet.address);
             } else {
               console.warn('⚠️ Wallet created but not immediately available, proceeding anyway...');
+              console.warn('⚠️ Wallet may appear after page refresh or next sync');
             }
             
             // Re-sync with backend after wallet creation
