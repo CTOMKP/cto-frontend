@@ -6,6 +6,10 @@ import { useCallback, useEffect, useState, useRef } from 'react';
 import { privyService } from '@/services/privyService';
 import { createMovementWallet, getMovementWallet } from '@/lib/movement-wallet';
 
+// Module-level Set to track processing user IDs across ALL hook instances
+// This prevents multiple parallel runs even if hook is instantiated multiple times
+const processingUserIds = new Set<string>();
+
 export function usePrivyAuth() {
   const { 
     authenticated, 
@@ -64,10 +68,10 @@ export function usePrivyAuth() {
 
     const userId = user.id;
     
-    // CRITICAL: Check if we've already processed this user ID (set immediately, before async)
-    // This prevents multiple parallel runs from all starting at once
-    if (syncedUserIdRef.current === userId) {
-      // Already processing or processed this user - skip
+    // CRITICAL: Check module-level Set FIRST to prevent parallel runs across ALL hook instances
+    // This is the key fix - module-level Set is shared across all instances
+    if (processingUserIds.has(userId)) {
+      console.log('⏭️ User ID already being processed (module-level check), skipping');
       const token = localStorage.getItem('cto_auth_token');
       if (token) {
         setIsAuthenticated(true);
@@ -87,16 +91,11 @@ export function usePrivyAuth() {
       return;
     }
 
-    // Prevent concurrent processing (test frontend doesn't need this because it navigates away)
-    if (isProcessingRef.current) {
-      console.log('⏭️ Already processing, skipping duplicate run');
-      return;
-    }
-
-    // CRITICAL: Mark user ID and processing IMMEDIATELY (synchronously) BEFORE any async operations
-    // This prevents multiple parallel runs from all starting
-    syncedUserIdRef.current = userId; // Set FIRST to prevent other runs
-    isProcessingRef.current = true; // Then set processing flag
+    // CRITICAL: Add to module-level Set IMMEDIATELY (synchronously) BEFORE any async operations
+    // This prevents multiple parallel runs from all starting at once
+    processingUserIds.add(userId);
+    syncedUserIdRef.current = userId;
+    isProcessingRef.current = true;
 
     const performSync = async () => {
       if (isSyncing) {
@@ -267,6 +266,8 @@ export function usePrivyAuth() {
       } finally {
         setIsSyncing(false);
         isProcessingRef.current = false; // Reset processing flag
+        // Remove from module-level Set to allow future runs for this user (if needed)
+        processingUserIds.delete(userId);
         // DO NOT reset syncedUserIdRef - we want to remember we've synced for this user
         console.log('✅ isSyncing set to false');
       }
