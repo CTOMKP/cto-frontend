@@ -81,11 +81,11 @@ export default function NavBar() {
                           {[
                             {
                               label: "Listing",
-                              href: "#",
+                              href: "/listings",
                             },
                             {
                               label: "Discovery Hub",
-                              href: "#",
+                              href: "/categories",
                             },
                           ].map((item) => (
                             <NavigationMenuLink
