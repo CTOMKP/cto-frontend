@@ -14,6 +14,7 @@ import WatchList from "./WatchList";
 import Notifications from "./Notifications";
 import LoginButton from "./LoginButton";
 import HarvestGrape from "./HarvestGrape";
+import AvatarDropdown from "./AvatarDropdown";
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
 import {
   DropdownMenu,
@@ -40,7 +41,16 @@ const ExploreCategoryLinks = [
 export default function NavBar() {
   const { isAuthenticated } = usePrivyAuth();
   const [isDropdownOpen, setDropdownOpen] = useState(false);
+  const [hasAvatar, setHasAvatar] = useState(false);
   const pathname = usePathname();
+
+  // Check if user has avatar
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && isAuthenticated) {
+      const avatarUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
+      setHasAvatar(!!avatarUrl);
+    }
+  }, [isAuthenticated]);
 
   if (pathname === "/" || pathname === "/faq") return null;
 
@@ -255,8 +265,7 @@ export default function NavBar() {
         <div className="border-l-[0.2px] ml-4 border-[#FFFFFF20] h-full flex items-center justify-center gap-2">
           {isAuthenticated ? (
             <>
-              <HarvestGrape />
-              <LoginButton />
+              {hasAvatar ? <AvatarDropdown /> : <HarvestGrape />}
             </>
           ) : (
             <LoginButton />

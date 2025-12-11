@@ -1,0 +1,211 @@
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { usePrivyAuth } from '@/hooks/usePrivyAuth';
+import { usePrivy } from '@privy-io/react-auth';
+import { Check, SquareArrowOutUpRight } from 'lucide-react';
+import { toast } from 'react-toastify';
+import Link from 'next/link';
+
+export default function AvatarDropdown() {
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [copiedAddress, setCopiedAddress] = useState(false);
+  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
+  const [level, setLevel] = useState(4);
+  const [currentXP, setCurrentXP] = useState(45);
+  const [nextLevelXP, setNextLevelXP] = useState(150);
+  const router = useRouter();
+  const { logout } = usePrivyAuth();
+  const { user } = usePrivy();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const updateAvatar = () => {
+        const url = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
+        setAvatarUrl(url);
+      };
+      
+      updateAvatar();
+      const userEmail = user?.email?.address || localStorage.getItem('cto_user_email') || '';
+      setEmail(userEmail);
+      // Get username from localStorage or use email prefix
+      const storedUsername = localStorage.getItem('cto_user_username') || userEmail.split('@')[0] || 'User';
+      setUsername(storedUsername);
+
+      // Listen for storage changes (when avatar is updated)
+      window.addEventListener('storage', updateAvatar);
+      return () => window.removeEventListener('storage', updateAvatar);
+    }
+  }, [user]);
+
+  // Get primary wallet address
+  const primaryWalletAddress = React.useMemo(() => {
+    if (typeof window !== 'undefined') {
+      const walletsJson = localStorage.getItem('cto_user_wallets');
+      if (walletsJson) {
+        try {
+          const wallets = JSON.parse(walletsJson);
+          const primaryWallet = wallets.find((w: any) => w.isPrimary) || wallets[0];
+          return primaryWallet?.address || '';
+        } catch (e) {
+          console.error('Failed to parse wallets:', e);
+        }
+      }
+    }
+    return '';
+  }, []);
+
+  const copyAddress = (address: string) => {
+    navigator.clipboard.writeText(address);
+    setCopiedAddress(true);
+    toast.success('Address copied!');
+    setTimeout(() => setCopiedAddress(false), 2000);
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/');
+  };
+
+  const xpProgress = nextLevelXP > 0 ? (currentXP / nextLevelXP) * 100 : 0;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger>
+        <span className="relative flex justify-center items-center rounded-lg size-13 border-[0.2px] border-[#FFFFFF20] overflow-hidden">
+          {avatarUrl ? (
+            <Image
+              src={avatarUrl}
+              alt="Profile"
+              fill
+              className="object-cover rounded-lg"
+              loading="lazy"
+              unoptimized
+            />
+          ) : (
+            <span className="bg-[#FFFFFF0D] rounded-sm size-7 flex items-center justify-center text-white text-xs font-bold">
+              {email.charAt(0).toUpperCase() || 'U'}
+            </span>
+          )}
+        </span>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="bg-[#010101] text-white p-6 w-[400px] border-2 border-[#86868630]">
+        {/* Profile Section */}
+        <div className="mb-4 pb-4 border-b-[0.5px] border-[#FFFFFF20]">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="relative w-16 h-16 rounded-full overflow-hidden flex-shrink-0">
+              {avatarUrl ? (
+                <Image
+                  src={avatarUrl}
+                  alt="Profile"
+                  fill
+                  className="object-cover rounded-full"
+                  loading="lazy"
+                  unoptimized
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-xl text-white font-bold">
+                  {email.charAt(0).toUpperCase() || 'U'}
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-bold text-lg truncate">{username}</h3>
+                <Image
+                  src="/badge.svg"
+                  alt="badge"
+                  width={15}
+                  height={15}
+                  loading="lazy"
+                />
+              </div>
+              <p className="text-sm text-white/70">Level {level} - Senior Sapling</p>
+            </div>
+          </div>
+
+          {/* XP Progress */}
+          <div className="mb-2">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs text-white/70">XP Progress</span>
+              <span className="text-xs text-white/70">{currentXP} / {nextLevelXP} XP</span>
+            </div>
+            <div className="w-full h-1 bg-[#27272A] rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-[#FF0075] via-[#FF4A15] to-[#FFCB45] transition-all duration-300"
+                style={{ width: `${xpProgress}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Wallet Address */}
+        <div className="mb-4 pb-4 border-b-[0.5px] border-[#FFFFFF20]">
+          <div className="flex items-center gap-2 p-2 bg-[#FFFFFF0D] rounded-lg">
+            <span className="text-xs text-white/70 flex-1 truncate font-mono">
+              {primaryWalletAddress ? (
+                `${primaryWalletAddress.slice(0, 10)}...${primaryWalletAddress.slice(-8)}`
+              ) : (
+                'No wallet connected'
+              )}
+            </span>
+            {primaryWalletAddress && (
+              <button
+                onClick={() => copyAddress(primaryWalletAddress)}
+                className="text-white/70 hover:text-white transition-colors p-1"
+              >
+                {copiedAddress ? (
+                  <Check size={14} className="text-[#16C784]" />
+                ) : (
+                  <Image
+                    src="/copy.svg"
+                    alt="copy"
+                    width={14}
+                    height={14}
+                    loading="lazy"
+                  />
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Navigation Links */}
+        <div className="space-y-2 mb-4">
+          <Link
+            href="/profile"
+            className="block text-sm text-white hover:text-white/80 transition-colors py-2"
+          >
+            Settings
+          </Link>
+          <a
+            href="#"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 text-sm text-white hover:text-white/80 transition-colors py-2"
+          >
+            Contact Support
+            <SquareArrowOutUpRight size={14} />
+          </a>
+        </div>
+
+        {/* Logout Button */}
+        <button
+          onClick={handleLogout}
+          className="w-full py-3 px-4 bg-[#FFFFFF0D] hover:bg-[#FFFFFF1A] rounded-lg text-white font-medium transition-colors"
+        >
+          Log out
+        </button>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
