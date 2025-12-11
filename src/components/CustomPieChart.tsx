@@ -19,7 +19,6 @@ interface CustomPieChartProps {
 
 export default function CustomPieChart({
   data,
-  width = 400,
   height = 200,
   innerRadius = 15,
   outerRadius = 35,

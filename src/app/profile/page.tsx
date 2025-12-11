@@ -9,11 +9,9 @@ import { getMovementWallet } from '@/lib/movement-wallet';
 import axios from 'axios';
 import Image from 'next/image';
 import { BackendWallet, PrivyWalletAccount, PrivyUser } from '@/types/privy';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import CustomPieChart from '@/components/CustomPieChart';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-import { Settings, Copy, Eye, EyeOff, Edit, LogOut, Link, Wallet, ChevronDown, ChevronUp, MoveDown, MoveUp, ArrowUpDown, SquareArrowOutUpRight } from 'lucide-react';
+import {Eye, EyeOff, Edit, LogOut, Link, Wallet, ChevronDown, ChevronUp, MoveDown, MoveUp, ArrowUpDown, SquareArrowOutUpRight, Check } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Helper function to get wallet chain info
@@ -440,12 +438,8 @@ export default function ProfilePage() {
     { name: 'Others', value: 10, color: '#EF4444' },
   ];
 
-  // Mock data - replace with real data from API
+  // Mock data
   const walletBalance = 2000000;
-  const assets = [
-    { name: 'Aptos', value: 1000000, logo: '/listings-chains/aptos.png' },
-    { name: 'USDC', value: 1000000, logo: '/listings-chains/usdc.png' },
-  ];
 
   const level = 4;
   const currentXP = 45;
@@ -501,12 +495,16 @@ export default function ProfilePage() {
                       onClick={() => copyAddress(primaryWalletAddress)}
                       className="text-white/70 hover:text-white transition-colors bg-white/20 rounded-[25px] p-1"
                     >
-                      <Image
-                        src="/copy.svg"
-                        alt="copy"
-                        width={14}
-                        height={14}
-                      />
+                      {copiedAddress ? (
+                        <Check size={14} className="text-[#16C784]" />
+                      ) : (
+                        <Image
+                          src="/copy.svg"
+                          alt="copy"
+                          width={14}
+                          height={14}
+                        />
+                      )}
                     </button>
                   </div>
                 </div>
