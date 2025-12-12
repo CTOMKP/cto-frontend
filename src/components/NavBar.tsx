@@ -39,7 +39,7 @@ const ExploreCategoryLinks = [
 ];
 
 export default function NavBar() {
-  const { isAuthenticated } = usePrivyAuth();
+  const { isAuthenticated, user } = usePrivyAuth();
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const [hasAvatar, setHasAvatar] = useState(false);
   const pathname = usePathname();
@@ -254,22 +254,22 @@ export default function NavBar() {
       </div>
 
       <div className="flex items-center">
-        {isAuthenticated && (
+        {isAuthenticated && user ?
           <div className="flex items-center gap-1">
             <NavBarChats />
             <WatchList />
             <Notifications />
           </div>
-        )}
+         : <></>}
 
         <div className="border-l-[0.2px] ml-4 border-[#FFFFFF20] h-full flex items-center justify-center gap-2">
-          {isAuthenticated ? (
+          {isAuthenticated && user ? 
             <>
               {hasAvatar ? <AvatarDropdown /> : <HarvestGrape />}
             </>
-          ) : (
+           : 
             <LoginButton />
-          )}
+          }
         </div>
       </div>
     </div>

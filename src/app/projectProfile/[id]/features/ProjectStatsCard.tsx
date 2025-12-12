@@ -14,7 +14,7 @@ export default function ProjectStatsCard({
   subtitle 
 }: ProjectStatsCardProps) {
   return (
-    <div className="flex flex-col items-center justify-center gap-1.5 bg-[#FFFFFF]/5 border border-[#8686864D] max-w-[238px] rounded-xl h-[113px]">
+    <div className="flex flex-col items-center justify-center gap-1.5 bg-[#FFFFFF]/5 border border-[#8686864D] w-full rounded-xl h-[113px]">
       <span className="flex items-center gap-1.5">
         <h2 className="font-bold text-[11px] text-[#FFFFFF]/50">
           {title}
