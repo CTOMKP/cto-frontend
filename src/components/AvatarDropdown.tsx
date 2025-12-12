@@ -13,15 +13,16 @@ import { usePrivy } from '@privy-io/react-auth';
 import { Check, SquareArrowOutUpRight } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Link from 'next/link';
+import { BackendWallet } from '@/types/privy';
 
 export default function AvatarDropdown() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [copiedAddress, setCopiedAddress] = useState(false);
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
-  const [level, setLevel] = useState(4);
-  const [currentXP, setCurrentXP] = useState(45);
-  const [nextLevelXP, setNextLevelXP] = useState(150);
+  const level = 4;
+  const currentXP = 45;
+  const nextLevelXP = 150;
   const router = useRouter();
   const { logout } = usePrivyAuth();
   const { user } = usePrivy();
@@ -52,8 +53,9 @@ export default function AvatarDropdown() {
       const walletsJson = localStorage.getItem('cto_user_wallets');
       if (walletsJson) {
         try {
-          const wallets = JSON.parse(walletsJson);
-          const primaryWallet = wallets.find((w: any) => w.isPrimary) || wallets[0];
+          const wallets = JSON.parse(walletsJson) as BackendWallet[];
+          type WalletWithPrimary = BackendWallet & { isPrimary?: boolean };
+          const primaryWallet = wallets.find((w: WalletWithPrimary) => w.isPrimary) || wallets[0];
           return primaryWallet?.address || '';
         } catch (e) {
           console.error('Failed to parse wallets:', e);

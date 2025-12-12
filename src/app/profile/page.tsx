@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
-import { usePrivyAuth } from '@/hooks/usePrivyAuth';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { getMovementWallet } from '@/lib/movement-wallet';
@@ -15,11 +14,11 @@ import {Eye, EyeOff, Edit, LogOut, Link, Wallet, ChevronDown, ChevronUp, MoveDow
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Helper function to get wallet chain info
-function getWalletChainInfo(wallet: BackendWallet | PrivyWalletAccount) {
-  const chainType = 'chainType' in wallet ? wallet.chainType : undefined;
-  const blockchain = 'blockchain' in wallet ? wallet.blockchain : undefined;
-  return { chainType, blockchain };
-}
+// function getWalletChainInfo(wallet: BackendWallet | PrivyWalletAccount) {
+//   const chainType = 'chainType' in wallet ? wallet.chainType : undefined;
+//   const blockchain = 'blockchain' in wallet ? wallet.blockchain : undefined;
+//   return { chainType, blockchain };
+// }
 
 // COMMENTED CODE FOR REFERENCE - DO NOT REMOVE
 // "use client";
@@ -296,7 +295,6 @@ function getWalletChainInfo(wallet: BackendWallet | PrivyWalletAccount) {
 export default function ProfilePage() {
   const router = useRouter();
   const { user, authenticated, ready } = usePrivy();
-  const { logout } = usePrivyAuth();
   const [allWallets, setAllWallets] = useState<BackendWallet[]>([]);
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [copiedAddress, setCopiedAddress] = useState(false);
@@ -360,14 +358,14 @@ export default function ProfilePage() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      router.push('/');
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
-  };
+  // const handleLogout = async () => {
+  //   try {
+  //     await logout();
+  //     router.push('/');
+  //   } catch (error) {
+  //     console.error('Logout failed:', error);
+  //   }
+  // };
 
   const copyAddress = (address: string) => {
     navigator.clipboard.writeText(address);
@@ -419,17 +417,17 @@ export default function ProfilePage() {
     : movementWallet?.address || '';
 
   // Calculate wallet stats
-  const cosmosWallets = uniqueWallets.filter(w => {
-    const { chainType, blockchain } = getWalletChainInfo(w);
-    const chain = (chainType || blockchain || '').toLowerCase();
-    return chain === 'cosmos' || chain === 'osmosis' || chain === 'juno';
-  }).length;
+  // const cosmosWallets = uniqueWallets.filter(w => {
+  //   const { chainType, blockchain } = getWalletChainInfo(w);
+  //   const chain = (chainType || blockchain || '').toLowerCase();
+  //   return chain === 'cosmos' || chain === 'osmosis' || chain === 'juno';
+  // }).length;
 
-  const evmWallets = uniqueWallets.filter(w => {
-    const { chainType, blockchain } = getWalletChainInfo(w);
-    const chain = (chainType || blockchain || '').toLowerCase();
-    return chain === 'ethereum' || chain === 'base' || chain === 'polygon' || chain === 'arbitrum' || chain === 'optimism';
-  }).length;
+  // const evmWallets = uniqueWallets.filter(w => {
+  //   const { chainType, blockchain } = getWalletChainInfo(w);
+  //   const chain = (chainType || blockchain || '').toLowerCase();
+  //   return chain === 'ethereum' || chain === 'base' || chain === 'polygon' || chain === 'arbitrum' || chain === 'optimism';
+  // }).length;
 
   // Achievement task data for donut chart
   const achievementData = [
