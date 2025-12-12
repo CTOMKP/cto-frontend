@@ -79,22 +79,24 @@ export default function AvatarDropdown() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger>
-        <span className="relative flex justify-center items-center rounded-lg size-13 border-[0.2px] border-[#FFFFFF20] overflow-hidden">
-          {avatarUrl ? (
-            <Image
-              src={avatarUrl}
-              alt="Profile"
-              fill
-              className="object-cover rounded-lg"
-              loading="lazy"
-              unoptimized
-            />
-          ) : (
-            <span className="bg-[#FFFFFF0D] rounded-sm size-7 flex items-center justify-center text-white text-xs font-bold">
-              {email.charAt(0).toUpperCase() || 'U'}
-            </span>
-          )}
+      <DropdownMenuTrigger className='mx-8.5'>
+        <span className="relative flex justify-center items-center rounded-lg size-13 border-[0.2px] border-[#FFFFFF20]">
+          <span className="relative bg-[#FFFFFF0D] rounded-full size-9 flex items-center justify-center overflow-hidden">
+            {avatarUrl ? (
+              <Image
+                src={avatarUrl}
+                alt="Profile"
+                fill
+                className="object-cover"
+                loading="lazy"
+                unoptimized
+              />
+            ) : (
+              <span className="text-white text-xs font-bold">
+                {email.charAt(0).toUpperCase() || 'U'}
+              </span>
+            )}
+          </span>
         </span>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="bg-[#010101] text-white p-6 w-[400px] border-2 border-[#86868630]">

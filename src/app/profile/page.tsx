@@ -11,7 +11,7 @@ import Image from 'next/image';
 import { BackendWallet, PrivyWalletAccount, PrivyUser } from '@/types/privy';
 import { Button } from '@/components/ui/button';
 import CustomPieChart from '@/components/CustomPieChart';
-import {Eye, EyeOff, LogOut, Link, Wallet, ChevronDown, ChevronUp, MoveDown, MoveUp, ArrowUpDown, SquareArrowOutUpRight } from 'lucide-react';
+import {Eye, EyeOff, Edit, LogOut, Link, Wallet, ChevronDown, ChevronUp, MoveDown, MoveUp, ArrowUpDown, SquareArrowOutUpRight, Check } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Helper function to get wallet chain info
@@ -299,6 +299,7 @@ export default function ProfilePage() {
   const { logout } = usePrivyAuth();
   const [allWallets, setAllWallets] = useState<BackendWallet[]>([]);
   const [balanceVisible, setBalanceVisible] = useState(true);
+  const [copiedAddress, setCopiedAddress] = useState(false);
 
   useEffect(() => {
     if (ready && !authenticated) {
@@ -368,6 +369,12 @@ export default function ProfilePage() {
     }
   };
 
+  const copyAddress = (address: string) => {
+    navigator.clipboard.writeText(address);
+    setCopiedAddress(true);
+    toast.success('Address copied!');
+    setTimeout(() => setCopiedAddress(false), 2000);
+  };
 
   if (!ready) {
     return (
@@ -445,6 +452,73 @@ export default function ProfilePage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
           {/* Left Container - User Profile, Level/XP, Achievement Task, Wallet Stats */}
           <div className="border-none w-full">
+            <div className="flex items-start justify-between mb-4 border-[0.5px] border-white/20 py-5 px-3 rounded-lg bg-[#FFFFFF]/3">
+              <div className="flex items-start gap-4">
+                <div className="relative w-20 h-20 rounded-full overflow-hidden">
+                  {avatarUrl ? (
+                    <Image
+                      src={avatarUrl}
+                      alt="Profile"
+                      fill
+                      className="object-cover size-15 rounded-full border-[0.6px] border-white"
+                      loading="lazy"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-2xl">
+                      {email.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div className="">
+                    <h1 className="text-white/70 font-semibold mb-2">
+                      Username
+                    </h1>
+                    <div className="flex items-center gap-1">
+                      <h2 className="font-bold text-[32px] ">User234353hgfk</h2>
+                      <Edit size={14} />
+                    </div>
+                    {/* <h2 className="text-2xl font-bold text-white">
+                        {email.split('@')[0] || 'User'}
+                      </h2> */}
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-white/70 font-semibold">
+                      Smart wallet{" "}
+                      <span className="bg-white/20 rounded-[25px] p-1 font-normal">
+                        {primaryWalletAddress.slice(0, 8)}...
+                        {primaryWalletAddress.slice(-8)}
+                      </span>
+                    </p>
+                    <button
+                      onClick={() => copyAddress(primaryWalletAddress)}
+                      className="text-white/70 hover:text-white transition-colors bg-white/20 rounded-[25px] p-1"
+                    >
+                      {copiedAddress ? (
+                        <Check size={14} className="text-[#16C784]" />
+                      ) : (
+                        <Image
+                          src="/copy.svg"
+                          alt="copy"
+                          width={14}
+                          height={14}
+                        />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-col justify-between items-end self-stretch">
+                <Button className="p-2 w-fit bg-none ronded-lg border-[0.2px] border-white/20">
+                  <LogOut size={32} />
+                </Button>
+                <Button className="text-[#9F9FA9] p-2 ronded-lg border-[0.2px] border-white/20">
+                  View wallets
+                </Button>
+              </div>
+            </div>
+
             {/* Level and XP Progress */}
             <div className="mb-4 rounded-lg border-[0.5px] border-white/20 py-[13px] px-3">
               <div className=" mb-2">
