@@ -41,7 +41,7 @@ const ExploreCategoryLinks = [
 ];
 
 export default function NavBar() {
-  const { isAuthenticated, user } = usePrivyAuth();
+  const { isAuthenticated } = usePrivyAuth();
   const { authenticated: privyAuthenticated, ready } = usePrivy();
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const [hasAvatar, setHasAvatar] = useState(false);
