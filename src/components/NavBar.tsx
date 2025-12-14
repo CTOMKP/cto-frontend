@@ -16,6 +16,8 @@ import LoginButton from "./LoginButton";
 import HarvestGrape from "./HarvestGrape";
 import AvatarDropdown from "./AvatarDropdown";
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
+import { usePrivy } from "@privy-io/react-auth";
+import { useEffect } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,17 +42,42 @@ const ExploreCategoryLinks = [
 
 export default function NavBar() {
   const { isAuthenticated, user } = usePrivyAuth();
+  const { authenticated: privyAuthenticated, ready } = usePrivy();
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const [hasAvatar, setHasAvatar] = useState(false);
   const pathname = usePathname();
 
-  // Check if user has avatar
-  React.useEffect(() => {
-    if (typeof window !== 'undefined' && isAuthenticated) {
-      const avatarUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
-      setHasAvatar(!!avatarUrl);
+
+  const showAuthenticatedUI = (privyAuthenticated && ready) || isAuthenticated;
+
+  // Check if user has avatar and listen for changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const checkAvatar = () => {
+        if (showAuthenticatedUI) {
+          const avatarUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
+          setHasAvatar(!!avatarUrl);
+        } else {
+          setHasAvatar(false);
+        }
+      };
+
+      // Check immediately
+      checkAvatar();
+
+      const interval = setInterval(checkAvatar, 500);
+
+      window.addEventListener('storage', checkAvatar);
+
+      window.addEventListener('avatarUpdated', checkAvatar);
+
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener('storage', checkAvatar);
+        window.removeEventListener('avatarUpdated', checkAvatar);
+      };
     }
-  }, [isAuthenticated]);
+  }, [showAuthenticatedUI]);
 
   if (pathname === "/" || pathname === "/faq") return null;
 
@@ -254,22 +281,22 @@ export default function NavBar() {
       </div>
 
       <div className="flex items-center">
-        {isAuthenticated && user ?
+        {showAuthenticatedUI ? (
           <div className="flex items-center gap-1">
             <NavBarChats />
             <WatchList />
             <Notifications />
           </div>
-         : <></>}
+        ) : null}
 
         <div className="border-l-[0.2px] ml-4 border-[#FFFFFF20] h-full flex items-center justify-center gap-2">
-          {isAuthenticated && user ? 
+          {showAuthenticatedUI ? (
             <>
               {hasAvatar ? <AvatarDropdown /> : <HarvestGrape />}
             </>
-           : 
+          ) : (
             <LoginButton />
-          }
+          )}
         </div>
       </div>
     </div>

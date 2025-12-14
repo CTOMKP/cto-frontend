@@ -162,6 +162,11 @@ class PFPService {
         localStorage.setItem('profile_avatar_url', imageUrl);
         localStorage.setItem('cto_user_avatar_url', imageUrl);
         
+        // Dispatch custom event to notify components of avatar update
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('avatarUpdated'));
+        }
+        
         return {
           success: true,
           message: response.data.message || 'PFP saved successfully',

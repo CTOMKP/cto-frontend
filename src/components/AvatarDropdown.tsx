@@ -101,7 +101,7 @@ export default function AvatarDropdown() {
           </span>
         </span>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="bg-[#010101] text-white p-6 w-[400px] border-2 border-[#86868630]">
+      <DropdownMenuContent className="bg-[#010101] text-white p-6 w-[300px] border-2 border-[#86868630]">
         {/* Profile Section */}
         <div className="mb-4 pb-4 border-b-[0.5px] border-[#FFFFFF20]">
           <div className="flex items-center gap-3 mb-4">
@@ -186,20 +186,88 @@ export default function AvatarDropdown() {
         <div className="space-y-2 mb-4">
           <Link
             href="/profile"
-            className="block text-sm text-white hover:text-white/80 transition-colors py-2"
+            className="block"
           >
-            Settings
+            <div
+              className="rounded-lg p-[1px] transition-all duration-300"
+              style={{ background: "transparent" }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background =
+                  "linear-gradient(100.86deg, rgba(255, 0, 117, 0.3) 4.13%, rgba(255, 74, 21, 0.3) 55.91%, rgba(255, 203, 69, 0.3) 100%)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+              }}
+            >
+              <div
+                className="rounded-lg w-full px-2 py-2"
+                style={{
+                  background: "#010101",
+                  transition: "all 0.3s ease-in-out",
+                }}
+              >
+                <span className="text-sm text-white">Settings</span>
+              </div>
+            </div>
           </Link>
           <a
             href="#"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 text-sm text-white hover:text-white/80 transition-colors py-2"
+            className="block"
           >
-            Contact Support
-            <SquareArrowOutUpRight size={14} />
+            <div
+              className="rounded-lg p-[1px] transition-all duration-300"
+              style={{ background: "transparent" }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background =
+                  "linear-gradient(100.86deg, rgba(255, 0, 117, 0.3) 4.13%, rgba(255, 74, 21, 0.3) 55.91%, rgba(255, 203, 69, 0.3) 100%)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+              }}
+            >
+              <div
+                className="rounded-lg w-full px-2 py-2 flex items-center gap-2"
+                style={{
+                  background: "#010101",
+                  transition: "all 0.3s ease-in-out",
+                }}
+              >
+                <span className="text-sm text-white">Contact Support</span>
+                <SquareArrowOutUpRight size={14} />
+              </div>
+            </div>
           </a>
         </div>
+
+        {/* Profile Link with Gradient Border */}
+        <Link
+          href="/profile"
+          className="block mb-3"
+        >
+          <div
+            className="rounded-lg p-[1px] transition-all duration-300"
+            style={{ background: "transparent" }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background =
+                "linear-gradient(100.86deg, rgba(255, 0, 117, 0.3) 4.13%, rgba(255, 74, 21, 0.3) 55.91%, rgba(255, 203, 69, 0.3) 100%)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent";
+            }}
+          >
+            <div
+              className="rounded-lg w-full px-4 py-3 text-center"
+              style={{
+                background: "#010101",
+                transition: "all 0.3s ease-in-out",
+              }}
+            >
+              <span className="text-white font-medium">Profile</span>
+            </div>
+          </div>
+        </Link>
 
         {/* Logout Button */}
         <button
