@@ -120,10 +120,10 @@ export default function ProjectHeader({ projectData, formatJoinedDate }: Project
             </div>
           </div>
           <span className="text-[#FFFFFF]/50 font-bold mt-2">
-            {projectData?.summary || "Just a chill guy"}
+            {"Just a chill guy"}
           </span>
 
-          <div className="flex gap-1 mt-4.5 items-center">
+          <div className="flex gap-1 mt-4.5 items-center mb-15">
             <span className="bg-[#FFFFFF0D] rounded-[26px] flex gap-1.5 items-center justify-center px-1.5 h-6">
               <Clock3 size={16} />
               <span>
@@ -152,10 +152,10 @@ export default function ProjectHeader({ projectData, formatJoinedDate }: Project
             </span>
           </div>
 
-          <p className="font-medium mt-4 max-w-[608px] text-wrap mb-[34px]">
+          {/* <p className="font-medium mt-4 max-w-[608px] text-wrap mb-[34px]">
             {projectData?.summary ||
               "AI native liquidity layer for Hyperliquid, Solana & more chains. Instantly deploy AI-powered onchain agents that aggregate & route liquidity via our powerful API."}
-          </p>
+          </p> */}
         </div>
       </div>
     </div>
