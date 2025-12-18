@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { ApiCoinItem } from "@/types/api";
 import { useRouter } from "next/navigation";
+import FallbackImage from "@/components/FallbackImage";
 
 // Helper function to format relative age
 function formatRelativeAge(date: Date): string {
@@ -116,28 +117,53 @@ export default function TrendingCommunity({
 
   // Convert API data to the format expected by the component
   const communityData = useMemo(() => {
+    console.log('TrendingCommunity - apiData received:', apiData?.length || 0, 'items');
     if (!apiData || apiData.length === 0) {
+      console.log('TrendingCommunity - No apiData, returning empty array');
       return [];
     }
     
-    // Calculate community score for each coin and filter out coins with no community score
+    // Calculate community score for each coin
+    // Since community scores are "Coming Soon" and mostly 0, we'll show top coins by other metrics
     const coinsWithCommunityScore = apiData
+      .filter((item) => item.contractAddress) // Only include items with valid addresses
       .map((item) => {
         const communityScore = typeof item.communityScore === "number" 
           ? item.communityScore 
           : (item?.metadata?.market?.communityScore ?? 0);
         
+        // If community score is 0, use risk score as a fallback for ranking
+        // This ensures we still show coins even when community scores aren't available
+        const fallbackScore = communityScore > 0 ? communityScore : (typeof item.riskScore === "number" ? item.riskScore : 0);
+        
         return {
           item,
-          communityScore
+          communityScore,
+          fallbackScore
         };
-      })
-      .filter(({ communityScore }) => communityScore > 0); // Only include coins with community score > 0
+      });
     
-    // Sort by community score (highest first) and take top 6
+    // Sort by community score first, then by fallback score, and take top 6
+    // Don't filter out coins - show top 6 even if all scores are 0
+    // This ensures we always show something if there's data
     const sortedCoins = coinsWithCommunityScore
-      .sort((a, b) => b.communityScore - a.communityScore)
+      .sort((a, b) => {
+        // Primary sort: community score
+        if (a.communityScore !== b.communityScore) {
+          return b.communityScore - a.communityScore;
+        }
+        // Secondary sort: fallback score (risk score)
+        if (b.fallbackScore !== a.fallbackScore) {
+          return b.fallbackScore - a.fallbackScore;
+        }
+        // Tertiary sort: volume (if available)
+        const aVolume = Number(a.item.volume24h ?? a.item?.metadata?.market?.volume?.h24 ?? 0);
+        const bVolume = Number(b.item.volume24h ?? b.item?.metadata?.market?.volume?.h24 ?? 0);
+        return bVolume - aVolume;
+      })
       .slice(0, 6);
+    
+    console.log('TrendingCommunity - Processed coins:', sortedCoins.length);
     
     return sortedCoins.map(({ item, communityScore }) => {
       const createdAt = item.createdAt ? new Date(item.createdAt) : null;
@@ -149,7 +175,8 @@ export default function TrendingCommunity({
         address: item.contractAddress,
         chain: item.chain,
         image: item.logoUrl || item?.metadata?.market?.logoUrl,
-        communityScore: communityScore
+        // Show "Coming Soon" for community score if it's 0, otherwise show the actual score
+        communityScore: communityScore > 0 ? communityScore : 0
       };
     });
   }, [apiData]);
@@ -249,12 +276,11 @@ export default function TrendingCommunity({
                   <TableCell className="!py-1">
                     <div className="flex items-center gap-1">
                       <div className="relative">
-                        <Image
+                        <FallbackImage
                           className="size-7 rounded-full border-[0.36px] border-white"
-                          src={data.image || ""}
+                          src={data.image}
                           alt="coin-image"
-                          width={28}
-                          height={28}
+                          customStyles={{ width: '28px', height: '28px', objectFit: 'cover' }}
                         />
                         {/* Chain image - using actual chain data */}
                         {data.chain && (
@@ -312,19 +338,25 @@ export default function TrendingCommunity({
                   </TableCell>
                   <TableCell className="!py-1">
                     <div className="flex items-center justify-end gap-1">
-                      <Image
-                        src={`${
-                          data.communityScore >= 70
-                            ? "/communitry-score-icons/good-green.svg"
-                            : data.communityScore >= 50
-                            ? "/communitry-score-icons/average-yellow.svg"
-                            : "/communitry-score-icons/bad-red.svg"
-                        }`}
-                        alt="community-score"
-                        width={16}
-                        height={16}
-                      />
-                      <p className="text-[#FFFFFF80]">{data.communityScore}%</p>
+                      {data.communityScore > 0 ? (
+                        <>
+                          <Image
+                            src={`${
+                              data.communityScore >= 70
+                                ? "/communitry-score-icons/good-green.svg"
+                                : data.communityScore >= 50
+                                ? "/communitry-score-icons/average-yellow.svg"
+                                : "/communitry-score-icons/bad-red.svg"
+                            }`}
+                            alt="community-score"
+                            width={16}
+                            height={16}
+                          />
+                          <p className="text-[#FFFFFF80]">{data.communityScore}%</p>
+                        </>
+                      ) : (
+                        <p className="text-[#FFFFFF80] text-sm">Coming Soon</p>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
