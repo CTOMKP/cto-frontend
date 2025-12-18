@@ -111,8 +111,11 @@ const compositeMascotImage = async (
 export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [isAutoSaved, setIsAutoSaved] = useState(false);
+  const [imagesLoaded, setImagesLoaded] = useState({ base: false, stage: false, trait: false });
   const { user } = usePrivy();
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  const allImagesLoaded = imagesLoaded.base && imagesLoaded.stage && imagesLoaded.trait;
 
   const traitName = selectedCardId ? (TRAIT_MAP[selectedCardId] || 'CTO') : 'CTO';
   const baseSkinPath = '/mascots/SKIN/BASE SKIN.png';
@@ -204,6 +207,12 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
       >
         {/* Composite Mascot Image */}
         <div className="relative w-[221px] h-[326px] mb-6 flex items-center justify-center">
+          {!allImagesLoaded && (
+            <div className="absolute inset-0 flex items-center justify-center z-30">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+            </div>
+          )}
+          
           {/* Base Skin Layer (background) */}
           <div className="absolute inset-0 z-10">
             <Image
@@ -211,7 +220,14 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
               alt="Base Skin"
               fill
               className="object-contain"
-              loading="lazy"
+              priority
+              unoptimized
+              onLoad={() => setImagesLoaded(prev => ({ ...prev, base: true }))}
+              onError={(e) => {
+                console.error('Failed to load base skin:', baseSkinPath);
+                e.currentTarget.style.display = 'none';
+                setImagesLoaded(prev => ({ ...prev, base: true })); // Mark as loaded even on error to hide spinner
+              }}
             />
           </div>
           
@@ -222,7 +238,14 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
               alt="Stage"
               fill
               className="object-contain"
-              loading="lazy"
+              priority
+              unoptimized
+              onLoad={() => setImagesLoaded(prev => ({ ...prev, stage: true }))}
+              onError={(e) => {
+                console.error('Failed to load stage:', stagePath);
+                e.currentTarget.style.display = 'none';
+                setImagesLoaded(prev => ({ ...prev, stage: true })); // Mark as loaded even on error to hide spinner
+              }}
             />
           </div>
           
@@ -233,7 +256,14 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
               alt={traitName}
               fill
               className="object-contain"
-              loading="lazy"
+              priority
+              unoptimized
+              onLoad={() => setImagesLoaded(prev => ({ ...prev, trait: true }))}
+              onError={(e) => {
+                console.error('Failed to load trait:', traitPath);
+                e.currentTarget.style.display = 'none';
+                setImagesLoaded(prev => ({ ...prev, trait: true })); // Mark as loaded even on error to hide spinner
+              }}
             />
           </div>
         </div>

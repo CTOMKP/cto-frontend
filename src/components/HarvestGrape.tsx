@@ -23,7 +23,7 @@ export default function HarvestGrape() {
 
   return (
     <Dialog>
-      <DialogTrigger className="mr-5 ml-9 relative flex justify-center items-center rounded-lg size-13 border-[0.2px] border-[#FFFFFF20] overflow-visible">
+      <DialogTrigger className="mx-8.5 relative flex justify-center items-center rounded-lg size-13 border-[0.2px] border-[#FFFFFF20] overflow-visible">
         {/* Pulsing background glow */}
         <div 
           className={`absolute inset-0 rounded-lg transition-all duration-500 ${
