@@ -69,11 +69,28 @@ export default function TopListings() {
         }
         const response = await res.json();
         console.log('Raw API response:', response);
-        console.log('Response keys:', Object.keys(response));
-        console.log('Response.data:', response.data);
+        console.log('Response type:', typeof response);
+        console.log('Response keys:', response ? Object.keys(response) : 'response is null/undefined');
+        console.log('Response.data:', response?.data);
+        console.log('Response.statusCode:', response?.statusCode);
         
         // Backend wraps response in { data, statusCode, timestamp } via TransformInterceptor
-        const data: ApiListingResponse = response.data || response;
+        // Handle both wrapped and unwrapped responses
+        let data: ApiListingResponse;
+        if (response && typeof response === 'object') {
+          if ('data' in response && response.data) {
+            data = response.data;
+          } else if ('items' in response || 'total' in response) {
+            // Response is already unwrapped (shouldn't happen but handle it)
+            data = response as ApiListingResponse;
+          } else {
+            console.error('Unexpected response structure:', response);
+            data = { total: 0, items: [], page: 1, limit: 20 };
+          }
+        } else {
+          console.error('Invalid response:', response);
+          data = { total: 0, items: [], page: 1, limit: 20 };
+        }
         
         console.log('Parsed data:', data);
         console.log('Listings API response:', { total: data.total, itemsCount: data.items?.length, items: data.items });
