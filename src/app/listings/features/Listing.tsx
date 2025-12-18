@@ -72,8 +72,27 @@ export default function TopListings() {
         setRawApiItems(data.items || []);
         
         const mapped: MockLikeCoin[] = (data.items || []).map((it) => {
-          const createdAt = it.createdAt ? new Date(it.createdAt) : null;
-          const ageStr = createdAt ? formatRelativeAge(createdAt) : it.age || null;
+          // Use backend-provided age (actual token age) or fallback to calculating from createdAt
+          let ageStr: string | null = null;
+          if (it.age && typeof it.age === 'string' && it.age.trim() !== '') {
+            ageStr = it.age;
+          } else {
+            const createdAt = it.createdAt ? new Date(it.createdAt) : null;
+            ageStr = createdAt ? formatRelativeAge(createdAt) : null;
+          }
+          
+          // Get holders from multiple possible sources
+          const holderCount = it.holders ?? it?.metadata?.market?.holders ?? 0;
+          
+          // Get tier and normalize it
+          let tier: string | null = it.tier || null;
+          if (tier) {
+            tier = String(tier).trim().toLowerCase();
+            if (tier === 'none' || tier === 'null' || tier === 'undefined' || tier === '' || tier === '—' || tier === '----') {
+              tier = null;
+            }
+          }
+          
           return {
             name: it.name || it.symbol || "",
             whale: false,
@@ -86,6 +105,7 @@ export default function TopListings() {
             category: it.category || "meme",
             communityScore: typeof it.communityScore === "number" ? it.communityScore : (it?.metadata?.market?.communityScore ?? 0),
             degenAudit: typeof it.riskScore === "number" ? it.riskScore : (it?.metadata?.market?.riskScore ?? 0),
+            tier: tier,
             mindshare: undefined,
             price: {
               amount: Number(it.priceUsd ?? 0),
@@ -100,7 +120,7 @@ export default function TopListings() {
             marketCap: Number(it.marketCap ?? it?.metadata?.market?.fdv ?? 0),
             liquidity: Number(it.liquidityUsd ?? 0),
             volume: { amount: Number(it.volume24h ?? it?.metadata?.market?.volume?.h24 ?? 0) },
-            holders: Number(it.holders ?? it?.metadata?.market?.holders ?? 0),
+            holders: Number(holderCount),
           } as MockLikeCoin;
         });
         setLiveItems(mapped);
@@ -253,8 +273,27 @@ export default function TopListings() {
   const handleFilterChange = (filteredItems: ApiCoinItem[]) => {
     // Convert filtered API items to MockLikeCoin format for display
     const mapped: MockLikeCoin[] = filteredItems.map((it) => {
-      const createdAt = it.createdAt ? new Date(it.createdAt) : null;
-      const ageStr = createdAt ? formatRelativeAge(createdAt) : it.age || null;
+      // Use backend-provided age (actual token age) or fallback to calculating from createdAt
+      let ageStr: string | null = null;
+      if (it.age && typeof it.age === 'string' && it.age.trim() !== '') {
+        ageStr = it.age;
+      } else {
+        const createdAt = it.createdAt ? new Date(it.createdAt) : null;
+        ageStr = createdAt ? formatRelativeAge(createdAt) : null;
+      }
+      
+      // Get holders from multiple possible sources
+      const holderCount = it.holders ?? it?.metadata?.market?.holders ?? 0;
+      
+      // Get tier and normalize it
+      let tier: string | null = it.tier || null;
+      if (tier) {
+        tier = String(tier).trim().toLowerCase();
+        if (tier === 'none' || tier === 'null' || tier === 'undefined' || tier === '' || tier === '—' || tier === '----') {
+          tier = null;
+        }
+      }
+      
       return {
         name: it.name || it.symbol || "",
         age: ageStr,
@@ -265,7 +304,8 @@ export default function TopListings() {
         chain: it.chain || "solana", // Default to solana if no chain specified
         category: it.category || "meme", // Include category from API
         communityScore: typeof it.communityScore === "number" ? it.communityScore : (it?.metadata?.market?.communityScore ?? 0),
-        degenAudit: 0,
+        degenAudit: typeof it.riskScore === "number" ? it.riskScore : (it?.metadata?.market?.riskScore ?? 0),
+        tier: tier,
         mindshare: undefined,
         price: {
           amount: Number(it.priceUsd ?? 0),
@@ -280,7 +320,7 @@ export default function TopListings() {
         marketCap: Number(it.marketCap ?? it?.metadata?.market?.fdv ?? 0),
         liquidity: Number(it.liquidityUsd ?? 0),
         volume: { amount: Number(it.volume24h ?? it?.metadata?.market?.volume?.h24 ?? 0) },
-        holders: Number(it.holders ?? it?.metadata?.market?.holders ?? 0),
+        holders: Number(holderCount),
       } as MockLikeCoin;
     });
     setLiveItems(mapped);

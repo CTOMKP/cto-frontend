@@ -119,6 +119,9 @@ export default function ListingTableHeader({ sortField, sortDirection, onSort }:
             <SortIcon field="degenAudit" sortField={sortField} sortDirection={sortDirection} />
           </div>
         </TableHead>
+        <TableHead className="!font-bold text-center">
+          Tier
+        </TableHead>
         <TableHead>
           <span className="hidden">Listing Engagement</span>
         </TableHead>

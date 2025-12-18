@@ -407,9 +407,49 @@ export default function ProfilePage() {
   const email = user?.email?.address || user?.wallet?.address || 'Privy User';
   const movementWallet = getMovementWallet(user as PrivyUser);
   
-  const avatarUrl = typeof window !== 'undefined' 
-    ? localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url')
-    : null;
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(
+    typeof window !== 'undefined' 
+      ? localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url')
+      : null
+  );
+
+  // Listen for avatar updates from PFP flow
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Listen for custom event (dispatched by pfpService)
+    const handleAvatarUpdate = () => {
+      const newAvatarUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
+      if (newAvatarUrl && newAvatarUrl !== avatarUrl) {
+        setAvatarUrl(newAvatarUrl);
+      }
+    };
+
+    // Listen for localStorage changes (cross-tab updates)
+    const handleStorageChange = (e: StorageEvent) => {
+      if ((e.key === 'cto_user_avatar_url' || e.key === 'profile_avatar_url') && e.newValue) {
+        setAvatarUrl(e.newValue);
+      }
+    };
+
+    // Check localStorage periodically (same-tab updates)
+    const checkAvatar = () => {
+      const storedAvatar = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
+      if (storedAvatar && storedAvatar !== avatarUrl) {
+        setAvatarUrl(storedAvatar);
+      }
+    };
+
+    window.addEventListener('avatarUpdated', handleAvatarUpdate);
+    window.addEventListener('storage', handleStorageChange);
+    const interval = setInterval(checkAvatar, 1000);
+
+    return () => {
+      window.removeEventListener('avatarUpdated', handleAvatarUpdate);
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [avatarUrl]);
 
   // Get primary wallet address for display
   const primaryWalletAddress = uniqueWallets.length > 0 
@@ -468,7 +508,7 @@ export default function ProfilePage() {
                     </div>
                   )}
                 </div>
-                <div>
+            <div>
                   <div className="">
                     <h1 className="text-white/70 font-semibold mb-2">
                       Username
@@ -480,7 +520,7 @@ export default function ProfilePage() {
                     {/* <h2 className="text-2xl font-bold text-white">
                         {email.split('@')[0] || 'User'}
                       </h2> */}
-                  </div>
+            </div>
                   <div className="flex items-center gap-2 mt-1">
                     <p className="text-white/70 font-semibold">
                       Smart wallet{" "}
@@ -489,7 +529,7 @@ export default function ProfilePage() {
                         {primaryWalletAddress.slice(-8)}
                       </span>
                     </p>
-                    <button
+            <button
                       onClick={() => copyAddress(primaryWalletAddress)}
                       className="text-white/70 hover:text-white transition-colors bg-white/20 rounded-[25px] p-1"
                     >
@@ -503,8 +543,8 @@ export default function ProfilePage() {
                           height={14}
                         />
                       )}
-                    </button>
-                  </div>
+            </button>
+          </div>
                 </div>
               </div>
               <div className="flex flex-col justify-between items-end self-stretch">
@@ -597,8 +637,8 @@ export default function ProfilePage() {
                   className="h-full bg-gradient-to-r from-[#FF0075] via-[#FF4A15] to-[#FFCB45] transition-all duration-300"
                   style={{ width: `${xpProgress}%` }}
                 />
-              </div>
-            </div>
+        </div>
+      </div>
 
             <div className="flex gap-4">
               {/* referral */}
@@ -619,7 +659,7 @@ export default function ProfilePage() {
                     Invite friends
                   </Button>
                 </div>
-              </div>
+            </div>
 
               {/* Connect social account */}
               <div className="min-w-[190px] rounded-lg space-y-2.5 border-[0.5px] border-white/20 p-3">
@@ -661,15 +701,15 @@ export default function ProfilePage() {
                   <div className="flex items-center gap-2">
                     <div className="text-sm text-[#A1A1AA] flex items-center gap-2.5">
                       <Wallet size={18} /> Wallet Balance:
+                      </div>
                     </div>
-                  </div>
-                  <button
+                    <button
                     onClick={() => setBalanceVisible(!balanceVisible)}
                     className="text-gray-400 hover:text-white transition-colors"
                   >
                     {balanceVisible ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
+                    </button>
+                  </div>
 
                 <div className="flex w-full justify-center mb-4">
                   <Button className="border-[0.5px] border-[#27272A] rounded-lg py-2 px-1 text-white/50">
@@ -684,13 +724,13 @@ export default function ProfilePage() {
                       <span className="text-[58px] font-semibold text-white">
                         ${walletBalance.toLocaleString()}
                       </span>
-                    </div>
+            </div>
                   ) : (
                     <div className="text-4xl font-bold text-white text-center">
                       ••••••
-                    </div>
-                  )}
-                </div>
+            </div>
+          )}
+        </div>
 
                 <div className="flex justify-center items-center">
                   <span
