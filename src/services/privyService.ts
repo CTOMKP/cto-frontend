@@ -91,7 +91,21 @@ class PrivyService {
       console.error('❌ Privy sync error:', error);
       let message = 'Failed to sync with backend';
       if (axios.isAxiosError(error)) {
-        message = error.response?.data?.message || message;
+        // Log full error details for debugging
+        console.error('❌ Backend error response:', {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          message: error.response?.data?.message,
+        });
+        message = error.response?.data?.message || error.response?.data?.error || message;
+        // If it's a 500 error, include more details
+        if (error.response?.status === 500) {
+          const errorData = error.response?.data;
+          if (errorData?.message?.includes('bio') || errorData?.error?.includes('bio')) {
+            message = 'Backend database schema mismatch. Please contact support.';
+          }
+        }
       } else if (error instanceof Error) {
         message = error.message || message;
       }

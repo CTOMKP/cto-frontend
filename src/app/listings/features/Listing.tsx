@@ -67,8 +67,15 @@ export default function TopListings() {
           setIsLoading(false);
           return;
         }
-        const data: ApiListingResponse = await res.json();
+        const response = await res.json();
+        console.log('Raw API response:', response);
+        console.log('Response keys:', Object.keys(response));
+        console.log('Response.data:', response.data);
         
+        // Backend wraps response in { data, statusCode, timestamp } via TransformInterceptor
+        const data: ApiListingResponse = response.data || response;
+        
+        console.log('Parsed data:', data);
         console.log('Listings API response:', { total: data.total, itemsCount: data.items?.length, items: data.items });
 
         setTotal(data.total || 0);
