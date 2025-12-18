@@ -294,10 +294,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, authenticated, ready } = usePrivy();
+  const { user, authenticated, ready, logout } = usePrivy();
   const [allWallets, setAllWallets] = useState<BackendWallet[]>([]);
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [copiedAddress, setCopiedAddress] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
+    // Initialize from localStorage
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
+    }
+    return null;
+  });
 
   useEffect(() => {
     if (ready && !authenticated) {
@@ -316,6 +323,46 @@ export default function ProfilePage() {
       }
     }
   }, [authenticated, user, ready]);
+
+  // Listen for avatar updates from PFP flow
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Listen for custom event (dispatched by pfpService)
+    const handleAvatarUpdate = () => {
+      const newAvatarUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
+      if (newAvatarUrl && newAvatarUrl !== avatarUrl) {
+        setAvatarUrl(newAvatarUrl);
+        toast.success('Profile picture updated!');
+      }
+    };
+
+    // Listen for localStorage changes (cross-tab updates)
+    const handleStorageChange = (e: StorageEvent) => {
+      if ((e.key === 'cto_user_avatar_url' || e.key === 'profile_avatar_url') && e.newValue) {
+        setAvatarUrl(e.newValue);
+        toast.success('Profile picture updated from another session!');
+      }
+    };
+
+    // Check localStorage periodically (same-tab updates)
+    const checkAvatar = () => {
+      const storedAvatar = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
+      if (storedAvatar && storedAvatar !== avatarUrl) {
+        setAvatarUrl(storedAvatar);
+      }
+    };
+
+    window.addEventListener('avatarUpdated', handleAvatarUpdate);
+    window.addEventListener('storage', handleStorageChange);
+    const interval = setInterval(checkAvatar, 1000);
+
+    return () => {
+      window.removeEventListener('avatarUpdated', handleAvatarUpdate);
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [avatarUrl]);
 
   const loadWallets = async () => {
     try {
@@ -374,6 +421,15 @@ export default function ProfilePage() {
     setTimeout(() => setCopiedAddress(false), 2000);
   };
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
   if (!ready) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -406,50 +462,6 @@ export default function ProfilePage() {
   
   const email = user?.email?.address || user?.wallet?.address || 'Privy User';
   const movementWallet = getMovementWallet(user as PrivyUser);
-  
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(
-    typeof window !== 'undefined' 
-      ? localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url')
-      : null
-  );
-
-  // Listen for avatar updates from PFP flow
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    // Listen for custom event (dispatched by pfpService)
-    const handleAvatarUpdate = () => {
-      const newAvatarUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
-      if (newAvatarUrl && newAvatarUrl !== avatarUrl) {
-        setAvatarUrl(newAvatarUrl);
-      }
-    };
-
-    // Listen for localStorage changes (cross-tab updates)
-    const handleStorageChange = (e: StorageEvent) => {
-      if ((e.key === 'cto_user_avatar_url' || e.key === 'profile_avatar_url') && e.newValue) {
-        setAvatarUrl(e.newValue);
-      }
-    };
-
-    // Check localStorage periodically (same-tab updates)
-    const checkAvatar = () => {
-      const storedAvatar = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
-      if (storedAvatar && storedAvatar !== avatarUrl) {
-        setAvatarUrl(storedAvatar);
-      }
-    };
-
-    window.addEventListener('avatarUpdated', handleAvatarUpdate);
-    window.addEventListener('storage', handleStorageChange);
-    const interval = setInterval(checkAvatar, 1000);
-
-    return () => {
-      window.removeEventListener('avatarUpdated', handleAvatarUpdate);
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
-    };
-  }, [avatarUrl]);
 
   // Get primary wallet address for display
   const primaryWalletAddress = uniqueWallets.length > 0 
@@ -548,7 +560,7 @@ export default function ProfilePage() {
                 </div>
               </div>
               <div className="flex flex-col justify-between items-end self-stretch">
-                <Button className="p-2 w-fit bg-none ronded-lg border-[0.2px] border-white/20">
+                <Button className="p-2 w-fit bg-none ronded-lg border-[0.2px] border-white/20" onClick={handleLogout}>
                   <LogOut size={32} />
                 </Button>
                 <Button className="text-[#9F9FA9] p-2 ronded-lg border-[0.2px] border-white/20">
