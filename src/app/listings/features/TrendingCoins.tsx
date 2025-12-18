@@ -436,10 +436,11 @@ export default function TrendingCoins({
                     <div className="flex items-center gap-1">
                       <div className="relative">
                         <FallbackImage
-                          className="size-7 rounded-full border-[0.36px] border-white"
+                          className="size-7 rounded-full border-[0.36px] border-white object-cover"
                           src={data.image}
                           alt="coin-image"
-                          customStyles={{ width: '28px', height: '28px', objectFit: 'cover' }}
+                          width={28}
+                          height={28}
                         />
                         {/* Chain image - using actual chain data */}
                         {data.chain && (
