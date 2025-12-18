@@ -386,7 +386,7 @@ export default function ProfilePage() {
 
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await axios.get(
-        `${backendUrl}/api/auth/privy/wallets`,
+        `${backendUrl}/api/v1/auth/privy/wallets`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,

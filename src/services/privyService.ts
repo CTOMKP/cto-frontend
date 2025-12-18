@@ -30,7 +30,7 @@ class PrivyService {
   }> {
     try {
       const response = await axios.post(
-        `${API_BASE}/api/auth/privy/sync`,
+        `${API_BASE}/api/v1/auth/privy/sync`,
         { privyToken },
         {
           headers: {
@@ -107,7 +107,7 @@ class PrivyService {
   async verifyToken(token: string) {
     try {
       const response = await axios.post(
-        `${API_BASE}/api/auth/privy/verify`,
+        `${API_BASE}/api/v1/auth/privy/verify`,
         { token },
         {
           headers: {
@@ -135,7 +135,7 @@ class PrivyService {
       }
 
       const response = await axios.get(
-        `${API_BASE}/api/auth/privy/me`,
+        `${API_BASE}/api/v1/auth/privy/me`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

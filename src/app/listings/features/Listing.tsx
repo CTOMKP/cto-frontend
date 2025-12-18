@@ -63,10 +63,13 @@ export default function TopListings() {
       try {
         const res = await fetch(url);
         if (!res.ok) {
+          console.error('Failed to fetch listings:', res.status, res.statusText);
           setIsLoading(false);
           return;
         }
         const data: ApiListingResponse = await res.json();
+        
+        console.log('Listings API response:', { total: data.total, itemsCount: data.items?.length, items: data.items });
 
         setTotal(data.total || 0);
         setRawApiItems(data.items || []);
