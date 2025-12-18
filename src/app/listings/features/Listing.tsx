@@ -53,11 +53,11 @@ export default function TopListings() {
       let url;
       if (selectedNetwork === null) {
         // No network selected - fetch from all chains
-        url = `${base}/api/listing/listings?category=MEME&sort=updatedAt%3Adesc&page=${page}&limit=${limit}`;
+        url = `${base}/api/v1/listing/listings?category=MEME&sort=updatedAt%3Adesc&page=${page}&limit=${limit}`;
       } else {
         // Specific network selected - fetch from that chain only
         const chainParam = selectedNetwork.toUpperCase();
-        url = `${base}/api/listing/listings?chain=${chainParam}&category=MEME&sort=updatedAt%3Adesc&page=${page}&limit=${limit}`;
+        url = `${base}/api/v1/listing/listings?chain=${chainParam}&category=MEME&sort=updatedAt%3Adesc&page=${page}&limit=${limit}`;
       }
       
       try {

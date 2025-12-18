@@ -22,7 +22,7 @@ export default function Listings() {
       const base = process.env.NEXT_PUBLIC_BACKEND_URL;
       
       // Fetch from all chains initially
-      const url = `${base}/api/listing/listings?category=MEME&sort=updatedAt%3Adesc&limit=10000&chain=SOLANA`;
+      const url = `${base}/api/v1/listing/listings?category=MEME&sort=updatedAt%3Adesc&limit=10000&chain=SOLANA`;
       
       try {
         const res = await fetch(url);
