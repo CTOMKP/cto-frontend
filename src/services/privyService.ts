@@ -91,17 +91,33 @@ class PrivyService {
       throw new Error('No response received from backend');
     }
 
+    // Check HTTP status first - if it's an error status, treat as error
+    if (response.status >= 400) {
+      console.error('❌ Backend returned error status:', {
+        status: response.status,
+        statusText: response.statusText,
+        data: response.data,
+      });
+      const errorMessage = response.data?.message || response.data?.error || `Backend returned status ${response.status}`;
+      throw new Error(`Failed to sync user: ${errorMessage} (Status: ${response.status})`);
+    }
+
     // Log the full response for debugging
     console.log('📦 Backend sync response:', {
+      status: response.status,
+      statusText: response.statusText,
       hasData: !!response.data,
+      dataKeys: response.data ? Object.keys(response.data) : [],
       success: response.data?.success,
       hasUser: !!response.data?.user,
       userId: response.data?.user?.id,
       hasToken: !!response.data?.token,
+      fullResponseData: JSON.stringify(response.data, null, 2),
     });
 
     // Check if response has success flag (backend should return success: true)
-    if (response.data?.success !== false && response.data?.user && response.data?.token) {
+    // Also allow response without success flag if it has user and token (more flexible)
+    if ((response.data?.success === true || (response.data?.user && response.data?.token)) && response.data?.user && response.data?.token) {
       console.log('✅ Backend sync successful:', response.data);
 
       // Store our JWT token and user info (matching test frontend exactly)
