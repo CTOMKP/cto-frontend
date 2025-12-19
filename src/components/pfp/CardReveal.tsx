@@ -233,9 +233,26 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
       }
     }
 
-    // If not in localStorage, try to get from Privy user
+    // If not in localStorage, try to get from backend using existing auth token
+    const authToken = typeof window !== 'undefined' ? localStorage.getItem('cto_auth_token') : null;
+    if (authToken) {
+      try {
+        const { privyService } = await import('@/services/privyService');
+        const userInfo = await privyService.getMe();
+        
+        if (userInfo?.user?.id) {
+          // Store it for next time
+          localStorage.setItem('cto_user_id', userInfo.user.id.toString());
+          return userInfo.user.id.toString();
+        }
+      } catch (error) {
+        console.warn('Failed to get user info from backend:', error);
+        // Fall through to sync attempt
+      }
+    }
+
+    // Last resort: try to sync with backend using Privy token
     if (user?.id && getAccessToken) {
-      // Try to sync with backend to get the database user ID
       try {
         const privyToken = await getAccessToken();
         
