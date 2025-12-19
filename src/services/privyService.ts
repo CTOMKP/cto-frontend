@@ -102,12 +102,14 @@ class PrivyService {
       throw new Error(`Failed to sync user: ${errorMessage} (Status: ${response.status})`);
     }
 
-    // Log the full response for debugging
+    // Log the full response for debugging - CRITICAL for debugging
+    const dataKeys = response.data ? Object.keys(response.data) : [];
     console.log('📦 Backend sync response:', {
       status: response.status,
       statusText: response.statusText,
       hasData: !!response.data,
-      dataKeys: response.data ? Object.keys(response.data) : [],
+      dataKeys: dataKeys,
+      dataKeysString: dataKeys.join(', '), // Show actual keys
       success: response.data?.success,
       hasUser: !!response.data?.user,
       userId: response.data?.user?.id,
@@ -115,46 +117,74 @@ class PrivyService {
       fullResponseData: JSON.stringify(response.data, null, 2),
     });
 
+    // Extract response data - handle different possible response structures
+    let responseData = response.data;
+    
+    // Check if data is nested (some APIs wrap responses)
+    if (responseData?.data && typeof responseData.data === 'object') {
+      console.log('⚠️ Response data appears to be nested, trying nested structure...');
+      responseData = responseData.data;
+    }
+
     // Check if response has success flag (backend should return success: true)
     // Also allow response without success flag if it has user and token (more flexible)
-    if ((response.data?.success === true || (response.data?.user && response.data?.token)) && response.data?.user && response.data?.token) {
-      console.log('✅ Backend sync successful:', response.data);
+    if ((responseData?.success === true || (responseData?.user && responseData?.token)) && responseData?.user && responseData?.token) {
+      console.log('✅ Backend sync successful:', responseData);
 
       // Store our JWT token and user info (matching test frontend exactly)
-      localStorage.setItem('cto_auth_token', response.data.token);
-      localStorage.setItem('cto_user_email', response.data.user.email);
-      localStorage.setItem('cto_user_id', response.data.user.id.toString());
+      localStorage.setItem('cto_auth_token', responseData.token);
+      localStorage.setItem('cto_user_email', responseData.user.email);
+      localStorage.setItem('cto_user_id', responseData.user.id.toString());
       
-      if (response.data.user.walletAddress) {
-        localStorage.setItem('cto_wallet_address', response.data.user.walletAddress);
+      if (responseData.user.walletAddress) {
+        localStorage.setItem('cto_wallet_address', responseData.user.walletAddress);
       }
 
       // Store avatarUrl if available (from database)
-      if (response.data.user.avatarUrl) {
-        console.log('✅ Storing avatarUrl from backend sync:', response.data.user.avatarUrl);
-        localStorage.setItem('cto_user_avatar_url', response.data.user.avatarUrl);
-        localStorage.setItem('profile_avatar_url', response.data.user.avatarUrl);
+      if (responseData.user.avatarUrl) {
+        console.log('✅ Storing avatarUrl from backend sync:', responseData.user.avatarUrl);
+        localStorage.setItem('cto_user_avatar_url', responseData.user.avatarUrl);
+        localStorage.setItem('profile_avatar_url', responseData.user.avatarUrl);
       } else {
         console.log('⚠️ No avatarUrl in sync response');
       }
 
       // Store ALL wallets (including Aptos) for profile display
-      if (response.data.wallets && response.data.wallets.length > 0) {
-        localStorage.setItem('cto_user_wallets', JSON.stringify(response.data.wallets));
-        console.log('💼 Saved wallets to localStorage:', response.data.wallets);
+      if (responseData.wallets && responseData.wallets.length > 0) {
+        localStorage.setItem('cto_user_wallets', JSON.stringify(responseData.wallets));
+        console.log('💼 Saved wallets to localStorage:', responseData.wallets);
       }
 
-      return response.data;
+      return responseData;
     }
 
     // If we get here, the response structure is unexpected
+    // Try to extract user ID from any possible location in the response
     console.error('❌ Unexpected response structure:', {
-      success: response.data?.success,
-      hasUser: !!response.data?.user,
-      hasToken: !!response.data?.token,
-      fullResponse: response.data,
+      success: responseData?.success,
+      hasUser: !!responseData?.user,
+      hasToken: !!responseData?.token,
+      dataKeys: Object.keys(responseData || {}),
+      fullResponse: responseData,
     });
-    throw new Error(`Failed to sync user: Invalid response structure. Success: ${response.data?.success}, Has User: ${!!response.data?.user}, Has Token: ${!!response.data?.token}`);
+    
+    // Last resort: try to find user ID in the response anywhere
+    const possibleUserId = responseData?.user?.id || 
+                          responseData?.id || 
+                          responseData?.userId ||
+                          (responseData?.user && typeof responseData.user === 'object' && responseData.user.id);
+    
+    if (possibleUserId && responseData?.token) {
+      console.warn('⚠️ Found user ID and token in unexpected structure, attempting to save anyway...');
+      localStorage.setItem('cto_auth_token', responseData.token);
+      localStorage.setItem('cto_user_id', possibleUserId.toString());
+      if (responseData.user?.email) {
+        localStorage.setItem('cto_user_email', responseData.user.email);
+      }
+      return responseData;
+    }
+    
+    throw new Error(`Failed to sync user: Invalid response structure. Keys: ${Object.keys(responseData || {}).join(', ')}, Success: ${responseData?.success}, Has User: ${!!responseData?.user}, Has Token: ${!!responseData?.token}`);
   }
 
   /**
