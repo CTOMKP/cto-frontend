@@ -33,7 +33,6 @@ const PfpSelection = () => {
     "stacked"
   );
   const [selectedCardId, setSelectedCardId] = useState<number | null>(null);
-  const [isRevealed, setIsRevealed] = useState(false);
   const [cards, setCards] = useState<PFPCard[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -69,17 +68,10 @@ const PfpSelection = () => {
     setSelectedCardId(id);
   };
 
-  const handleReveal = () => {
-    if (!selectedCardId) return;
-    
-    // Show CardReveal component which will handle the reveal internally
-    setIsRevealed(true);
-  };
-
   const handleHarvest = () => {
     if (!selectedCardId) return;
     
-    // Just transition to the next phase - no API call needed
+    // Transition to selected phase to show CardReveal
     setPhase("stacked");
     setTimeout(() => {
       setPhase("selected");
@@ -190,9 +182,9 @@ const PfpSelection = () => {
         )}
 
         <AnimatePresence mode="wait">
-          {phase === "selected" && selectedCardId && !isRevealed && (
+          {phase === "selected" && selectedCardId && (
             <motion.div
-              key="placeholder-card"
+              key="mascot-reveal"
               initial={{ opacity: 0, y: 200, scale: 0.7 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{
@@ -208,69 +200,23 @@ const PfpSelection = () => {
                 damping: 14,
               }}
             >
-              <div
-                className="p-px rounded-[8px] my-10"
-                style={{
-                  background:
-                    "linear-gradient(to bottom, #FF0075 0%, #FF4A15 50%, #FFCB45 100%)",
-                }}
-              >
-                <div onClick={handleReveal} className="w-[173px] h-[274px] rounded-[8px] bg-[#0D0D0D] shadow-xl flex items-center justify-center">
-                  <Image
-                    loading="lazy"
-                    src="/cto-logo-small.png"
-                    alt="placeholder"
-                    className="w-[45px] h-[49px] object-contain"
-                    width={45}
-                    height={49}
-                  />
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {phase === "selected" && selectedCardId && isRevealed && (
-            <motion.div
-              key="mascot-reveal"
-              initial={{ opacity: 0, y: 200, scale: 0.7 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{
-                duration: 0.8,
-                type: "spring",
-                stiffness: 100,
-                damping: 14,
-              }}
-            >
-              <CardReveal selectedCardId={selectedCardId} />
+              <CardReveal onClose={() => setPhase("spread")} />
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {isRevealed ? 
-      <div>
-        <p className="text-center text-xs text-[#FFFFFF50] font-medium mb-4">Share on social:</p>
-        <div className="flex items-center gap-7 transition-all duration-300">
-        {sharelinks.map((link, index) => (
-            <Button
-              key={index}
-              className="border-[0.4px] border-[#FFFFFF20] social-link-bg  justify-between size-12 rounded-lg"
-            >
-              <Image loading="lazy" className="size-[25.3px]" height={25.3} width={25.3} src={link.icon} alt={link.name} />
-            </Button>
-        ))}
-      </div>
-      </div>
-      : 
-      <Button
-        onClick={phase === "selected" ? handleReveal : handleHarvest}
-        disabled={!selectedCardId}
-        className={`cta-gradient w-full mt-6 transition-all duration-300 ${
-          !selectedCardId ? "opacity-50 cursor-not-allowed" : ""
-        }`}
-      >
-        {phase === "selected" ? "Reveal" : "Harvest"}
-      </Button>}
+      {phase !== "selected" && (
+        <Button
+          onClick={handleHarvest}
+          disabled={!selectedCardId}
+          className={`cta-gradient w-full mt-6 transition-all duration-300 ${
+            !selectedCardId ? "opacity-50 cursor-not-allowed" : ""
+          }`}
+        >
+          Harvest
+        </Button>
+      )}
     </div>
     </div>
   );

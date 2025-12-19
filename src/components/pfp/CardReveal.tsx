@@ -10,7 +10,6 @@ import { toast } from 'react-toastify';
 import { usePrivy } from '@privy-io/react-auth';
 
 interface CardRevealProps {
-  selectedCardId: number | null;
   onClose?: () => void;
 }
 
@@ -304,14 +303,6 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
               <div className="text-gray-400 text-sm">
                 {isRevealing ? 'Revealing your mascot...' : 'Click to reveal your mascot!'}
               </div>
-              {!isRevealing && (
-                <button
-                  onClick={handleReveal}
-                  className="mt-4 bg-gradient-to-r from-pink-500 to-orange-500 text-white px-6 py-2 rounded-lg font-semibold hover:from-pink-600 hover:to-orange-600 transition-all"
-                >
-                  🎴 Reveal Your Mascot!
-                </button>
-              )}
             </div>
           </div>
         )}
@@ -351,6 +342,18 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
         )}
 
         {/* Action Buttons */}
+        {!isRevealed && (
+          <div className="text-center mt-4">
+            <Button
+              onClick={handleReveal}
+              disabled={isRevealing}
+              className="cta-gradient w-full rounded-lg font-medium text-[14px] text-white h-[36px] disabled:opacity-50"
+            >
+              {isRevealing ? '🎴 Revealing...' : '🎴 Reveal Your Mascot!'}
+            </Button>
+          </div>
+        )}
+
         {isRevealed && mascotCard && (
           <div className="flex items-center gap-2 mb-2">
             {isAutoSaved ? (
