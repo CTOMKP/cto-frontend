@@ -69,7 +69,7 @@ class PFPService {
     try {
       // 1) Try presigned upload first (like old project)
       const presignRes = await axios.post(
-        `${API_BASE}/api/images/presign`,
+        `${API_BASE}/api/v1/images/presign`,
         {
           type: 'profile',
           userId: userId,
@@ -96,7 +96,7 @@ class PFPService {
 
         if (putRes.ok) {
           // 3) Use server redirect endpoint for stable reads
-          const viewUrl = `${API_BASE}/api/images/view/${key}`;
+          const viewUrl = `${API_BASE}/api/v1/images/view/${key}`;
           return { viewUrl, key };
         }
       }
@@ -150,7 +150,7 @@ class PFPService {
 
       // Save the image URL to user profile
       const response = await axios.post(
-        `${API_BASE}/api/pfp/save`,
+        `${API_BASE}/api/v1/pfp/save`,
         { imageUrl },
         {
           headers: {

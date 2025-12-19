@@ -134,17 +134,18 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
 
   // Generate mascot based on wallet address + timestamp + random (like test frontend)
   const generateMascot = async (): Promise<MascotCard> => {
-    // Get wallet address from user or localStorage (Next.js/Privy approach)
+    // Get wallet address from user or localStorage (matching test frontend logic)
+    // Test frontend uses: wallet?.address || user?.email || 'demo'
     interface PrivyLinkedAccount {
       type: string;
       address?: string;
     }
-    const walletAddress = user?.wallet?.address || 
-                         (user?.linkedAccounts as PrivyLinkedAccount[] | undefined)?.find((acc) => acc.type === 'wallet')?.address ||
-                         (typeof window !== 'undefined' ? localStorage.getItem('cto_wallet_address') : null) ||
-                         user?.email?.address || 
-                         user?.id || 
-                         'demo';
+    const walletAddress = 
+      (user?.linkedAccounts as PrivyLinkedAccount[] | undefined)?.find((acc) => acc.type === 'wallet')?.address ||
+      (typeof window !== 'undefined' ? localStorage.getItem('cto_wallet_address') : null) ||
+      user?.email?.address || 
+      user?.id || 
+      'demo';
     
     const timestamp = Date.now();
     const random = Math.random() * 1000000;
@@ -219,8 +220,8 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
         const blob = await response.blob();
         const file = new File([blob], `mascot-${mascotCard.id}.png`, { type: 'image/png' });
 
-        // Get user ID from localStorage
-        const userId = user?.id || (typeof window !== 'undefined' ? localStorage.getItem('cto_user_id') : null);
+        // Get user ID from localStorage (matching test frontend: localStorage.getItem('cto_user_id'))
+        const userId = typeof window !== 'undefined' ? localStorage.getItem('cto_user_id') : null;
 
         if (!userId) {
           console.warn('User ID not found, skipping auto-save');
@@ -245,7 +246,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
     if (isRevealed && mascotCard) {
       handleSavePFP();
     }
-  }, [mascotCard, isRevealed, isAutoSaved, isSaving, user]);
+  }, [mascotCard, isRevealed, isAutoSaved, isSaving]);
 
   const handleSavePFP = async () => {
     if (!mascotCard) return;
@@ -258,8 +259,8 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
       const blob = await response.blob();
       const file = new File([blob], `mascot-${mascotCard.id}.png`, { type: 'image/png' });
 
-      // Get user ID
-      const userId = user?.id || (typeof window !== 'undefined' ? localStorage.getItem('cto_user_id') : null);
+      // Get user ID from localStorage (matching test frontend: localStorage.getItem('cto_user_id'))
+      const userId = typeof window !== 'undefined' ? localStorage.getItem('cto_user_id') : null;
       if (!userId) {
         throw new Error('User ID not found. Please log in again.');
       }
