@@ -140,7 +140,7 @@ const createCompositeImage = async (traitType: TraitType): Promise<string> => {
 
 
 export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
-  const { user, getAccessToken } = usePrivy();
+  const { user } = usePrivy();
   const [isRevealing, setIsRevealing] = useState(false);
   const [isRevealed, setIsRevealed] = useState(false);
   const [mascotCard, setMascotCard] = useState<MascotCard | null>(null);
@@ -223,54 +223,12 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
     }
   };
 
-  // Helper function to get user ID (with fallbacks)
-  const getUserId = async (): Promise<string | null> => {
-    // Try localStorage first (fastest)
+  // Get user ID from localStorage (matching test frontend exactly)
+  // The test frontend assumes cto_user_id is already stored from initial auth sync
+  const getUserId = (): string | null => {
     if (typeof window !== 'undefined') {
-      const storedUserId = localStorage.getItem('cto_user_id');
-      if (storedUserId) {
-        return storedUserId;
-      }
+      return localStorage.getItem('cto_user_id');
     }
-
-    // If not in localStorage, try to get from backend using existing auth token
-    const authToken = typeof window !== 'undefined' ? localStorage.getItem('cto_auth_token') : null;
-    if (authToken) {
-      try {
-        const { privyService } = await import('@/services/privyService');
-        const userInfo = await privyService.getMe();
-        
-        if (userInfo?.user?.id) {
-          // Store it for next time
-          localStorage.setItem('cto_user_id', userInfo.user.id.toString());
-          return userInfo.user.id.toString();
-        }
-      } catch (error) {
-        console.warn('Failed to get user info from backend:', error);
-        // Fall through to sync attempt
-      }
-    }
-
-    // Last resort: try to sync with backend using Privy token
-    if (user?.id && getAccessToken) {
-      try {
-        const privyToken = await getAccessToken();
-        
-        if (privyToken) {
-          const { privyService } = await import('@/services/privyService');
-          const syncResult = await privyService.syncUser(privyToken);
-          
-          if (syncResult.success && syncResult.user.id) {
-            // Store it for next time
-            localStorage.setItem('cto_user_id', syncResult.user.id.toString());
-            return syncResult.user.id.toString();
-          }
-        }
-      } catch (error) {
-        console.warn('Failed to sync user for PFP save:', error);
-      }
-    }
-
     return null;
   };
 
@@ -286,8 +244,8 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
         const blob = await response.blob();
         const file = new File([blob], `mascot-${mascotCard.id}.png`, { type: 'image/png' });
 
-        // Get user ID (with fallbacks)
-        const userId = await getUserId();
+        // Get user ID from localStorage (matching test frontend: localStorage.getItem('cto_user_id'))
+        const userId = getUserId();
 
         if (!userId) {
           console.warn('User ID not found, skipping auto-save. Please ensure you are logged in.');
@@ -313,7 +271,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
     if (isRevealed && mascotCard) {
       handleSavePFP();
     }
-  }, [mascotCard, isRevealed, isAutoSaved, isSaving, user, getAccessToken]);
+  }, [mascotCard, isRevealed, isAutoSaved, isSaving]);
 
   const handleSavePFP = async () => {
     if (!mascotCard) return;
@@ -326,8 +284,8 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
       const blob = await response.blob();
       const file = new File([blob], `mascot-${mascotCard.id}.png`, { type: 'image/png' });
 
-      // Get user ID (with fallbacks)
-      const userId = await getUserId();
+      // Get user ID from localStorage (matching test frontend: localStorage.getItem('cto_user_id'))
+      const userId = getUserId();
       if (!userId) {
         throw new Error('User ID not found. Please ensure you are logged in and try again.');
       }
