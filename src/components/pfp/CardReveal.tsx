@@ -140,7 +140,7 @@ const createCompositeImage = async (traitType: TraitType): Promise<string> => {
 
 
 export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
-  const { user } = usePrivy();
+  const { user, getAccessToken } = usePrivy();
   const [isRevealing, setIsRevealing] = useState(false);
   const [isRevealed, setIsRevealed] = useState(false);
   const [mascotCard, setMascotCard] = useState<MascotCard | null>(null);
@@ -223,6 +223,40 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
     }
   };
 
+  // Helper function to get user ID (with fallbacks)
+  const getUserId = async (): Promise<string | null> => {
+    // Try localStorage first (fastest)
+    if (typeof window !== 'undefined') {
+      const storedUserId = localStorage.getItem('cto_user_id');
+      if (storedUserId) {
+        return storedUserId;
+      }
+    }
+
+    // If not in localStorage, try to get from Privy user
+    if (user?.id && getAccessToken) {
+      // Try to sync with backend to get the database user ID
+      try {
+        const privyToken = await getAccessToken();
+        
+        if (privyToken) {
+          const { privyService } = await import('@/services/privyService');
+          const syncResult = await privyService.syncUser(privyToken);
+          
+          if (syncResult.success && syncResult.user.id) {
+            // Store it for next time
+            localStorage.setItem('cto_user_id', syncResult.user.id.toString());
+            return syncResult.user.id.toString();
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to sync user for PFP save:', error);
+      }
+    }
+
+    return null;
+  };
+
   // Auto-save PFP when mascot is revealed (like test frontend)
   useEffect(() => {
     const handleSavePFP = async () => {
@@ -235,11 +269,12 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
         const blob = await response.blob();
         const file = new File([blob], `mascot-${mascotCard.id}.png`, { type: 'image/png' });
 
-        // Get user ID from localStorage (matching test frontend: localStorage.getItem('cto_user_id'))
-        const userId = typeof window !== 'undefined' ? localStorage.getItem('cto_user_id') : null;
+        // Get user ID (with fallbacks)
+        const userId = await getUserId();
 
         if (!userId) {
-          console.warn('User ID not found, skipping auto-save');
+          console.warn('User ID not found, skipping auto-save. Please ensure you are logged in.');
+          // Don't show error toast - just log it, as the user can still use the mascot
           return;
         }
 
@@ -261,7 +296,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
     if (isRevealed && mascotCard) {
       handleSavePFP();
     }
-  }, [mascotCard, isRevealed, isAutoSaved, isSaving]);
+  }, [mascotCard, isRevealed, isAutoSaved, isSaving, user, getAccessToken]);
 
   const handleSavePFP = async () => {
     if (!mascotCard) return;
@@ -274,10 +309,10 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
       const blob = await response.blob();
       const file = new File([blob], `mascot-${mascotCard.id}.png`, { type: 'image/png' });
 
-      // Get user ID from localStorage (matching test frontend: localStorage.getItem('cto_user_id'))
-      const userId = typeof window !== 'undefined' ? localStorage.getItem('cto_user_id') : null;
+      // Get user ID (with fallbacks)
+      const userId = await getUserId();
       if (!userId) {
-        throw new Error('User ID not found. Please log in again.');
+        throw new Error('User ID not found. Please ensure you are logged in and try again.');
       }
 
       // Upload and save the PFP
