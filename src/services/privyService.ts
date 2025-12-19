@@ -61,15 +61,22 @@ class PrivyService {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         console.log(`❌ Sync attempt ${retryCount + 1} failed:`, errorMessage);
         
+        // Log full error details for debugging on every attempt
+        if (axios.isAxiosError(error)) {
+          console.error(`❌ Backend error (attempt ${retryCount + 1}):`, {
+            status: error.response?.status,
+            statusText: error.response?.statusText,
+            data: error.response?.data,
+            message: error.response?.data?.message || error.response?.data?.error,
+            url: error.config?.url,
+          });
+        }
+        
         if (retryCount === maxRetries) {
-          // Log full error details for debugging
+          // On final failure, throw with detailed error
           if (axios.isAxiosError(error)) {
-            console.error('❌ Backend error response:', {
-              status: error.response?.status,
-              statusText: error.response?.statusText,
-              data: error.response?.data,
-              message: error.response?.data?.message,
-            });
+            const backendMessage = error.response?.data?.message || error.response?.data?.error || error.message;
+            throw new Error(`Failed to sync user: ${backendMessage} (Status: ${error.response?.status || 'N/A'})`);
           }
           throw error; // Re-throw the last error
         }
@@ -84,7 +91,17 @@ class PrivyService {
       throw new Error('No response received from backend');
     }
 
-    if (response.data.success) {
+    // Log the full response for debugging
+    console.log('📦 Backend sync response:', {
+      hasData: !!response.data,
+      success: response.data?.success,
+      hasUser: !!response.data?.user,
+      userId: response.data?.user?.id,
+      hasToken: !!response.data?.token,
+    });
+
+    // Check if response has success flag (backend should return success: true)
+    if (response.data?.success !== false && response.data?.user && response.data?.token) {
       console.log('✅ Backend sync successful:', response.data);
 
       // Store our JWT token and user info (matching test frontend exactly)
@@ -114,7 +131,14 @@ class PrivyService {
       return response.data;
     }
 
-    throw new Error('Failed to sync user');
+    // If we get here, the response structure is unexpected
+    console.error('❌ Unexpected response structure:', {
+      success: response.data?.success,
+      hasUser: !!response.data?.user,
+      hasToken: !!response.data?.token,
+      fullResponse: response.data,
+    });
+    throw new Error(`Failed to sync user: Invalid response structure. Success: ${response.data?.success}, Has User: ${!!response.data?.user}, Has Token: ${!!response.data?.token}`);
   }
 
   /**
