@@ -142,8 +142,6 @@ class PrivyService {
 
       // Store avatarUrl if available (from database) - transform to CloudFront URL
       if (responseData.user.avatarUrl) {
-        // Import dynamically to avoid circular dependencies
-        const { getCloudFrontUrl } = await import('@/lib/image-url-helper');
         const cloudfrontUrl = getCloudFrontUrl(responseData.user.avatarUrl);
         console.log('✅ Storing avatarUrl from backend sync (CloudFront):', cloudfrontUrl);
         localStorage.setItem('cto_user_avatar_url', cloudfrontUrl);
