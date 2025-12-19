@@ -153,13 +153,17 @@ class PFPService {
           userId = userIdFromStorage;
         }
 
+        console.log('📸 Converting data URL to File for upload...');
         // Convert data URL to File
         const response = await fetch(imageFileOrUrl);
         const blob = await response.blob();
         const file = new File([blob], `mascot-${Date.now()}.png`, { type: 'image/png' });
+        console.log(`📦 File created: ${file.name}, size: ${file.size} bytes, type: ${file.type}`);
 
-        const { viewUrl } = await this.uploadProfileImage(file, userId);
-        imageUrl = viewUrl;
+        console.log('☁️ Uploading file to S3 via presigned URL...');
+        const uploadResult = await this.uploadProfileImage(file, userId);
+        imageUrl = uploadResult.viewUrl;
+        console.log(`✅ Upload successful, imageUrl: ${imageUrl}`);
       } else {
         // It's already a URL string (not a data URL)
         imageUrl = imageFileOrUrl;
@@ -196,10 +200,19 @@ class PFPService {
 
       throw new Error(response.data.message || 'Failed to save PFP');
     } catch (error: unknown) {
-      console.error('Failed to save PFP:', error);
+      console.error('❌ Failed to save PFP:', error);
       let message = 'Failed to save PFP';
       if (axios.isAxiosError(error)) {
-        message = error.response?.data?.message || message;
+        console.error('❌ Axios error details:', {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          message: error.response?.data?.message,
+        });
+        message = error.response?.data?.message || error.response?.data?.error || message;
+        if (error.response?.status === 500) {
+          message = `Backend error: ${message}. Check backend logs for details.`;
+        }
       } else if (error instanceof Error) {
         message = error.message || message;
       }
