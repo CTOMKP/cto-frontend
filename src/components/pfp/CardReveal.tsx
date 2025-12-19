@@ -109,17 +109,22 @@ const createCompositeImage = async (traitType: TraitType): Promise<string> => {
     };
 
     // Load all images (using same paths as test frontend - with spaces)
+    // Use encodeURI to properly handle spaces in filenames for Next.js static files
+    const stagePath = encodeURI('/mascots/STAGE/STAGE.png');
+    const baseSkinPath = encodeURI('/mascots/SKIN/BASE SKIN.png');
+    const traitPath = encodeURI(`/mascots/TRAITS/${traitType}.png`);
+
     images.stage.onload = onImageLoad;
     images.stage.onerror = () => onImageError('/mascots/STAGE/STAGE.png');
-    images.stage.src = '/mascots/STAGE/STAGE.png';
+    images.stage.src = stagePath;
 
     images.baseSkin.onload = onImageLoad;
     images.baseSkin.onerror = () => onImageError('/mascots/SKIN/BASE SKIN.png');
-    images.baseSkin.src = '/mascots/SKIN/BASE SKIN.png';
+    images.baseSkin.src = baseSkinPath;
 
     images.trait.onload = onImageLoad;
     images.trait.onerror = () => onImageError(`/mascots/TRAITS/${traitType}.png`);
-    images.trait.src = `/mascots/TRAITS/${traitType}.png`;
+    images.trait.src = traitPath;
   });
 };
 
