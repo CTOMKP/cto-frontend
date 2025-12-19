@@ -24,7 +24,7 @@ class PFPService {
       }
 
       const response = await axios.get(
-        `${API_BASE}/api/pfp/cards`,
+        `${API_BASE}/api/v1/pfp/cards`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -120,7 +120,7 @@ class PFPService {
 
   /**
    * Save/Upload PFP to user profile
-   * Now accepts either a File (for upload) or imageUrl (for existing URLs)
+   * Now accepts either a File (for upload), data URL (base64), or imageUrl (for existing URLs)
    */
   async savePFP(imageFileOrUrl: File | string, userId?: string): Promise<{ success: boolean; message?: string; imageUrl?: string }> {
     try {
@@ -143,8 +143,25 @@ class PFPService {
 
         const { viewUrl } = await this.uploadProfileImage(imageFileOrUrl, userId);
         imageUrl = viewUrl;
+      } else if (imageFileOrUrl.startsWith('data:image/')) {
+        // It's a data URL (base64) - convert to File and upload
+        if (!userId) {
+          const userIdFromStorage = localStorage.getItem('cto_user_id');
+          if (!userIdFromStorage) {
+            throw new Error('User ID is required for file upload');
+          }
+          userId = userIdFromStorage;
+        }
+
+        // Convert data URL to File
+        const response = await fetch(imageFileOrUrl);
+        const blob = await response.blob();
+        const file = new File([blob], `mascot-${Date.now()}.png`, { type: 'image/png' });
+
+        const { viewUrl } = await this.uploadProfileImage(file, userId);
+        imageUrl = viewUrl;
       } else {
-        // It's already a URL string
+        // It's already a URL string (not a data URL)
         imageUrl = imageFileOrUrl;
       }
 
