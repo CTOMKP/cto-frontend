@@ -115,6 +115,15 @@ const createCompositeImage = async (traitType: TraitType): Promise<string> => {
     const baseSkinPath = getMascotImageUrl('mascots/SKIN/BASE SKIN.png');
     const traitPath = getMascotImageUrl(`mascots/TRAITS/${traitType}.png`);
 
+    // Set crossOrigin for CORS when loading from CloudFront (cross-origin)
+    // This prevents "tainted canvas" errors when calling toDataURL()
+    const isCloudFrontUrl = stagePath.startsWith('http');
+    if (isCloudFrontUrl) {
+      images.stage.crossOrigin = 'anonymous';
+      images.baseSkin.crossOrigin = 'anonymous';
+      images.trait.crossOrigin = 'anonymous';
+    }
+
     images.stage.onload = onImageLoad;
     images.stage.onerror = () => onImageError(stagePath);
     images.stage.src = stagePath;
