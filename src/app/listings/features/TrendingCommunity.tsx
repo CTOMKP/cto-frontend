@@ -356,7 +356,7 @@ export default function TrendingCommunity({
                           <p className="text-[#FFFFFF80]">{data.communityScore}%</p>
                         </>
                       ) : (
-                        <p className="text-[#FFFFFF80] text-sm">Coming Soon</p>
+                        <p className="text-[#FFFFFF80] text-sm">0%</p>
                       )}
                     </div>
                   </TableCell>

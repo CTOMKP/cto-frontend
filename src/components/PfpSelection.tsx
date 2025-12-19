@@ -72,11 +72,8 @@ const PfpSelection = () => {
   const handleReveal = () => {
     if (!selectedCardId) return;
     
-    // Just transition to reveal the card - no API call needed
-    setIsRevealed(false); // Trigger exit animation of placeholder
-    setTimeout(() => {
-      setIsRevealed(true); // Show mascot reveal with entrance animation
-    }, 500); // Matches exit duration
+    // Show CardReveal component which will handle the reveal internally
+    setIsRevealed(true);
   };
 
   const handleHarvest = () => {

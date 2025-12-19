@@ -1,0 +1,20 @@
+[33m7b87b14[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Add comprehensive challenges and resolutions reference document - single source of truth for all issues and fixes
+[33m9966d92[m CRITICAL FIX: Use module-level Set to prevent parallel effect runs across ALL hook instances - fixes race condition causing multiple wallet creation
+[33mb90fec6[m Fix duplicate wallet display on profile page - deduplicate by address and hide Movement Wallet section if already in list
+[33m5957389[m CRITICAL FIX: Use user?.id in dependency array instead of user to prevent re-runs when user object updates after wallet creation - this is the key difference from test frontend
+[33m6f6be16[m CRITICAL FIX: Set syncedUserIdRef IMMEDIATELY at start to prevent multiple parallel effect runs - fixes multiple wallet creation issue
+[33mc982380[m Match test frontend authentication flow exactly - localStorage token check FIRST to prevent re-runs when user object updates (equivalent to test frontend navigating away)
+[33m935a6b7[m CRITICAL FIX: Check for existing token BEFORE processing to prevent duplicate wallet creation - matches test frontend token-based auth check
+[33m9ebf511[m \Check for existing Movement wallet BEFORE async operations to prevent multiple effect runs"
+[33m120320c[m \Add isProcessingRef lock to prevent concurrent effect runs when user object changes"
+[33m026b663[m \Simplify to match test frontend exactly: remove complex refs, use simple guards only"
+[33mc7e51c0[m \CRITICAL FIX: Prevent multiple wallet creation - match test frontend dependency array and add proper guards"
+[33md4114f2[m \Fix: Prevent multiple wallet creation - remove isSyncing/isCreatingMovementWallet from deps, add wait/re-check"
+[33m6438b2a[m \CRITICAL FIX: Use useCreateWallet from extended-chains to support Aptos wallet creation"
+[33m1dac7b3[m Add walletCreationInProgressRef to prevent concurrent wallet creation attempts
+[33m41ceb84[m Match test frontend: Don't verify returned wallet chainType, check user.linkedAccounts instead
+[33m8f91b29[m Fix: Add isCreatingMovementWallet guard, verify wallet chainType, prevent multiple runs
+[33m34b53b5[m Match test frontend exactly: simplify wallet creation, fix timing, ensure 100% parity
+[33md597402[m Fix authentication flow: sync backend first, then check for Movement wallet - matches test frontend logic
+[33maa53d8a[m Fix OAuth callback stuck on loading - Redirect when Privy authenticated (don't wait for backend sync) - Add better OAuth callback handling and timeout - Show clearer messages during OAuth flow
+[33mb5b4490[m Fix /login page to actually allow login - Remove redirect that was blocking users - Trigger Privy login modal when users visit /login - Only redirect authenticated users to profile
