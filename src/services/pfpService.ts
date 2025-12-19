@@ -18,7 +18,9 @@ class PFPService {
     try {
       const token = localStorage.getItem('cto_auth_token');
       if (!token) {
-        throw new Error('No authentication token');
+        console.warn('No authentication token found, using default cards');
+        // Return default cards if not authenticated
+        return this.getDefaultCards();
       }
 
       const response = await axios.get(
@@ -31,15 +33,16 @@ class PFPService {
         }
       );
 
-      if (response.data.success) {
-        return response.data.cards || [];
+      if (response.data.success && response.data.cards && response.data.cards.length > 0) {
+        return response.data.cards;
       }
 
-      // Fallback to default cards if API fails
+      // Fallback to default cards if API fails or returns empty
+      console.warn('API returned no cards, using default cards');
       return this.getDefaultCards();
     } catch (error) {
       console.error('Failed to fetch PFP cards:', error);
-      // Return default cards as fallback
+      // Return default cards as fallback - don't throw error, just use defaults
       return this.getDefaultCards();
     }
   }

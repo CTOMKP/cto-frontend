@@ -41,7 +41,9 @@ const getTraitImage = (traitName: string, cardId: number): string => {
   // Use cardId to deterministically select a variant (so same card always shows same variant)
   const variantIndex = (cardId - 1) % variants.length;
   const selectedVariant = variants[variantIndex] || traitName;
-  return `/mascots/TRAITS/${selectedVariant}.png`;
+  // URL encode the trait name to handle any special characters
+  const encodedTrait = encodeURIComponent(selectedVariant);
+  return `/mascots/TRAITS/${encodedTrait}.png`;
 };
 
 /**
@@ -96,9 +98,12 @@ const compositeMascotImage = async (
         images[index] = img;
         checkAllLoaded();
       };
-      img.onerror = () => {
+      img.onerror = (error) => {
+        console.error(`Failed to load image: ${src}`, error);
+        // Try to continue with a placeholder or reject
         reject(new Error(`Failed to load image: ${src}`));
       };
+      // Ensure src is properly encoded
       img.src = src;
     };
 
@@ -118,25 +123,35 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
   const allImagesLoaded = imagesLoaded.base && imagesLoaded.stage && imagesLoaded.trait;
 
   const traitName = selectedCardId ? (TRAIT_MAP[selectedCardId] || 'CTO') : 'CTO';
-  const baseSkinPath = '/mascots/SKIN/BASE SKIN.png';
+  // URL encode paths with spaces to prevent 404 errors
+  const baseSkinPath = '/mascots/SKIN/BASE%20SKIN.png';
   const stagePath = '/mascots/STAGE/STAGE.png';
   const traitPath = getTraitImage(traitName, selectedCardId || 0);
 
   // Auto-save when component mounts (card is revealed)
   useEffect(() => {
-    if (!selectedCardId) return;
+    if (!selectedCardId || !allImagesLoaded) return; // Wait for images to load
+    
     const autoSavePFP = async () => {
       if (isAutoSaved || isSaving) return; // Prevent duplicate saves
       
       setIsSaving(true);
       try {
+        // Check for authentication token first
+        const token = localStorage.getItem('cto_auth_token');
+        if (!token) {
+          console.warn('No authentication token found, skipping auto-save');
+          return;
+        }
+        
         // Composite the mascot layers into a single image file (without stage)
         const compositeFile = await compositeMascotImage(baseSkinPath, traitPath);
         
         // Get user ID
         const userId = user?.id || localStorage.getItem('cto_user_id') || '';
         if (!userId) {
-          throw new Error('User ID not found');
+          console.warn('User ID not found, skipping auto-save');
+          return;
         }
 
         // Upload and save the PFP automatically
@@ -155,24 +170,30 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
       }
     };
 
-    // Auto-save after a short delay to ensure images are loaded
+    // Auto-save after images are loaded
     const timer = setTimeout(() => {
       autoSavePFP();
-    }, 500);
+    }, 1000); // Increased delay to ensure all images are fully loaded
 
     return () => clearTimeout(timer);
-  }, [selectedCardId, baseSkinPath, traitPath, user?.id, isAutoSaved, isSaving]);
+  }, [selectedCardId, baseSkinPath, traitPath, user?.id, isAutoSaved, isSaving, allImagesLoaded]);
 
   const handleSavePFP = async () => {
     setIsSaving(true);
     try {
+      // Check for authentication token first
+      const token = localStorage.getItem('cto_auth_token');
+      if (!token) {
+        throw new Error('Please log in to save your profile picture');
+      }
+      
       // Composite the mascot layers into a single image file (without stage)
       const compositeFile = await compositeMascotImage(baseSkinPath, traitPath);
       
       // Get user ID
       const userId = user?.id || localStorage.getItem('cto_user_id') || '';
       if (!userId) {
-        throw new Error('User ID not found');
+        throw new Error('User ID not found. Please log in again.');
       }
 
       // Upload and save the PFP
@@ -290,6 +311,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
           ) : (
             <>
               <Button 
+                onClick={handleSavePFP}
                 className="cta-gradient w-26.5 rounded-lg font-medium text-[14px] text-white h-[36px]"
                 disabled={isSaving}
               >

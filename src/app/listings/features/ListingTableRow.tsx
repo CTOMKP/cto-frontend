@@ -318,26 +318,32 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
       {/* Community */}
       <TableCell className="text-center">
         <div className="flex justify-center gap-1">
-          <Image
-            loading="lazy"
-            src={
-              coin.communityScore < 50
-                ? "/communitry-score-icons/bad-red.svg"
-                : coin.communityScore >= 50 && coin.communityScore < 70
-                ? "/communitry-score-icons/average-yellow.svg"
-                : "/communitry-score-icons/good-green.svg"
-            }
-            alt={
-              coin.communityScore < 50
-                ? "bad-red"
-                : coin.communityScore >= 50 && coin.communityScore < 70
-                ? "average-yellow"
-                : "good-green"
-            }
-            width={16}
-            height={16}
-          />{" "}
-          <span>{coin.communityScore}%</span>
+          {coin.communityScore > 0 ? (
+            <>
+              <Image
+                loading="lazy"
+                src={
+                  coin.communityScore < 50
+                    ? "/communitry-score-icons/bad-red.svg"
+                    : coin.communityScore >= 50 && coin.communityScore < 70
+                    ? "/communitry-score-icons/average-yellow.svg"
+                    : "/communitry-score-icons/good-green.svg"
+                }
+                alt={
+                  coin.communityScore < 50
+                    ? "bad-red"
+                    : coin.communityScore >= 50 && coin.communityScore < 70
+                    ? "average-yellow"
+                    : "good-green"
+                }
+                width={16}
+                height={16}
+              />
+              <span>{coin.communityScore}%</span>
+            </>
+          ) : (
+            <span className="text-[#FFFFFF]/50 italic text-xs">Coming Soon</span>
+          )}
         </div>
       </TableCell>
 
