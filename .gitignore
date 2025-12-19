@@ -43,3 +43,6 @@ next-env.d.ts
 # temporary files
 temp_*.tsx
 *_original.tsx
+
+# upload scripts with credentials (if any)
+.env.upload

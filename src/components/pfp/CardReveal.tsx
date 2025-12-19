@@ -8,6 +8,7 @@ import { Save } from 'lucide-react';
 import { pfpService } from '@/services/pfpService';
 import { toast } from 'react-toastify';
 import { usePrivy } from '@privy-io/react-auth';
+import { getMascotImageUrl } from '@/lib/image-url-helper';
 
 interface CardRevealProps {
   onClose?: () => void;
@@ -108,18 +109,23 @@ const createCompositeImage = async (traitType: TraitType): Promise<string> => {
       reject(`Failed to load mascot image: ${src}`);
     };
 
-    // Load all images (using same paths as test frontend - with spaces, no encodeURI)
+    // Load all images from CloudFront CDN (S3)
+    // Fallback to local paths for development if CloudFront is not configured
+    const stagePath = getMascotImageUrl('mascots/STAGE/STAGE.png');
+    const baseSkinPath = getMascotImageUrl('mascots/SKIN/BASE SKIN.png');
+    const traitPath = getMascotImageUrl(`mascots/TRAITS/${traitType}.png`);
+
     images.stage.onload = onImageLoad;
-    images.stage.onerror = () => onImageError('/mascots/STAGE/STAGE.png');
-    images.stage.src = '/mascots/STAGE/STAGE.png';
+    images.stage.onerror = () => onImageError(stagePath);
+    images.stage.src = stagePath;
 
     images.baseSkin.onload = onImageLoad;
-    images.baseSkin.onerror = () => onImageError('/mascots/SKIN/BASE SKIN.png');
-    images.baseSkin.src = '/mascots/SKIN/BASE SKIN.png';
+    images.baseSkin.onerror = () => onImageError(baseSkinPath);
+    images.baseSkin.src = baseSkinPath;
 
     images.trait.onload = onImageLoad;
-    images.trait.onerror = () => onImageError(`/mascots/TRAITS/${traitType}.png`);
-    images.trait.src = `/mascots/TRAITS/${traitType}.png`;
+    images.trait.onerror = () => onImageError(traitPath);
+    images.trait.src = traitPath;
   });
 };
 

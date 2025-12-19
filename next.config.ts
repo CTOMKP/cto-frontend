@@ -30,6 +30,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/cms/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'd2cjbd1iqkwr9j.cloudfront.net',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
   env: {
@@ -39,6 +45,9 @@ const nextConfig: NextConfig = {
     // Backend Configuration
     NEXT_PUBLIC_BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL,
     NEXT_PUBLIC_AUTH_API_BASE: process.env.NEXT_PUBLIC_AUTH_API_BASE,
+    
+    // CloudFront CDN Configuration
+    NEXT_PUBLIC_CLOUDFRONT_DOMAIN: process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN,
     
     // Panora API Configuration
     PANORA_API_KEY: process.env.PANORA_API_KEY,
