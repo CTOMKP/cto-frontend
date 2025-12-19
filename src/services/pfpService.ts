@@ -87,6 +87,7 @@ class PFPService {
 
       const { uploadUrl, key } = presignRes.data || {};
       if (uploadUrl && key) {
+        console.log(`📤 Uploading to S3: ${uploadUrl.substring(0, 100)}...`);
         // 2) Upload directly to storage (S3) via presigned PUT
         const putRes = await fetch(uploadUrl, {
           method: 'PUT',
@@ -97,11 +98,19 @@ class PFPService {
         if (putRes.ok) {
           // 3) Use server redirect endpoint for stable reads
           const viewUrl = `${API_BASE}/api/v1/images/view/${key}`;
+          console.log(`✅ S3 upload successful, viewUrl: ${viewUrl}`);
           return { viewUrl, key };
+        } else {
+          console.error(`❌ S3 upload failed: ${putRes.status} ${putRes.statusText}`);
+          throw new Error(`S3 upload failed: ${putRes.status} ${putRes.statusText}`);
         }
+      } else {
+        console.warn('⚠️ No uploadUrl or key in presign response:', presignRes.data);
       }
     } catch (presignError) {
-      console.warn('Presigned upload not available, falling back to base64:', presignError);
+      console.error('❌ Presigned upload failed:', presignError);
+      // Don't fallback to base64 for PFP saves - this creates huge URLs that cause backend errors
+      throw new Error(`Failed to upload image: ${presignError instanceof Error ? presignError.message : 'Unknown error'}`);
     }
 
     // Fallback: Convert to base64 data URL
