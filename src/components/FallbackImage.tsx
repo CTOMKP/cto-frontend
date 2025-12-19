@@ -64,7 +64,7 @@ const FallbackImage: React.FC<Props> = ({
     }
   }, [src]);
 
-  // Preload image
+  // Preload image with CORS support
   useEffect(() => {
     if (!current) {
       setLoading(false);
@@ -73,6 +73,13 @@ const FallbackImage: React.FC<Props> = ({
     }
     
     const img = new window.Image();
+    
+    // Set crossOrigin for cross-origin requests (backend API URLs)
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
+    if (current.startsWith('http') && (current.includes(backendUrl) || current.includes('/api/v1/images/view/'))) {
+      img.crossOrigin = 'anonymous';
+    }
+    
     img.src = current;
     
     img.onload = () => {
@@ -99,6 +106,10 @@ const FallbackImage: React.FC<Props> = ({
     };
   }, [current, index, candidates.length, onLoad]);
 
+  // Check if this is a cross-origin backend URL that needs special handling
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
+  const isCrossOrigin = current && current.startsWith('http') && (current.includes(backendUrl) || current.includes('/api/v1/images/view/'));
+
   // Show placeholder if no image or error
   if (!current || error) {
     return (
@@ -112,7 +123,7 @@ const FallbackImage: React.FC<Props> = ({
       </div>
     );
   }
-
+  
   if (fill) {
     return (
       <div className={`relative ${className || ''}`}>
@@ -121,19 +132,36 @@ const FallbackImage: React.FC<Props> = ({
             <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
           </div>
         )}
-        <Image
-          src={current}
-          alt={alt}
-          fill
-          className={`${className || ''} ${loading ? 'opacity-0' : 'opacity-100'}`}
-          style={{ transition: 'opacity 300ms' }}
-          onError={() => setIndex((i) => i + 1)}
-          onLoad={() => {
-            setLoading(false);
-            if (onLoad) onLoad();
-          }}
-          unoptimized
-        />
+        {isCrossOrigin ? (
+          // Use regular img tag for cross-origin images to support CORS
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={current}
+            alt={alt}
+            className={`${className || ''} ${loading ? 'opacity-0' : 'opacity-100'} w-full h-full object-cover`}
+            style={{ transition: 'opacity 300ms', position: 'absolute', inset: 0 }}
+            onError={() => setIndex((i) => i + 1)}
+            onLoad={() => {
+              setLoading(false);
+              if (onLoad) onLoad();
+            }}
+            crossOrigin="anonymous"
+          />
+        ) : (
+          <Image
+            src={current}
+            alt={alt}
+            fill
+            className={`${className || ''} ${loading ? 'opacity-0' : 'opacity-100'}`}
+            style={{ transition: 'opacity 300ms' }}
+            onError={() => setIndex((i) => i + 1)}
+            onLoad={() => {
+              setLoading(false);
+              if (onLoad) onLoad();
+            }}
+            unoptimized
+          />
+        )}
       </div>
     );
   }
@@ -145,20 +173,39 @@ const FallbackImage: React.FC<Props> = ({
           <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
         </div>
       )}
-      <Image
-        src={current}
-        alt={alt}
-        width={width}
-        height={height}
-        className={`${className || ''} ${loading ? 'opacity-0' : 'opacity-100'}`}
-        style={{ transition: 'opacity 300ms' }}
-        onError={() => setIndex((i) => i + 1)}
-        onLoad={() => {
-          setLoading(false);
-          if (onLoad) onLoad();
-        }}
-        unoptimized
-      />
+      {isCrossOrigin ? (
+        // Use regular img tag for cross-origin images to support CORS
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={current}
+          alt={alt}
+          width={width}
+          height={height}
+          className={`${className || ''} ${loading ? 'opacity-0' : 'opacity-100'}`}
+          style={{ transition: 'opacity 300ms' }}
+          onError={() => setIndex((i) => i + 1)}
+          onLoad={() => {
+            setLoading(false);
+            if (onLoad) onLoad();
+          }}
+          crossOrigin="anonymous"
+        />
+      ) : (
+        <Image
+          src={current}
+          alt={alt}
+          width={width}
+          height={height}
+          className={`${className || ''} ${loading ? 'opacity-0' : 'opacity-100'}`}
+          style={{ transition: 'opacity 300ms' }}
+          onError={() => setIndex((i) => i + 1)}
+          onLoad={() => {
+            setLoading(false);
+            if (onLoad) onLoad();
+          }}
+          unoptimized
+        />
+      )}
     </div>
   );
 };

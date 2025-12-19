@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import CustomPieChart from '@/components/CustomPieChart';
 import {Eye, EyeOff, Edit, LogOut, Link, Wallet, ChevronDown, ChevronUp, MoveDown, MoveUp, ArrowUpDown, SquareArrowOutUpRight, Check } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import FallbackImage from '@/components/FallbackImage';
 
 // Helper function to get wallet chain info
 // function getWalletChainInfo(wallet: BackendWallet | PrivyWalletAccount) {
@@ -506,13 +507,11 @@ export default function ProfilePage() {
               <div className="flex items-start gap-4">
                 <div className="relative w-20 h-20 rounded-full overflow-hidden">
                   {avatarUrl ? (
-                    <Image
+                    <FallbackImage
                       src={avatarUrl}
                       alt="Profile"
                       fill
                       className="object-cover size-15 rounded-full border-[0.6px] border-white"
-                      loading="lazy"
-                      unoptimized
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-2xl">

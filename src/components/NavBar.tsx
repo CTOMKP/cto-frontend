@@ -51,6 +51,7 @@ export default function NavBar() {
   const showAuthenticatedUI = (privyAuthenticated && ready) || isAuthenticated;
 
   // Check if user has avatar and listen for changes
+  // This is only used to show AvatarDropdown alongside HarvestGrape
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const checkAvatar = () => {
@@ -292,7 +293,8 @@ export default function NavBar() {
         <div className="border-l-[0.2px] ml-4 border-[#FFFFFF20] h-full flex items-center justify-center gap-2">
           {showAuthenticatedUI ? (
             <>
-              {hasAvatar ? <AvatarDropdown /> : <HarvestGrape />}
+              <HarvestGrape />
+              {hasAvatar && <AvatarDropdown />}
             </>
           ) : (
             <LoginButton />

@@ -36,6 +36,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'api.ctomarketplace.com',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
   env: {

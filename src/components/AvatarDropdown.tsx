@@ -14,6 +14,7 @@ import { Check, SquareArrowOutUpRight } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Link from 'next/link';
 import { BackendWallet } from '@/types/privy';
+import FallbackImage from './FallbackImage';
 
 export default function AvatarDropdown() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -85,13 +86,11 @@ export default function AvatarDropdown() {
         <span className="relative flex justify-center items-center rounded-lg size-13 border-[0.2px] border-[#FFFFFF20]">
           <span className="relative bg-[#FFFFFF0D] rounded-full size-9 flex items-center justify-center overflow-hidden">
             {avatarUrl ? (
-              <Image
+              <FallbackImage
                 src={avatarUrl}
                 alt="Profile"
                 fill
-                className="object-cover"
-                loading="lazy"
-                unoptimized
+                className="object-cover rounded-full"
               />
             ) : (
               <span className="text-white text-xs font-bold">
@@ -107,13 +106,11 @@ export default function AvatarDropdown() {
           <div className="flex items-center gap-3 mb-4">
             <div className="relative w-16 h-16 rounded-full overflow-hidden flex-shrink-0">
               {avatarUrl ? (
-                <Image
+                <FallbackImage
                   src={avatarUrl}
                   alt="Profile"
                   fill
                   className="object-cover rounded-full"
-                  loading="lazy"
-                  unoptimized
                 />
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-xl text-white font-bold">
