@@ -85,7 +85,10 @@ class PFPService {
         }
       );
 
-      const { uploadUrl, key } = presignRes.data || {};
+      // Handle nested response structure (NestJS wraps in {data: {...}, statusCode, timestamp})
+      const presignData = presignRes.data?.data || presignRes.data;
+      const { uploadUrl, key } = presignData || {};
+      
       if (uploadUrl && key) {
         console.log(`📤 Uploading to S3: ${uploadUrl.substring(0, 100)}...`);
         // 2) Upload directly to storage (S3) via presigned PUT
@@ -105,7 +108,14 @@ class PFPService {
           throw new Error(`S3 upload failed: ${putRes.status} ${putRes.statusText}`);
         }
       } else {
-        console.warn('⚠️ No uploadUrl or key in presign response:', presignRes.data);
+        console.error('❌ No uploadUrl or key in presign response:', {
+          hasData: !!presignRes.data,
+          hasNestedData: !!presignRes.data?.data,
+          dataKeys: presignRes.data ? Object.keys(presignRes.data) : [],
+          nestedDataKeys: presignRes.data?.data ? Object.keys(presignRes.data.data) : [],
+          fullResponse: presignRes.data,
+        });
+        throw new Error('Presign response missing uploadUrl or key');
       }
     } catch (presignError) {
       console.error('❌ Presigned upload failed:', presignError);
