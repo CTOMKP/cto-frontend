@@ -72,3 +72,4 @@ After redeployment, verify:
 - Review Dependabot alerts promptly
 - Use dependency pinning for critical packages
 
+

@@ -15,6 +15,7 @@ import { toast } from 'react-toastify';
 import Link from 'next/link';
 import { BackendWallet } from '@/types/privy';
 import FallbackImage from './FallbackImage';
+import { getCloudFrontUrl } from '@/lib/image-url-helper';
 
 export default function AvatarDropdown() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -31,8 +32,10 @@ export default function AvatarDropdown() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const updateAvatar = () => {
-        const url = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
-        setAvatarUrl(url);
+        const rawUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
+        // Transform backend URLs to CloudFront URLs
+        const cloudfrontUrl = rawUrl ? getCloudFrontUrl(rawUrl) : null;
+        setAvatarUrl(cloudfrontUrl);
       };
       
       updateAvatar();

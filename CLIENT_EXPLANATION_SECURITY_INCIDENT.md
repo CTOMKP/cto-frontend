@@ -107,3 +107,4 @@ This was a critical but quickly resolved security incident. The application is n
 **Impact**: Low (display-level injection, no data breach detected)  
 **Response Time**: < 24 hours
 
+

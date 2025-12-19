@@ -34,19 +34,29 @@ export function getCloudFrontUrl(url: string | null | undefined): string {
   let imagePath = '';
 
   if (url.startsWith('http')) {
-    // Extract path from full S3 URL
-    try {
-      const urlObj = new URL(url);
-      imagePath = urlObj.pathname.startsWith('/') ? urlObj.pathname.substring(1) : urlObj.pathname;
-    } catch (e) {
-      // If URL parsing fails, try to extract path manually
-      const match = url.match(/\/memes\/.+/) || 
-                   url.match(/\/user-uploads\/.+/) || 
-                   url.match(/\/mascots\/.+/);
+    // Handle backend API URLs: /api/v1/images/view/user-uploads/...
+    if (url.includes('/api/v1/images/view/')) {
+      const match = url.match(/\/api\/v1\/images\/view\/(.+)$/);
       if (match) {
-        imagePath = match[0].substring(1); // Remove leading slash
+        imagePath = match[1].split('?')[0]; // Remove query params if any
       } else {
         return url; // Return original if we can't parse it
+      }
+    } else {
+      // Extract path from full S3 URL
+      try {
+        const urlObj = new URL(url);
+        imagePath = urlObj.pathname.startsWith('/') ? urlObj.pathname.substring(1) : urlObj.pathname;
+      } catch (e) {
+        // If URL parsing fails, try to extract path manually
+        const match = url.match(/\/memes\/.+/) || 
+                     url.match(/\/user-uploads\/.+/) || 
+                     url.match(/\/mascots\/.+/);
+        if (match) {
+          imagePath = match[0].substring(1); // Remove leading slash
+        } else {
+          return url; // Return original if we can't parse it
+        }
       }
     }
   } else {

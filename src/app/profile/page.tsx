@@ -13,6 +13,7 @@ import CustomPieChart from '@/components/CustomPieChart';
 import {Eye, EyeOff, Edit, LogOut, Link, Wallet, ChevronDown, ChevronUp, MoveDown, MoveUp, ArrowUpDown, SquareArrowOutUpRight, Check } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FallbackImage from '@/components/FallbackImage';
+import { getCloudFrontUrl } from '@/lib/image-url-helper';
 
 // Helper function to get wallet chain info
 // function getWalletChainInfo(wallet: BackendWallet | PrivyWalletAccount) {
@@ -331,26 +332,33 @@ export default function ProfilePage() {
 
     // Listen for custom event (dispatched by pfpService)
     const handleAvatarUpdate = () => {
-      const newAvatarUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
-      if (newAvatarUrl && newAvatarUrl !== avatarUrl) {
-        setAvatarUrl(newAvatarUrl);
-        toast.success('Profile picture updated!');
+      const rawUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
+      if (rawUrl) {
+        const newAvatarUrl = getCloudFrontUrl(rawUrl);
+        if (newAvatarUrl !== avatarUrl) {
+          setAvatarUrl(newAvatarUrl);
+          toast.success('Profile picture updated!');
+        }
       }
     };
 
     // Listen for localStorage changes (cross-tab updates)
     const handleStorageChange = (e: StorageEvent) => {
       if ((e.key === 'cto_user_avatar_url' || e.key === 'profile_avatar_url') && e.newValue) {
-        setAvatarUrl(e.newValue);
+        const cloudfrontUrl = getCloudFrontUrl(e.newValue);
+        setAvatarUrl(cloudfrontUrl);
         toast.success('Profile picture updated from another session!');
       }
     };
 
     // Check localStorage periodically (same-tab updates)
     const checkAvatar = () => {
-      const storedAvatar = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
-      if (storedAvatar && storedAvatar !== avatarUrl) {
-        setAvatarUrl(storedAvatar);
+      const rawUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
+      if (rawUrl) {
+        const cloudfrontUrl = getCloudFrontUrl(rawUrl);
+        if (cloudfrontUrl !== avatarUrl) {
+          setAvatarUrl(cloudfrontUrl);
+        }
       }
     };
 

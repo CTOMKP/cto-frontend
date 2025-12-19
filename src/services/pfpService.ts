@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getCloudFrontUrl } from '@/lib/image-url-helper';
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
 
@@ -99,12 +100,43 @@ class PFPService {
         });
 
         if (putRes.ok) {
-          // 3) Use server redirect endpoint for stable reads
+          // Wait a moment for S3 to propagate the file
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Verify the file exists by trying to access it via the backend endpoint
           const viewUrl = `${API_BASE}/api/v1/images/view/${key}`;
-          console.log(`✅ S3 upload successful, viewUrl: ${viewUrl}`);
+          console.log(`✅ S3 upload successful, verifying file exists at: ${viewUrl}`);
+          
+          // Try to verify the file exists (with retries)
+          let verified = false;
+          for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+              const verifyRes = await fetch(viewUrl, { method: 'HEAD' });
+              if (verifyRes.ok || verifyRes.status === 307 || verifyRes.status === 302) {
+                verified = true;
+                console.log(`✅ File verified after ${attempt + 1} attempt(s)`);
+                break;
+              }
+              if (attempt < 2) {
+                console.log(`⏳ File not yet available, retrying in 1s... (attempt ${attempt + 1}/3)`);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+              }
+            } catch (verifyError) {
+              console.warn(`⚠️ Verification attempt ${attempt + 1} failed:`, verifyError);
+              if (attempt < 2) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+              }
+            }
+          }
+          
+          if (!verified) {
+            console.warn(`⚠️ Could not verify file exists, but upload appeared successful. File may be propagating.`);
+          }
+          
           return { viewUrl, key };
         } else {
-          console.error(`❌ S3 upload failed: ${putRes.status} ${putRes.statusText}`);
+          const errorText = await putRes.text().catch(() => 'Unknown error');
+          console.error(`❌ S3 upload failed: ${putRes.status} ${putRes.statusText}`, errorText);
           throw new Error(`S3 upload failed: ${putRes.status} ${putRes.statusText}`);
         }
       } else {
@@ -218,18 +250,20 @@ class PFPService {
       if (saveData?.success) {
         // Use backend's avatarUrl if provided, otherwise use our constructed imageUrl
         // Backend might return avatarUrl, imageUrl, or url field
-        const finalAvatarUrl = saveData?.avatarUrl || saveData?.imageUrl || saveData?.url || imageUrl;
+        const backendUrl = saveData?.avatarUrl || saveData?.imageUrl || saveData?.url || imageUrl;
+        // Transform to CloudFront URL (same approach as memes)
+        const finalAvatarUrl = getCloudFrontUrl(backendUrl);
         
         console.log('💾 Storing avatar URL:', {
           backendAvatarUrl: saveData?.avatarUrl,
           backendImageUrl: saveData?.imageUrl,
           backendUrl: saveData?.url,
           constructedImageUrl: imageUrl,
-          finalAvatarUrl,
+          cloudfrontUrl: finalAvatarUrl,
           allSaveDataKeys: Object.keys(saveData || {}),
         });
         
-        // Store in localStorage for quick access (both keys for compatibility)
+        // Store CloudFront URL in localStorage for quick access (both keys for compatibility)
         localStorage.setItem('profile_avatar_url', finalAvatarUrl);
         localStorage.setItem('cto_user_avatar_url', finalAvatarUrl);
         
