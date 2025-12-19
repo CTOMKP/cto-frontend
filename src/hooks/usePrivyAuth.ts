@@ -128,7 +128,8 @@ export function usePrivyAuth() {
         console.log('🔄 Syncing with backend FIRST (matching test frontend logic)...');
         let backendSyncResult;
         try {
-          backendSyncResult = await privyService.syncUser(token);
+          // Pass getAccessToken for retry logic (matching test frontend)
+          backendSyncResult = await privyService.syncUser(token, getAccessToken);
           console.log('✅ Backend sync completed:', backendSyncResult);
         } catch (syncError) {
           console.error('❌ Backend sync failed:', syncError);
@@ -197,7 +198,7 @@ export function usePrivyAuth() {
             try {
               const freshToken = await getAccessToken();
               if (freshToken) {
-                await privyService.syncUser(freshToken);
+                await privyService.syncUser(freshToken, getAccessToken);
               }
             } catch (resyncError) {
               console.error('❌ Backend re-sync failed:', resyncError);
@@ -215,7 +216,7 @@ export function usePrivyAuth() {
               try {
                 const freshToken = await getAccessToken();
                 if (freshToken) {
-                  await privyService.syncUser(freshToken);
+                  await privyService.syncUser(freshToken, getAccessToken);
                 }
               } catch (resyncError) {
                 console.error('❌ Backend re-sync failed:', resyncError);
