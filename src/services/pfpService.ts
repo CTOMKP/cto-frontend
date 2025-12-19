@@ -216,19 +216,35 @@ class PFPService {
       });
 
       if (saveData?.success) {
+        // Use backend's avatarUrl if provided, otherwise use our constructed imageUrl
+        // Backend might return avatarUrl, imageUrl, or url field
+        const finalAvatarUrl = saveData?.avatarUrl || saveData?.imageUrl || saveData?.url || imageUrl;
+        
+        console.log('💾 Storing avatar URL:', {
+          backendAvatarUrl: saveData?.avatarUrl,
+          backendImageUrl: saveData?.imageUrl,
+          backendUrl: saveData?.url,
+          constructedImageUrl: imageUrl,
+          finalAvatarUrl,
+          allSaveDataKeys: Object.keys(saveData || {}),
+        });
+        
         // Store in localStorage for quick access (both keys for compatibility)
-        localStorage.setItem('profile_avatar_url', imageUrl);
-        localStorage.setItem('cto_user_avatar_url', imageUrl);
+        localStorage.setItem('profile_avatar_url', finalAvatarUrl);
+        localStorage.setItem('cto_user_avatar_url', finalAvatarUrl);
         
         // Dispatch custom event to notify components of avatar update
+        // Use a small delay to ensure localStorage is updated before event fires
         if (typeof window !== 'undefined') {
-          window.dispatchEvent(new Event('avatarUpdated'));
+          setTimeout(() => {
+            window.dispatchEvent(new Event('avatarUpdated'));
+          }, 100);
         }
         
         return {
           success: true,
           message: saveData.message || 'PFP saved successfully',
-          imageUrl,
+          imageUrl: finalAvatarUrl,
         };
       }
 
