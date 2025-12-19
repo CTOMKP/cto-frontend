@@ -84,9 +84,9 @@ const createCompositeImage = async (traitType: TraitType): Promise<string> => {
     canvas.height = 800;
 
     const images = {
-      stage: new Image(),
-      baseSkin: new Image(),
-      trait: new Image(),
+      stage: document.createElement('img'),
+      baseSkin: document.createElement('img'),
+      trait: document.createElement('img'),
     };
 
     let loadedCount = 0;
@@ -125,7 +125,7 @@ const createCompositeImage = async (traitType: TraitType): Promise<string> => {
 };
 
 
-export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId: _selectedCardId, onClose }) => {
+export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
   const { user } = usePrivy();
   const [isRevealing, setIsRevealing] = useState(false);
   const [isRevealed, setIsRevealed] = useState(false);
