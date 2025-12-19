@@ -125,7 +125,7 @@ const createCompositeImage = async (traitType: TraitType): Promise<string> => {
 };
 
 
-export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose }) => {
+export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId: _selectedCardId, onClose }) => {
   const { user } = usePrivy();
   const [isRevealing, setIsRevealing] = useState(false);
   const [isRevealed, setIsRevealed] = useState(false);
@@ -136,9 +136,13 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
   // Generate mascot based on wallet address + timestamp + random (like test frontend)
   const generateMascot = async (): Promise<MascotCard> => {
     // Get wallet address from user or localStorage (Next.js/Privy approach)
+    interface PrivyLinkedAccount {
+      type: string;
+      address?: string;
+    }
     const walletAddress = user?.wallet?.address || 
-                         user?.linkedAccounts?.find((acc: any) => acc.type === 'wallet')?.address ||
-                         localStorage.getItem('cto_wallet_address') ||
+                         (user?.linkedAccounts as PrivyLinkedAccount[] | undefined)?.find((acc) => acc.type === 'wallet')?.address ||
+                         (typeof window !== 'undefined' ? localStorage.getItem('cto_wallet_address') : null) ||
                          user?.email?.address || 
                          user?.id || 
                          'demo';
@@ -328,6 +332,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
 
             {/* Mascot Composite Image */}
             <div className="text-center mb-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img 
                 src={mascotCard.compositeImage} 
                 alt={mascotCard.name}
@@ -339,7 +344,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
             {/* Description */}
             <div className="bg-gray-800 bg-opacity-50 p-3 rounded-lg">
               <p className="text-gray-300 text-sm text-center italic">
-                "{mascotCard.description}"
+                &quot;{mascotCard.description}&quot;
               </p>
             </div>
           </div>
