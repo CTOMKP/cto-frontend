@@ -189,6 +189,7 @@ class PFPService {
       }
 
       // Save the image URL to user profile
+      console.log(`💾 Saving PFP to backend: ${imageUrl.substring(0, 100)}...`);
       const response = await axios.post(
         `${API_BASE}/api/v1/pfp/save`,
         { imageUrl },
@@ -200,7 +201,21 @@ class PFPService {
         }
       );
 
-      if (response.data.success) {
+      // Handle nested response structure (NestJS wraps in {data: {...}, statusCode, timestamp})
+      const saveData = response.data?.data || response.data;
+      console.log('📦 Backend save response:', {
+        status: response.status,
+        hasData: !!response.data,
+        hasNestedData: !!response.data?.data,
+        dataKeys: response.data ? Object.keys(response.data) : [],
+        nestedDataKeys: response.data?.data ? Object.keys(response.data.data) : [],
+        success: saveData?.success,
+        message: saveData?.message,
+        avatarUrl: saveData?.avatarUrl,
+        fullResponse: response.data,
+      });
+
+      if (saveData?.success) {
         // Store in localStorage for quick access (both keys for compatibility)
         localStorage.setItem('profile_avatar_url', imageUrl);
         localStorage.setItem('cto_user_avatar_url', imageUrl);
@@ -212,12 +227,12 @@ class PFPService {
         
         return {
           success: true,
-          message: response.data.message || 'PFP saved successfully',
+          message: saveData.message || 'PFP saved successfully',
           imageUrl,
         };
       }
 
-      throw new Error(response.data.message || 'Failed to save PFP');
+      throw new Error(saveData?.message || `Failed to save PFP. Response: ${JSON.stringify(saveData)}`);
     } catch (error: unknown) {
       console.error('❌ Failed to save PFP:', error);
       let message = 'Failed to save PFP';
