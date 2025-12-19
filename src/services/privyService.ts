@@ -57,8 +57,9 @@ class PrivyService {
         
         // If we get here, the request succeeded
         break;
-      } catch (error: any) {
-        console.log(`❌ Sync attempt ${retryCount + 1} failed:`, error.message);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.log(`❌ Sync attempt ${retryCount + 1} failed:`, errorMessage);
         
         if (retryCount === maxRetries) {
           // Log full error details for debugging
