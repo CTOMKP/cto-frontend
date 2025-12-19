@@ -108,23 +108,18 @@ const createCompositeImage = async (traitType: TraitType): Promise<string> => {
       reject(`Failed to load mascot image: ${src}`);
     };
 
-    // Load all images (using same paths as test frontend - with spaces)
-    // Use encodeURI to properly handle spaces in filenames for Next.js static files
-    const stagePath = encodeURI('/mascots/STAGE/STAGE.png');
-    const baseSkinPath = encodeURI('/mascots/SKIN/BASE SKIN.png');
-    const traitPath = encodeURI(`/mascots/TRAITS/${traitType}.png`);
-
+    // Load all images (using same paths as test frontend - with spaces, no encodeURI)
     images.stage.onload = onImageLoad;
     images.stage.onerror = () => onImageError('/mascots/STAGE/STAGE.png');
-    images.stage.src = stagePath;
+    images.stage.src = '/mascots/STAGE/STAGE.png';
 
     images.baseSkin.onload = onImageLoad;
     images.baseSkin.onerror = () => onImageError('/mascots/SKIN/BASE SKIN.png');
-    images.baseSkin.src = baseSkinPath;
+    images.baseSkin.src = '/mascots/SKIN/BASE SKIN.png';
 
     images.trait.onload = onImageLoad;
     images.trait.onerror = () => onImageError(`/mascots/TRAITS/${traitType}.png`);
-    images.trait.src = traitPath;
+    images.trait.src = `/mascots/TRAITS/${traitType}.png`;
   });
 };
 
@@ -225,7 +220,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
         const file = new File([blob], `mascot-${mascotCard.id}.png`, { type: 'image/png' });
 
         // Get user ID from localStorage
-        const userId = user?.id || localStorage.getItem('cto_user_id');
+        const userId = user?.id || (typeof window !== 'undefined' ? localStorage.getItem('cto_user_id') : null);
 
         if (!userId) {
           console.warn('User ID not found, skipping auto-save');
@@ -264,7 +259,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
       const file = new File([blob], `mascot-${mascotCard.id}.png`, { type: 'image/png' });
 
       // Get user ID
-      const userId = user?.id || localStorage.getItem('cto_user_id');
+      const userId = user?.id || (typeof window !== 'undefined' ? localStorage.getItem('cto_user_id') : null);
       if (!userId) {
         throw new Error('User ID not found. Please log in again.');
       }
@@ -301,7 +296,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
       >
         {/* Card Back (Before Reveal) */}
         {!isRevealed && (
-          <div className={`w-[221px] h-[326px] rounded-xl border-4 border-pink-500 bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center transition-all duration-1000 ${isRevealing ? 'animate-spin' : ''}`}>
+          <div className="w-[221px] h-[326px] rounded-xl border-4 border-pink-500 bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
             <div className="text-center">
               <div className="text-6xl mb-4">🎴</div>
               <div className="text-white text-xl font-bold">Mystery Card</div>
