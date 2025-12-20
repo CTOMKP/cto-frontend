@@ -154,22 +154,22 @@ export default function AvatarDropdown() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className='mx-8.5'>
-        <div className="relative flex justify-center items-center rounded-lg size-13 border-[0.2px] border-[#FFFFFF20]">
-          <div className="relative w-9 h-9 rounded-full overflow-hidden bg-[#FFFFFF0D] flex items-center justify-center">
-            {avatarUrl ? (
-              <FallbackImage
-                src={avatarUrl}
-                alt="Profile"
-                fill
-                className="object-cover rounded-full"
-                onLoad={() => console.log('[AvatarDropdown] ✅ FallbackImage onLoad fired for:', avatarUrl)}
-              />
-            ) : (
+        <div className="relative w-9 h-9 rounded-full overflow-hidden">
+          {avatarUrl ? (
+            <FallbackImage
+              src={avatarUrl}
+              alt="Profile"
+              fill
+              className="object-cover rounded-full"
+              onLoad={() => console.log('[AvatarDropdown] ✅ FallbackImage onLoad fired for:', avatarUrl)}
+            />
+          ) : (
+            <div className="w-full h-full bg-[#FFFFFF0D] flex items-center justify-center">
               <span className="text-white text-xs font-bold">
                 {email.charAt(0).toUpperCase() || 'U'}
               </span>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="bg-[#010101] text-white p-6 w-[300px] border-2 border-[#86868630]">
