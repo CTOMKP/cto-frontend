@@ -22,7 +22,14 @@ export default function AvatarDropdown() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
     // Initialize from localStorage
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
+      const raw = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
+      console.log('[AvatarDropdown] 🎯 Initial state - raw from localStorage:', raw);
+      if (raw) {
+        const transformed = getCloudFrontUrl(raw);
+        console.log('[AvatarDropdown] 🎯 Initial state - transformed to CloudFront:', transformed);
+        return transformed;
+      }
+      return null;
     }
     return null;
   });
@@ -50,21 +57,33 @@ export default function AvatarDropdown() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    console.log('[AvatarDropdown] 🔄 useEffect running, current avatarUrl state:', avatarUrl);
+
     // Listen for custom event (dispatched by pfpService)
     const handleAvatarUpdate = () => {
+      console.log('[AvatarDropdown] 📢 avatarUpdated event received');
       const rawUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
+      console.log('[AvatarDropdown] 📢 Raw URL from localStorage:', rawUrl);
       if (rawUrl) {
         const newAvatarUrl = getCloudFrontUrl(rawUrl);
+        console.log('[AvatarDropdown] 📢 Transformed URL:', newAvatarUrl, 'Current state:', avatarUrl);
         if (newAvatarUrl !== avatarUrl) {
+          console.log('[AvatarDropdown] ✅ Updating avatarUrl state to:', newAvatarUrl);
           setAvatarUrl(newAvatarUrl);
+        } else {
+          console.log('[AvatarDropdown] ⏭️ URLs match, skipping update');
         }
+      } else {
+        console.log('[AvatarDropdown] ⚠️ No raw URL found in localStorage');
       }
     };
 
     // Listen for localStorage changes (cross-tab updates)
     const handleStorageChange = (e: StorageEvent) => {
+      console.log('[AvatarDropdown] 💾 Storage event:', e.key, e.newValue);
       if ((e.key === 'cto_user_avatar_url' || e.key === 'profile_avatar_url') && e.newValue) {
         const cloudfrontUrl = getCloudFrontUrl(e.newValue);
+        console.log('[AvatarDropdown] ✅ Updating from storage event:', cloudfrontUrl);
         setAvatarUrl(cloudfrontUrl);
       }
     };
@@ -75,10 +94,17 @@ export default function AvatarDropdown() {
       if (rawUrl) {
         const cloudfrontUrl = getCloudFrontUrl(rawUrl);
         if (cloudfrontUrl !== avatarUrl) {
+          console.log('[AvatarDropdown] ⏰ Periodic check - updating from', avatarUrl, 'to', cloudfrontUrl);
           setAvatarUrl(cloudfrontUrl);
         }
+      } else if (avatarUrl) {
+        console.log('[AvatarDropdown] ⏰ Periodic check - clearing avatar (no localStorage value)');
+        setAvatarUrl(null);
       }
     };
+
+    // Check immediately on mount
+    checkAvatar();
 
     window.addEventListener('avatarUpdated', handleAvatarUpdate);
     window.addEventListener('storage', handleStorageChange);
@@ -90,6 +116,11 @@ export default function AvatarDropdown() {
       clearInterval(interval);
     };
   }, [avatarUrl]);
+
+  // Log current avatarUrl on every render
+  useEffect(() => {
+    console.log('[AvatarDropdown] 🖼️ Render - avatarUrl state:', avatarUrl);
+  });
 
   // Get primary wallet address
   const primaryWalletAddress = React.useMemo(() => {
