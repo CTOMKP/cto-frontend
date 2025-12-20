@@ -18,7 +18,14 @@ import FallbackImage from './FallbackImage';
 import { getCloudFrontUrl } from '@/lib/image-url-helper';
 
 export default function AvatarDropdown() {
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
+    // Initialize from localStorage immediately (same as profile page)
+    if (typeof window !== 'undefined') {
+      const rawUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
+      return rawUrl ? getCloudFrontUrl(rawUrl) : null;
+    }
+    return null;
+  });
   const [copiedAddress, setCopiedAddress] = useState(false);
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
