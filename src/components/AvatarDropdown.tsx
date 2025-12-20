@@ -135,55 +135,14 @@ export default function AvatarDropdown() {
 
   const xpProgress = nextLevelXP > 0 ? (currentXP / nextLevelXP) * 100 : 0;
 
-  // Force re-render when localStorage changes by using a state trigger
-  const [, forceUpdate] = React.useReducer(x => x + 1, 0);
-  
-  // Listen for localStorage changes to force re-render
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    
-    const handleStorageChange = () => {
-      forceUpdate();
-    };
-    
-    // Check localStorage periodically to catch same-tab updates
-    const interval = setInterval(() => {
-      const current = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
-      if (current !== avatarUrl) {
-        forceUpdate();
-      }
-    }, 100);
-    
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('avatarUpdated', handleStorageChange);
-    
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('avatarUpdated', handleStorageChange);
-    };
-  }, [avatarUrl]);
-
-  // Read directly from localStorage on every render (same as profile page does)
-  // This ensures we always have the latest value, even if state hasn't updated yet
-  const currentAvatarUrl = typeof window !== 'undefined' 
-    ? localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url')
-    : null;
-  
-  // Always transform to CloudFront URL before rendering (same as profile page)
-  const displayAvatarUrl = React.useMemo(() => {
-    if (!currentAvatarUrl) return null;
-    return getCloudFrontUrl(currentAvatarUrl);
-  }, [currentAvatarUrl]);
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className='mx-8.5'>
         <span className="relative flex justify-center items-center rounded-lg size-13 border-[0.2px] border-[#FFFFFF20]">
           <span className="relative bg-[#FFFFFF0D] rounded-full size-9 flex items-center justify-center overflow-hidden">
-            {displayAvatarUrl ? (
+            {avatarUrl ? (
               <FallbackImage
-                src={displayAvatarUrl}
+                src={avatarUrl}
                 alt="Profile"
                 fill
                 className="object-cover rounded-full"
@@ -201,9 +160,9 @@ export default function AvatarDropdown() {
         <div className="mb-4 pb-4 border-b-[0.5px] border-[#FFFFFF20]">
           <div className="flex items-center gap-3 mb-4">
             <div className="relative w-16 h-16 rounded-full overflow-hidden flex-shrink-0">
-              {displayAvatarUrl ? (
+              {avatarUrl ? (
                 <FallbackImage
-                  src={displayAvatarUrl}
+                  src={avatarUrl}
                   alt="Profile"
                   fill
                   className="object-cover rounded-full"
