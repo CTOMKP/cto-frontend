@@ -154,8 +154,8 @@ export default function AvatarDropdown() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className='mx-8.5'>
-        <span className="relative flex justify-center items-center rounded-lg size-13 border-[0.2px] border-[#FFFFFF20]">
-          <span className="relative bg-[#FFFFFF0D] rounded-full size-9 flex items-center justify-center overflow-hidden">
+        <div className="relative flex justify-center items-center rounded-lg size-13 border-[0.2px] border-[#FFFFFF20]">
+          <div className="relative w-9 h-9 rounded-full overflow-hidden bg-[#FFFFFF0D] flex items-center justify-center">
             {avatarUrl ? (
               <FallbackImage
                 src={avatarUrl}
@@ -169,8 +169,8 @@ export default function AvatarDropdown() {
                 {email.charAt(0).toUpperCase() || 'U'}
               </span>
             )}
-          </span>
-        </span>
+          </div>
+        </div>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="bg-[#010101] text-white p-6 w-[300px] border-2 border-[#86868630]">
         {/* Profile Section */}
