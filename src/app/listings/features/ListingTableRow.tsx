@@ -74,9 +74,11 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
                 {/* Tier Badge */}
                 {(() => {
                   const rawTier = coin.tier;
+                  const tierStr = rawTier ? String(rawTier).trim().toLowerCase() : '';
                   if (!rawTier || rawTier === null || rawTier === undefined || 
-                      rawTier === 'none' || rawTier === 'null' || rawTier === 'undefined' || 
-                      rawTier === '' || rawTier === '—' || rawTier === '----') {
+                      tierStr === 'none' || tierStr === 'null' || tierStr === 'undefined' || 
+                      tierStr === '' || tierStr === '—' || tierStr === '----' || tierStr === '------' ||
+                      tierStr.startsWith('---') || tierStr === 'n/a' || tierStr === 'na') {
                     return null;
                   }
                   
@@ -417,13 +419,15 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
       <TableCell className="text-center">
         {(() => {
           const rawTier = coin.tier;
+          const tierStr = rawTier ? String(rawTier).trim().toLowerCase() : '';
           if (!rawTier || rawTier === null || rawTier === undefined || 
-              rawTier === 'none' || rawTier === 'null' || rawTier === 'undefined' || 
-              rawTier === '' || rawTier === '—' || rawTier === '----') {
+              tierStr === 'none' || tierStr === 'null' || tierStr === 'undefined' || 
+              tierStr === '' || tierStr === '—' || tierStr === '----' || tierStr === '------' ||
+              tierStr.startsWith('---') || tierStr === 'n/a' || tierStr === 'na') {
             return <span className="text-[#FFFFFF]/50">—</span>;
           }
           
-          const tier = String(rawTier).trim().toLowerCase();
+          const tier = tierStr;
           const tierColors: Record<string, { bg: string; text: string }> = {
             stellar: { bg: 'bg-purple-900/30', text: 'text-purple-200' },
             bloom: { bg: 'bg-blue-900/30', text: 'text-blue-200' },

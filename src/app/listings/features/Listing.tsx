@@ -115,7 +115,10 @@ export default function TopListings() {
           let tier: string | null = it.tier || null;
           if (tier) {
             tier = String(tier).trim().toLowerCase();
-            if (tier === 'none' || tier === 'null' || tier === 'undefined' || tier === '' || tier === '—' || tier === '----') {
+            // Normalize various invalid tier values to null
+            if (tier === 'none' || tier === 'null' || tier === 'undefined' || tier === '' || 
+                tier === '—' || tier === '----' || tier === '------' || 
+                tier.startsWith('---') || tier === 'n/a' || tier === 'na') {
               tier = null;
             }
           }
@@ -316,7 +319,10 @@ export default function TopListings() {
       let tier: string | null = it.tier || null;
       if (tier) {
         tier = String(tier).trim().toLowerCase();
-        if (tier === 'none' || tier === 'null' || tier === 'undefined' || tier === '' || tier === '—' || tier === '----') {
+        // Normalize various invalid tier values to null
+        if (tier === 'none' || tier === 'null' || tier === 'undefined' || tier === '' || 
+            tier === '—' || tier === '----' || tier === '------' || 
+            tier.startsWith('---') || tier === 'n/a' || tier === 'na') {
           tier = null;
         }
       }
