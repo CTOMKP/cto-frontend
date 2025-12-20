@@ -38,12 +38,17 @@ export default function AvatarDropdown() {
         setAvatarUrl(cloudfrontUrl);
       };
       
+      // Check immediately
       updateAvatar();
+      
       const userEmail = user?.email?.address || localStorage.getItem('cto_user_email') || '';
       setEmail(userEmail);
       // Get username from localStorage or use email prefix
       const storedUsername = localStorage.getItem('cto_user_username') || userEmail.split('@')[0] || 'User';
       setUsername(storedUsername);
+
+      // Also check periodically in case avatar is stored after component mounts
+      const interval = setInterval(updateAvatar, 500);
 
       // Listen for custom avatarUpdated event (dispatched by pfpService)
       window.addEventListener('avatarUpdated', updateAvatar);
@@ -51,6 +56,7 @@ export default function AvatarDropdown() {
       window.addEventListener('storage', updateAvatar);
       
       return () => {
+        clearInterval(interval);
         window.removeEventListener('avatarUpdated', updateAvatar);
         window.removeEventListener('storage', updateAvatar);
       };
