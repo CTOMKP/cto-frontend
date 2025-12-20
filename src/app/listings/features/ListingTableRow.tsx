@@ -408,11 +408,19 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
       <TableCell className="text-center">
         {(() => {
           const rawTier = coin.tier;
-          const tierStr = rawTier ? String(rawTier).trim().toLowerCase() : '';
-          if (!rawTier || rawTier === null || rawTier === undefined || 
-              tierStr === 'none' || tierStr === 'null' || tierStr === 'undefined' || 
+          
+          // Normalize tier - handle all invalid formats
+          if (!rawTier || rawTier === null || rawTier === undefined) {
+            return <span className="text-[#FFFFFF]/50">—</span>;
+          }
+          
+          const tierStr = String(rawTier).trim().toLowerCase();
+          
+          // Check for all invalid tier values (including dash variations)
+          if (tierStr === 'none' || tierStr === 'null' || tierStr === 'undefined' || 
               tierStr === '' || tierStr === '—' || tierStr === '----' || tierStr === '------' ||
-              tierStr.startsWith('---') || tierStr === 'n/a' || tierStr === 'na') {
+              tierStr.startsWith('---') || tierStr === 'n/a' || tierStr === 'na' ||
+              /^[-—]+$/.test(tierStr)) { // Match any string that's only dashes/em-dashes
             return <span className="text-[#FFFFFF]/50">—</span>;
           }
           

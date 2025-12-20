@@ -115,10 +115,11 @@ export default function TopListings() {
           let tier: string | null = it.tier || null;
           if (tier) {
             tier = String(tier).trim().toLowerCase();
-            // Normalize various invalid tier values to null
+            // Normalize various invalid tier values to null (including all dash variations)
             if (tier === 'none' || tier === 'null' || tier === 'undefined' || tier === '' || 
                 tier === '—' || tier === '----' || tier === '------' || 
-                tier.startsWith('---') || tier === 'n/a' || tier === 'na') {
+                tier.startsWith('---') || tier === 'n/a' || tier === 'na' ||
+                /^[-—]+$/.test(tier)) { // Match any string that's only dashes/em-dashes
               tier = null;
             }
           }
@@ -319,10 +320,11 @@ export default function TopListings() {
       let tier: string | null = it.tier || null;
       if (tier) {
         tier = String(tier).trim().toLowerCase();
-        // Normalize various invalid tier values to null
+        // Normalize various invalid tier values to null (including all dash variations)
         if (tier === 'none' || tier === 'null' || tier === 'undefined' || tier === '' || 
             tier === '—' || tier === '----' || tier === '------' || 
-            tier.startsWith('---') || tier === 'n/a' || tier === 'na') {
+            tier.startsWith('---') || tier === 'n/a' || tier === 'na' ||
+            /^[-—]+$/.test(tier)) { // Match any string that's only dashes/em-dashes
           tier = null;
         }
       }
