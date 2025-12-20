@@ -151,10 +151,21 @@ const FallbackImage: React.FC<Props> = ({
           <img
             src={current}
             alt={alt}
-            className={`${className || ''} ${loading ? 'opacity-0' : 'opacity-100'} w-full h-full object-cover`}
-            style={{ transition: 'opacity 300ms', position: 'absolute', inset: 0 }}
-            onError={() => setIndex((i) => i + 1)}
+            className={`${className || ''} ${loading ? 'opacity-0' : 'opacity-100'}`}
+            style={{ 
+              transition: 'opacity 300ms', 
+              position: 'absolute', 
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover'
+            }}
+            onError={() => {
+              console.log('[FallbackImage] ❌ Image error for:', current);
+              setIndex((i) => i + 1);
+            }}
             onLoad={() => {
+              console.log('[FallbackImage] ✅ Image loaded successfully:', current, 'loading:', loading);
               setLoading(false);
               if (onLoad) onLoad();
             }}
