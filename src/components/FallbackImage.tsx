@@ -140,8 +140,12 @@ const FallbackImage: React.FC<Props> = ({
   
   if (fill) {
     console.log('[FallbackImage] 🎨 Rendering with fill - current:', current, 'loading:', loading, 'error:', error, 'isCrossOrigin:', isCrossOrigin);
+    // Extract className parts - object-cover and rounded-full should only apply to img, not wrapper
+    const wrapperClasses = className?.replace(/object-cover|rounded-full/g, '').trim() || '';
+    const imgClasses = className?.match(/(object-cover|rounded-full)/g)?.join(' ') || '';
+    
     return (
-      <div className={`relative ${className || ''}`}>
+      <div className={`relative w-full h-full ${wrapperClasses}`} style={{ minWidth: '100%', minHeight: '100%' }}>
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-800 rounded-full z-10">
             <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
@@ -153,14 +157,15 @@ const FallbackImage: React.FC<Props> = ({
           <img
             src={current}
             alt={alt}
-            className={`${className || ''} ${loading ? 'opacity-0' : 'opacity-100'}`}
+            className={`${imgClasses} ${loading ? 'opacity-0' : 'opacity-100'}`}
             style={{ 
               transition: 'opacity 300ms', 
               position: 'absolute', 
               inset: 0,
               width: '100%',
               height: '100%',
-              objectFit: 'cover'
+              objectFit: 'cover',
+              display: loading ? 'none' : 'block'
             }}
             onError={() => {
               console.log('[FallbackImage] ❌ Image error for:', current);
