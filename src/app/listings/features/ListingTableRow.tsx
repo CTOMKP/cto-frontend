@@ -74,15 +74,23 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
                 {/* Tier Badge */}
                 {(() => {
                   const rawTier = coin.tier;
-                  const tierStr = rawTier ? String(rawTier).trim().toLowerCase() : '';
-                  if (!rawTier || rawTier === null || rawTier === undefined || 
-                      tierStr === 'none' || tierStr === 'null' || tierStr === 'undefined' || 
-                      tierStr === '' || tierStr === '—' || tierStr === '----' || tierStr === '------' ||
-                      tierStr.startsWith('---') || tierStr === 'n/a' || tierStr === 'na') {
+                  
+                  // Normalize tier - handle all invalid formats
+                  if (!rawTier || rawTier === null || rawTier === undefined) {
                     return null;
                   }
                   
-                  const tier = String(rawTier).trim().toLowerCase();
+                  const tierStr = String(rawTier).trim().toLowerCase();
+                  
+                  // Check for all invalid tier values (including dash variations)
+                  if (tierStr === 'none' || tierStr === 'null' || tierStr === 'undefined' || 
+                      tierStr === '' || tierStr === '—' || tierStr === '----' || tierStr === '------' ||
+                      tierStr.startsWith('---') || tierStr === 'n/a' || tierStr === 'na' ||
+                      /^[-—]+$/.test(tierStr)) { // Match any string that's only dashes/em-dashes
+                    return null;
+                  }
+                  
+                  const tier = tierStr;
                   const tierIcons: Record<string, string> = {
                     stellar: "/project-categories/stellar.svg",
                     bloom: "/project-categories/bloom.svg",
