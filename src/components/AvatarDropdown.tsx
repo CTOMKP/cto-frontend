@@ -135,6 +135,35 @@ export default function AvatarDropdown() {
 
   const xpProgress = nextLevelXP > 0 ? (currentXP / nextLevelXP) * 100 : 0;
 
+  // Force re-render when localStorage changes by using a state trigger
+  const [, forceUpdate] = React.useReducer(x => x + 1, 0);
+  
+  // Listen for localStorage changes to force re-render
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const handleStorageChange = () => {
+      forceUpdate();
+    };
+    
+    // Check localStorage periodically to catch same-tab updates
+    const interval = setInterval(() => {
+      const current = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
+      if (current !== avatarUrl) {
+        forceUpdate();
+      }
+    }, 100);
+    
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('avatarUpdated', handleStorageChange);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('avatarUpdated', handleStorageChange);
+    };
+  }, [avatarUrl]);
+
   // Read directly from localStorage on every render (same as profile page does)
   // This ensures we always have the latest value, even if state hasn't updated yet
   const currentAvatarUrl = typeof window !== 'undefined' 
