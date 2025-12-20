@@ -366,7 +366,50 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
               </span>
             </>
           ) : (
-            <span className="text-[#FFFFFF]/50 italic">Not Scanned</span>
+            <span className="text-[#FFFFFF]/50 italic">
+              {(() => {
+                // Check if token is too young (< 14 days)
+                if (coin.age) {
+                  // Parse age string (e.g., "5d", "13d", "14d", "365d", "1y 2mo 3d")
+                  const ageStr = coin.age.toLowerCase().trim();
+                  
+                  // Extract days from age string
+                  let days = 0;
+                  
+                  // Check for years (y)
+                  const yearMatch = ageStr.match(/(\d+)\s*y/);
+                  if (yearMatch) {
+                    days += parseInt(yearMatch[1]) * 365;
+                  }
+                  
+                  // Check for months (mo or m)
+                  const monthMatch = ageStr.match(/(\d+)\s*mo/);
+                  if (monthMatch) {
+                    days += parseInt(monthMatch[1]) * 30;
+                  }
+                  
+                  // Check for days (d)
+                  const dayMatch = ageStr.match(/(\d+)\s*d/);
+                  if (dayMatch) {
+                    days += parseInt(dayMatch[1]);
+                  }
+                  
+                  // Check for hours (h) - treat as < 1 day
+                  const hourMatch = ageStr.match(/(\d+)\s*h/);
+                  if (hourMatch && days === 0) {
+                    return "Too Young";
+                  }
+                  
+                  // If we have days and it's < 14, show "Too Young"
+                  if (days > 0 && days < 14) {
+                    return "Too Young";
+                  }
+                }
+                
+                // Default message for tokens without risk score
+                return "Not Scanned";
+              })()}
+            </span>
           )}
         </span>
       </TableCell>

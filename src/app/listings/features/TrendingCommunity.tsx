@@ -339,25 +339,14 @@ export default function TrendingCommunity({
                   </TableCell>
                   <TableCell className="!py-1">
                     <div className="flex items-center justify-end gap-1">
-                      {data.communityScore > 0 ? (
-                        <>
-                          <Image
-                            src={`${
-                              data.communityScore >= 70
-                                ? "/communitry-score-icons/good-green.svg"
-                                : data.communityScore >= 50
-                                ? "/communitry-score-icons/average-yellow.svg"
-                                : "/communitry-score-icons/bad-red.svg"
-                            }`}
-                            alt="community-score"
-                            width={16}
-                            height={16}
-                          />
-                          <p className="text-[#FFFFFF80]">{data.communityScore}%</p>
-                        </>
-                      ) : (
-                        <p className="text-[#FFFFFF80] text-sm">0%</p>
-                      )}
+                      {/* Always show 0% with bad-red gauge (community score not calculated yet) */}
+                      <Image
+                        src="/communitry-score-icons/bad-red.svg"
+                        alt="community-score"
+                        width={16}
+                        height={16}
+                      />
+                      <p className="text-[#FFFFFF80]">0%</p>
                     </div>
                   </TableCell>
                 </TableRow>
