@@ -253,13 +253,13 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
           return;
         }
 
-        // Save PFP automatically
+        // Save PFP automatically (silent - no toast)
         const result = await pfpService.savePFP(file, userId);
         
         if (result.success) {
           setIsAutoSaved(true);
           console.log('✅ PFP auto-saved successfully:', result.imageUrl);
-          toast.success('🎉 Profile picture saved automatically!');
+          // No toast for auto-save - user will see it when they manually save or it will be silent
         }
       } catch (error) {
         console.error('Failed to auto-save PFP:', error);
@@ -295,7 +295,8 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
       
       if (result.success) {
         setIsAutoSaved(true);
-        toast.success(result.message || 'Profile picture saved successfully!');
+        // Show single professional success message
+        toast.success('Profile picture updated successfully');
         if (onClose) {
           setTimeout(() => onClose(), 1000);
         }

@@ -337,7 +337,7 @@ export default function ProfilePage() {
         const newAvatarUrl = getCloudFrontUrl(rawUrl);
         if (newAvatarUrl !== avatarUrl) {
           setAvatarUrl(newAvatarUrl);
-          toast.success('Profile picture updated!');
+          // No toast here - toast is shown in CardReveal component
         }
       }
     };
@@ -347,7 +347,10 @@ export default function ProfilePage() {
       if ((e.key === 'cto_user_avatar_url' || e.key === 'profile_avatar_url') && e.newValue) {
         const cloudfrontUrl = getCloudFrontUrl(e.newValue);
         setAvatarUrl(cloudfrontUrl);
-        toast.success('Profile picture updated from another session!');
+        // Only show toast for cross-tab updates (different session), not same-tab updates
+        if (e.newValue !== e.oldValue) {
+          toast.success('Profile picture updated');
+        }
       }
     };
 
