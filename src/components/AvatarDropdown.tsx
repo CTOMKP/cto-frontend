@@ -45,16 +45,6 @@ export default function AvatarDropdown() {
     }
   }, [user]);
 
-  // Transform initial avatarUrl to CloudFront URL on mount
-  useEffect(() => {
-    if (avatarUrl && !avatarUrl.includes('cloudfront.net')) {
-      const cloudfrontUrl = getCloudFrontUrl(avatarUrl);
-      if (cloudfrontUrl !== avatarUrl) {
-        setAvatarUrl(cloudfrontUrl);
-      }
-    }
-  }, []); // Run once on mount
-
   // Listen for avatar updates - EXACT same implementation as profile page
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -64,9 +54,10 @@ export default function AvatarDropdown() {
       const rawUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
       if (rawUrl) {
         const newAvatarUrl = getCloudFrontUrl(rawUrl);
-        if (newAvatarUrl !== avatarUrl) {
-          setAvatarUrl(newAvatarUrl);
-        }
+        setAvatarUrl(prev => {
+          // Only update if different to avoid unnecessary re-renders
+          return newAvatarUrl !== prev ? newAvatarUrl : prev;
+        });
       }
     };
 
@@ -83,9 +74,13 @@ export default function AvatarDropdown() {
       const rawUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
       if (rawUrl) {
         const cloudfrontUrl = getCloudFrontUrl(rawUrl);
-        if (cloudfrontUrl !== avatarUrl) {
-          setAvatarUrl(cloudfrontUrl);
-        }
+        setAvatarUrl(prev => {
+          // Only update if different to avoid unnecessary re-renders
+          return cloudfrontUrl !== prev ? cloudfrontUrl : prev;
+        });
+      } else {
+        // Clear avatar if localStorage is empty
+        setAvatarUrl(null);
       }
     };
 
@@ -101,7 +96,7 @@ export default function AvatarDropdown() {
       window.removeEventListener('storage', handleStorageChange);
       clearInterval(interval);
     };
-  }, [avatarUrl]); // Same dependency as profile page
+  }, []); // Empty dependency - handlers use functional updates
 
   // Get primary wallet address
   const primaryWalletAddress = React.useMemo(() => {
