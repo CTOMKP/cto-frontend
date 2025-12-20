@@ -320,26 +320,15 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
       {/* Community */}
       <TableCell className="text-center">
         <div className="flex justify-center gap-1">
+          {/* Always show 0% with bad-red gauge (community score not calculated yet) */}
           <Image
             loading="lazy"
-            src={
-              coin.communityScore < 50
-                ? "/communitry-score-icons/bad-red.svg"
-                : coin.communityScore >= 50 && coin.communityScore < 70
-                ? "/communitry-score-icons/average-yellow.svg"
-                : "/communitry-score-icons/good-green.svg"
-            }
-            alt={
-              coin.communityScore < 50
-                ? "bad-red"
-                : coin.communityScore >= 50 && coin.communityScore < 70
-                ? "average-yellow"
-                : "good-green"
-            }
+            src="/communitry-score-icons/bad-red.svg"
+            alt="community-score"
             width={16}
             height={16}
-          />{" "}
-          <span>{coin.communityScore}%</span>
+          />
+          <span>0%</span>
         </div>
       </TableCell>
 
