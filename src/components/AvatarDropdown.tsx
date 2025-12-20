@@ -45,9 +45,15 @@ export default function AvatarDropdown() {
       const storedUsername = localStorage.getItem('cto_user_username') || userEmail.split('@')[0] || 'User';
       setUsername(storedUsername);
 
-      // Listen for storage changes (when avatar is updated)
+      // Listen for custom avatarUpdated event (dispatched by pfpService)
+      window.addEventListener('avatarUpdated', updateAvatar);
+      // Listen for storage changes (cross-tab updates)
       window.addEventListener('storage', updateAvatar);
-      return () => window.removeEventListener('storage', updateAvatar);
+      
+      return () => {
+        window.removeEventListener('avatarUpdated', updateAvatar);
+        window.removeEventListener('storage', updateAvatar);
+      };
     }
   }, [user]);
 
