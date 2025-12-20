@@ -20,6 +20,7 @@ import { getCloudFrontUrl } from '@/lib/image-url-helper';
 export default function AvatarDropdown() {
   // Initialize exactly like profile page - read raw URL from localStorage
   const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
+    // Initialize from localStorage
     if (typeof window !== 'undefined') {
       return localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
     }
@@ -45,7 +46,7 @@ export default function AvatarDropdown() {
     }
   }, [user]);
 
-  // Listen for avatar updates - EXACT same implementation as profile page
+  // Listen for avatar updates from PFP flow - EXACT COPY from profile page
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -54,10 +55,9 @@ export default function AvatarDropdown() {
       const rawUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
       if (rawUrl) {
         const newAvatarUrl = getCloudFrontUrl(rawUrl);
-        setAvatarUrl(prev => {
-          // Only update if different to avoid unnecessary re-renders
-          return newAvatarUrl !== prev ? newAvatarUrl : prev;
-        });
+        if (newAvatarUrl !== avatarUrl) {
+          setAvatarUrl(newAvatarUrl);
+        }
       }
     };
 
@@ -69,34 +69,27 @@ export default function AvatarDropdown() {
       }
     };
 
-    // Check localStorage periodically (same-tab updates) - EXACT same as profile page
+    // Check localStorage periodically (same-tab updates)
     const checkAvatar = () => {
       const rawUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
       if (rawUrl) {
         const cloudfrontUrl = getCloudFrontUrl(rawUrl);
-        setAvatarUrl(prev => {
-          // Only update if different to avoid unnecessary re-renders
-          return cloudfrontUrl !== prev ? cloudfrontUrl : prev;
-        });
-      } else {
-        // Clear avatar if localStorage is empty
-        setAvatarUrl(null);
+        if (cloudfrontUrl !== avatarUrl) {
+          setAvatarUrl(cloudfrontUrl);
+        }
       }
     };
 
-    // Transform immediately on mount
-    checkAvatar();
-
     window.addEventListener('avatarUpdated', handleAvatarUpdate);
     window.addEventListener('storage', handleStorageChange);
-    const interval = setInterval(checkAvatar, 1000); // Same 1000ms interval as profile page
+    const interval = setInterval(checkAvatar, 1000);
 
     return () => {
       window.removeEventListener('avatarUpdated', handleAvatarUpdate);
       window.removeEventListener('storage', handleStorageChange);
       clearInterval(interval);
     };
-  }, []); // Empty dependency - handlers use functional updates
+  }, [avatarUrl]);
 
   // Get primary wallet address
   const primaryWalletAddress = React.useMemo(() => {
