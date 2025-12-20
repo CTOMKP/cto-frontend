@@ -24,12 +24,7 @@ export default function AvatarDropdown() {
     if (typeof window !== 'undefined') {
       const raw = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
       console.log('[AvatarDropdown] 🎯 Initial state - raw from localStorage:', raw);
-      if (raw) {
-        const transformed = getCloudFrontUrl(raw);
-        console.log('[AvatarDropdown] 🎯 Initial state - transformed to CloudFront:', transformed);
-        return transformed;
-      }
-      return null;
+      return raw; // Return raw URL, transformation happens in useEffect (like profile page)
     }
     return null;
   });
@@ -103,7 +98,7 @@ export default function AvatarDropdown() {
       }
     };
 
-    // Check immediately on mount
+    // Transform immediately on mount (like profile page)
     checkAvatar();
 
     window.addEventListener('avatarUpdated', handleAvatarUpdate);
