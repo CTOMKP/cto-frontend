@@ -149,6 +149,8 @@ export default function AvatarDropdown() {
 
   const xpProgress = nextLevelXP > 0 ? (currentXP / nextLevelXP) * 100 : 0;
 
+  console.log('[AvatarDropdown] 🎨 Rendering - avatarUrl:', avatarUrl, 'will render FallbackImage:', !!avatarUrl);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className='mx-8.5'>
@@ -160,6 +162,7 @@ export default function AvatarDropdown() {
                 alt="Profile"
                 fill
                 className="object-cover rounded-full"
+                onLoad={() => console.log('[AvatarDropdown] ✅ FallbackImage onLoad fired for:', avatarUrl)}
               />
             ) : (
               <span className="text-white text-xs font-bold">
