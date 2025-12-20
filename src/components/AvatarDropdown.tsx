@@ -45,6 +45,16 @@ export default function AvatarDropdown() {
     }
   }, [user]);
 
+  // Transform initial avatarUrl to CloudFront URL on mount
+  useEffect(() => {
+    if (avatarUrl && !avatarUrl.includes('cloudfront.net')) {
+      const cloudfrontUrl = getCloudFrontUrl(avatarUrl);
+      if (cloudfrontUrl !== avatarUrl) {
+        setAvatarUrl(cloudfrontUrl);
+      }
+    }
+  }, []); // Run once on mount
+
   // Listen for avatar updates - EXACT same implementation as profile page
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -78,6 +88,9 @@ export default function AvatarDropdown() {
         }
       }
     };
+
+    // Transform immediately on mount
+    checkAvatar();
 
     window.addEventListener('avatarUpdated', handleAvatarUpdate);
     window.addEventListener('storage', handleStorageChange);
@@ -122,14 +135,20 @@ export default function AvatarDropdown() {
 
   const xpProgress = nextLevelXP > 0 ? (currentXP / nextLevelXP) * 100 : 0;
 
+  // Always transform avatarUrl to CloudFront URL before rendering (same as profile page)
+  const displayAvatarUrl = React.useMemo(() => {
+    if (!avatarUrl) return null;
+    return getCloudFrontUrl(avatarUrl);
+  }, [avatarUrl]);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className='mx-8.5'>
         <span className="relative flex justify-center items-center rounded-lg size-13 border-[0.2px] border-[#FFFFFF20]">
           <span className="relative bg-[#FFFFFF0D] rounded-full size-9 flex items-center justify-center overflow-hidden">
-            {avatarUrl ? (
+            {displayAvatarUrl ? (
               <FallbackImage
-                src={avatarUrl}
+                src={displayAvatarUrl}
                 alt="Profile"
                 fill
                 className="object-cover rounded-full"
@@ -147,9 +166,9 @@ export default function AvatarDropdown() {
         <div className="mb-4 pb-4 border-b-[0.5px] border-[#FFFFFF20]">
           <div className="flex items-center gap-3 mb-4">
             <div className="relative w-16 h-16 rounded-full overflow-hidden flex-shrink-0">
-              {avatarUrl ? (
+              {displayAvatarUrl ? (
                 <FallbackImage
-                  src={avatarUrl}
+                  src={displayAvatarUrl}
                   alt="Profile"
                   fill
                   className="object-cover rounded-full"
