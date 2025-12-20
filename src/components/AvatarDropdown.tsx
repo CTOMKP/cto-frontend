@@ -135,11 +135,17 @@ export default function AvatarDropdown() {
 
   const xpProgress = nextLevelXP > 0 ? (currentXP / nextLevelXP) * 100 : 0;
 
-  // Always transform avatarUrl to CloudFront URL before rendering (same as profile page)
+  // Read directly from localStorage on every render (same as profile page does)
+  // This ensures we always have the latest value, even if state hasn't updated yet
+  const currentAvatarUrl = typeof window !== 'undefined' 
+    ? localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url')
+    : null;
+  
+  // Always transform to CloudFront URL before rendering (same as profile page)
   const displayAvatarUrl = React.useMemo(() => {
-    if (!avatarUrl) return null;
-    return getCloudFrontUrl(avatarUrl);
-  }, [avatarUrl]);
+    if (!currentAvatarUrl) return null;
+    return getCloudFrontUrl(currentAvatarUrl);
+  }, [currentAvatarUrl]);
 
   return (
     <DropdownMenu>
