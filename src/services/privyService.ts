@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getCloudFrontUrl } from '@/lib/image-url-helper';
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
 
