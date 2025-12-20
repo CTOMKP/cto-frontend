@@ -89,6 +89,7 @@ const FallbackImage: React.FC<Props> = ({
     img.src = current;
     
     img.onload = () => {
+      console.log('[FallbackImage] 🖼️ Preload onload - setting loading to false for:', current);
       setLoading(false);
       setError(false);
       if (onLoad) {
@@ -138,10 +139,11 @@ const FallbackImage: React.FC<Props> = ({
   }
   
   if (fill) {
+    console.log('[FallbackImage] 🎨 Rendering with fill - current:', current, 'loading:', loading, 'error:', error, 'isCrossOrigin:', isCrossOrigin);
     return (
       <div className={`relative ${className || ''}`}>
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-800 rounded-full">
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-800 rounded-full z-10">
             <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
           </div>
         )}
