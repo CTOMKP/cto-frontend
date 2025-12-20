@@ -18,11 +18,10 @@ import FallbackImage from './FallbackImage';
 import { getCloudFrontUrl } from '@/lib/image-url-helper';
 
 export default function AvatarDropdown() {
+  // Initialize exactly like profile page - read raw URL from localStorage
   const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
-    // Initialize from localStorage immediately (same as profile page)
     if (typeof window !== 'undefined') {
-      const rawUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
-      return rawUrl ? getCloudFrontUrl(rawUrl) : null;
+      return localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
     }
     return null;
   });
@@ -36,39 +35,60 @@ export default function AvatarDropdown() {
   const { logout } = usePrivyAuth();
   const { user } = usePrivy();
 
+  // Set email and username on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const updateAvatar = () => {
-        const rawUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
-        // Transform backend URLs to CloudFront URLs
-        const cloudfrontUrl = rawUrl ? getCloudFrontUrl(rawUrl) : null;
-        setAvatarUrl(cloudfrontUrl);
-      };
-      
-      // Check immediately
-      updateAvatar();
-      
       const userEmail = user?.email?.address || localStorage.getItem('cto_user_email') || '';
       setEmail(userEmail);
-      // Get username from localStorage or use email prefix
       const storedUsername = localStorage.getItem('cto_user_username') || userEmail.split('@')[0] || 'User';
       setUsername(storedUsername);
-
-      // Also check periodically in case avatar is stored after component mounts
-      const interval = setInterval(updateAvatar, 500);
-
-      // Listen for custom avatarUpdated event (dispatched by pfpService)
-      window.addEventListener('avatarUpdated', updateAvatar);
-      // Listen for storage changes (cross-tab updates)
-      window.addEventListener('storage', updateAvatar);
-      
-      return () => {
-        clearInterval(interval);
-        window.removeEventListener('avatarUpdated', updateAvatar);
-        window.removeEventListener('storage', updateAvatar);
-      };
     }
   }, [user]);
+
+  // Listen for avatar updates - EXACT same implementation as profile page
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Listen for custom event (dispatched by pfpService)
+    const handleAvatarUpdate = () => {
+      const rawUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
+      if (rawUrl) {
+        const newAvatarUrl = getCloudFrontUrl(rawUrl);
+        if (newAvatarUrl !== avatarUrl) {
+          setAvatarUrl(newAvatarUrl);
+        }
+      }
+    };
+
+    // Listen for localStorage changes (cross-tab updates)
+    const handleStorageChange = (e: StorageEvent) => {
+      if ((e.key === 'cto_user_avatar_url' || e.key === 'profile_avatar_url') && e.newValue) {
+        const cloudfrontUrl = getCloudFrontUrl(e.newValue);
+        setAvatarUrl(cloudfrontUrl);
+      }
+    };
+
+    // Check localStorage periodically (same-tab updates) - EXACT same as profile page
+    const checkAvatar = () => {
+      const rawUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
+      if (rawUrl) {
+        const cloudfrontUrl = getCloudFrontUrl(rawUrl);
+        if (cloudfrontUrl !== avatarUrl) {
+          setAvatarUrl(cloudfrontUrl);
+        }
+      }
+    };
+
+    window.addEventListener('avatarUpdated', handleAvatarUpdate);
+    window.addEventListener('storage', handleStorageChange);
+    const interval = setInterval(checkAvatar, 1000); // Same 1000ms interval as profile page
+
+    return () => {
+      window.removeEventListener('avatarUpdated', handleAvatarUpdate);
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [avatarUrl]); // Same dependency as profile page
 
   // Get primary wallet address
   const primaryWalletAddress = React.useMemo(() => {
