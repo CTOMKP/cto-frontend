@@ -49,7 +49,7 @@ export default function NavBar() {
 
   // Wait for Privy to be ready before determining authentication state
   // This prevents the login button from flashing on page load
-  const showAuthenticatedUI = ready ? ((privyAuthenticated && ready) || isAuthenticated) : false;
+  const showAuthenticatedUI = ready && (privyAuthenticated || isAuthenticated);
 
   // Check if user has avatar and listen for changes
   // This is only used to show AvatarDropdown alongside HarvestGrape
