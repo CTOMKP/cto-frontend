@@ -4,10 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
-import { getMovementWallet } from '@/lib/movement-wallet';
 import axios from 'axios';
 import Image from 'next/image';
-import { BackendWallet, PrivyWalletAccount, PrivyUser } from '@/types/privy';
+import { BackendWallet } from '@/types/privy';
 import { Button } from '@/components/ui/button';
 import CustomPieChart from '@/components/CustomPieChart';
 import {Eye, EyeOff, Edit, LogOut, Link, Wallet, ChevronDown, ChevronUp, MoveDown, MoveUp, ArrowUpDown, SquareArrowOutUpRight, Check } from 'lucide-react';
@@ -297,6 +296,8 @@ import { getCloudFrontUrl } from '@/lib/image-url-helper';
 export default function ProfilePage() {
   const router = useRouter();
   const { user, authenticated, ready, logout } = usePrivy();
+  // Keep allWallets for potential future use (displaying all wallets)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [allWallets, setAllWallets] = useState<BackendWallet[]>([]);
   const [movementWalletAddress, setMovementWalletAddress] = useState<string | null>(null);
   const [balanceVisible, setBalanceVisible] = useState(true);
@@ -317,6 +318,99 @@ export default function ProfilePage() {
 
   const walletsLoadedRef = React.useRef<string | null>(null);
 
+  const loadWallets = React.useCallback(async () => {
+    try {
+      // First, try to load from localStorage (faster and more reliable) - like test frontend
+      const walletsJson = localStorage.getItem('cto_user_wallets');
+      if (walletsJson) {
+        try {
+          const wallets = JSON.parse(walletsJson) as BackendWallet[];
+          console.log('💼 Loading wallets from localStorage:', wallets);
+          setAllWallets(wallets);
+          
+          // Check if Movement wallet exists (Movement wallets are detected as 'aptos' chainType or 'MOVEMENT' blockchain)
+          interface WalletWithMovement {
+            blockchain?: string;
+            chainType?: string;
+            walletClient?: string;
+            address?: string;
+          }
+          
+          const movementWallet = wallets.find((w: WalletWithMovement) => 
+            w.blockchain === 'MOVEMENT' || 
+            w.blockchain === 'APTOS' || 
+            w.chainType === 'aptos' || 
+            w.walletClient === 'APTOS_EMBEDDED'
+          );
+          if (movementWallet?.address) {
+            setMovementWalletAddress(movementWallet.address);
+          }
+          
+          // If we have wallets in localStorage, we're done (but still check Privy as fallback)
+          if (wallets.length > 0) {
+            console.log('✅ Loaded wallets from localStorage successfully');
+            // Still check Privy as fallback
+            checkMovementWallet();
+            return;
+          }
+        } catch (parseError) {
+          console.error('Failed to parse wallets from localStorage:', parseError);
+        }
+      }
+      
+      // Fallback: Fetch from backend if localStorage is empty or invalid
+      const token = localStorage.getItem('cto_auth_token');
+      const userId = localStorage.getItem('cto_user_id');
+      
+      if (!token || !userId) {
+        console.warn('No user ID or token found');
+        return;
+      }
+
+      console.log('🔄 Fetching wallets from backend...');
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const response = await axios.get(
+        `${backendUrl}/api/v1/auth/privy/wallets`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (response.data.success && response.data.wallets) {
+        const wallets = response.data.wallets as BackendWallet[];
+        console.log('💼 Loaded wallets from backend:', wallets);
+        setAllWallets(wallets);
+        
+        // Check if Movement wallet exists (Movement wallets are detected as 'aptos' chainType or 'MOVEMENT' blockchain)
+        interface WalletWithMovement {
+          blockchain?: string;
+          chainType?: string;
+          walletClient?: string;
+          address?: string;
+        }
+        
+        const movementWallet = wallets.find((w: WalletWithMovement) => 
+          w.blockchain === 'MOVEMENT' || 
+          w.blockchain === 'APTOS' || 
+          w.chainType === 'aptos' || 
+          w.walletClient === 'APTOS_EMBEDDED'
+        );
+        if (movementWallet?.address) {
+          setMovementWalletAddress(movementWallet.address);
+        }
+        
+        // Update localStorage with fresh data
+        localStorage.setItem('cto_user_wallets', JSON.stringify(wallets));
+      }
+    } catch (error) {
+      console.error('Failed to load wallets from backend:', error);
+      // If backend fails, Privy wallets will be used via checkMovementWallet()
+    }
+  }, [checkMovementWallet]);
+
   useEffect(() => {
     if (authenticated && user && ready) {
       const userId = user.id;
@@ -326,21 +420,7 @@ export default function ProfilePage() {
         walletsLoadedRef.current = userId;
       }
     }
-  }, [authenticated, user, ready]);
-
-  // Check Movement wallet from Privy's linkedAccounts (like test frontend)
-  const checkMovementWallet = () => {
-    if (!user?.linkedAccounts) return;
-    
-    // Check if user has Movement wallet in their linked accounts (Movement wallets are detected as 'aptos' chainType)
-    const movementWalletAccount = user.linkedAccounts.find(
-      (account: any) => account.type === 'wallet' && account.chainType === 'aptos'
-    );
-    
-    if (movementWalletAccount?.address) {
-      setMovementWalletAddress((movementWalletAccount as any).address);
-    }
-  };
+  }, [authenticated, user, ready, checkMovementWallet, loadWallets]);
 
   // Listen for avatar updates from PFP flow
   useEffect(() => {
@@ -392,84 +472,6 @@ export default function ProfilePage() {
     };
   }, [avatarUrl]);
 
-  const loadWallets = async () => {
-    try {
-      // First, try to load from localStorage (faster and more reliable) - like test frontend
-      const walletsJson = localStorage.getItem('cto_user_wallets');
-      if (walletsJson) {
-        try {
-          const wallets = JSON.parse(walletsJson);
-          console.log('💼 Loading wallets from localStorage:', wallets);
-          setAllWallets(wallets);
-          
-          // Check if Movement wallet exists (Movement wallets are detected as 'aptos' chainType or 'MOVEMENT' blockchain)
-          const movementWallet = wallets.find((w: any) => 
-            w.blockchain === 'MOVEMENT' || 
-            w.blockchain === 'APTOS' || 
-            w.chainType === 'aptos' || 
-            w.walletClient === 'APTOS_EMBEDDED'
-          );
-          if (movementWallet?.address) {
-            setMovementWalletAddress(movementWallet.address);
-          }
-          
-          // If we have wallets in localStorage, we're done (but still check Privy as fallback)
-          if (wallets.length > 0) {
-            console.log('✅ Loaded wallets from localStorage successfully');
-            // Still check Privy as fallback
-            checkMovementWallet();
-            return;
-          }
-        } catch (parseError) {
-          console.error('Failed to parse wallets from localStorage:', parseError);
-        }
-      }
-      
-      // Fallback: Fetch from backend if localStorage is empty or invalid
-      const token = localStorage.getItem('cto_auth_token');
-      const userId = localStorage.getItem('cto_user_id');
-      
-      if (!token || !userId) {
-        console.warn('No user ID or token found');
-        return;
-      }
-
-      console.log('🔄 Fetching wallets from backend...');
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-      const response = await axios.get(
-        `${backendUrl}/api/v1/auth/privy/wallets`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (response.data.success && response.data.wallets) {
-        const wallets = response.data.wallets;
-        console.log('💼 Loaded wallets from backend:', wallets);
-        setAllWallets(wallets);
-        
-        // Check if Movement wallet exists (Movement wallets are detected as 'aptos' chainType or 'MOVEMENT' blockchain)
-        const movementWallet = wallets.find((w: any) => 
-          w.blockchain === 'MOVEMENT' || 
-          w.blockchain === 'APTOS' || 
-          w.chainType === 'aptos' || 
-          w.walletClient === 'APTOS_EMBEDDED'
-        );
-        if (movementWallet?.address) {
-          setMovementWalletAddress(movementWallet.address);
-        }
-        
-        // Update localStorage with fresh data
-        localStorage.setItem('cto_user_wallets', JSON.stringify(wallets));
-      }
-    } catch (error) {
-      console.error('Failed to load wallets from backend:', error);
-      // If backend fails, Privy wallets will be used via checkMovementWallet()
-    }
-  };
 
   // const handleLogout = async () => {
   //   try {
