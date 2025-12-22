@@ -298,6 +298,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const { user, authenticated, ready, logout } = usePrivy();
   const [allWallets, setAllWallets] = useState<BackendWallet[]>([]);
+  const [movementWalletAddress, setMovementWalletAddress] = useState<string | null>(null);
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [copiedAddress, setCopiedAddress] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
@@ -320,11 +321,26 @@ export default function ProfilePage() {
     if (authenticated && user && ready) {
       const userId = user.id;
       if (walletsLoadedRef.current !== userId) {
+        checkMovementWallet();
         loadWallets();
         walletsLoadedRef.current = userId;
       }
     }
   }, [authenticated, user, ready]);
+
+  // Check Movement wallet from Privy's linkedAccounts (like test frontend)
+  const checkMovementWallet = () => {
+    if (!user?.linkedAccounts) return;
+    
+    // Check if user has Movement wallet in their linked accounts (Movement wallets are detected as 'aptos' chainType)
+    const movementWalletAccount = user.linkedAccounts.find(
+      (account: any) => account.type === 'wallet' && account.chainType === 'aptos'
+    );
+    
+    if (movementWalletAccount?.address) {
+      setMovementWalletAddress((movementWalletAccount as any).address);
+    }
+  };
 
   // Listen for avatar updates from PFP flow
   useEffect(() => {
@@ -378,24 +394,47 @@ export default function ProfilePage() {
 
   const loadWallets = async () => {
     try {
+      // First, try to load from localStorage (faster and more reliable) - like test frontend
       const walletsJson = localStorage.getItem('cto_user_wallets');
       if (walletsJson) {
         try {
           const wallets = JSON.parse(walletsJson);
+          console.log('💼 Loading wallets from localStorage:', wallets);
           setAllWallets(wallets);
-          return;
+          
+          // Check if Movement wallet exists (Movement wallets are detected as 'aptos' chainType or 'MOVEMENT' blockchain)
+          const movementWallet = wallets.find((w: any) => 
+            w.blockchain === 'MOVEMENT' || 
+            w.blockchain === 'APTOS' || 
+            w.chainType === 'aptos' || 
+            w.walletClient === 'APTOS_EMBEDDED'
+          );
+          if (movementWallet?.address) {
+            setMovementWalletAddress(movementWallet.address);
+          }
+          
+          // If we have wallets in localStorage, we're done (but still check Privy as fallback)
+          if (wallets.length > 0) {
+            console.log('✅ Loaded wallets from localStorage successfully');
+            // Still check Privy as fallback
+            checkMovementWallet();
+            return;
+          }
         } catch (parseError) {
           console.error('Failed to parse wallets from localStorage:', parseError);
         }
       }
-
+      
+      // Fallback: Fetch from backend if localStorage is empty or invalid
       const token = localStorage.getItem('cto_auth_token');
       const userId = localStorage.getItem('cto_user_id');
       
       if (!token || !userId) {
+        console.warn('No user ID or token found');
         return;
       }
 
+      console.log('🔄 Fetching wallets from backend...');
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await axios.get(
         `${backendUrl}/api/v1/auth/privy/wallets`,
@@ -409,11 +448,26 @@ export default function ProfilePage() {
 
       if (response.data.success && response.data.wallets) {
         const wallets = response.data.wallets;
+        console.log('💼 Loaded wallets from backend:', wallets);
         setAllWallets(wallets);
+        
+        // Check if Movement wallet exists (Movement wallets are detected as 'aptos' chainType or 'MOVEMENT' blockchain)
+        const movementWallet = wallets.find((w: any) => 
+          w.blockchain === 'MOVEMENT' || 
+          w.blockchain === 'APTOS' || 
+          w.chainType === 'aptos' || 
+          w.walletClient === 'APTOS_EMBEDDED'
+        );
+        if (movementWallet?.address) {
+          setMovementWalletAddress(movementWallet.address);
+        }
+        
+        // Update localStorage with fresh data
         localStorage.setItem('cto_user_wallets', JSON.stringify(wallets));
       }
     } catch (error) {
-      console.error('Failed to load wallets:', error);
+      console.error('Failed to load wallets from backend:', error);
+      // If backend fails, Privy wallets will be used via checkMovementWallet()
     }
   };
 
@@ -463,22 +517,13 @@ export default function ProfilePage() {
     );
   }
 
-  const privyWallets = user?.linkedAccounts?.filter(
-    (account) => account.type === 'wallet'
-  ) as PrivyWalletAccount[] || [];
-  const displayWallets = allWallets.length > 0 ? allWallets : privyWallets;
-  
-  const uniqueWallets = displayWallets.filter((wallet, index, self) => 
-    index === self.findIndex((w) => w.address.toLowerCase() === wallet.address.toLowerCase())
-  );
-  
+  // Use movementWalletAddress state (set from backend wallets or Privy linkedAccounts)
+  // This matches the test frontend pattern
   const email = user?.email?.address || user?.wallet?.address || 'Privy User';
-  const movementWallet = getMovementWallet(user as PrivyUser);
-
-  // Get primary wallet address for display
-  const primaryWalletAddress = uniqueWallets.length > 0 
-    ? uniqueWallets[0].address 
-    : movementWallet?.address || '';
+  
+  // Primary wallet address for display (Movement wallet only)
+  // Prioritize movementWalletAddress state (from backend or Privy check)
+  const primaryWalletAddress = movementWalletAddress || '';
 
   // Calculate wallet stats
   // const cosmosWallets = uniqueWallets.filter(w => {
@@ -545,15 +590,22 @@ export default function ProfilePage() {
             </div>
                   <div className="flex items-center gap-2 mt-1">
                     <p className="text-white/70 font-semibold">
-                      Smart wallet{" "}
+                      Movement wallet{" "}
                       <span className="bg-white/20 rounded-[25px] p-1 font-normal">
-                        {primaryWalletAddress.slice(0, 8)}...
-                        {primaryWalletAddress.slice(-8)}
+                        {primaryWalletAddress ? (
+                          <>
+                            {primaryWalletAddress.slice(0, 8)}...
+                            {primaryWalletAddress.slice(-8)}
+                          </>
+                        ) : (
+                          'Not available'
+                        )}
                       </span>
                     </p>
             <button
-                      onClick={() => copyAddress(primaryWalletAddress)}
-                      className="text-white/70 hover:text-white transition-colors bg-white/20 rounded-[25px] p-1"
+                      onClick={() => primaryWalletAddress && copyAddress(primaryWalletAddress)}
+                      disabled={!primaryWalletAddress}
+                      className="text-white/70 hover:text-white transition-colors bg-white/20 rounded-[25px] p-1 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {copiedAddress ? (
                         <Check size={14} className="text-[#16C784]" />
