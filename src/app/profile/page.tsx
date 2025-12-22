@@ -318,6 +318,27 @@ export default function ProfilePage() {
 
   const walletsLoadedRef = React.useRef<string | null>(null);
 
+  // Check Movement wallet from Privy's linkedAccounts (like test frontend)
+  // Define this FIRST so it can be used in loadWallets
+  const checkMovementWallet = React.useCallback(() => {
+    if (!user?.linkedAccounts) return;
+    
+    // Check if user has Movement wallet in their linked accounts (Movement wallets are detected as 'aptos' chainType)
+    interface PrivyLinkedAccount {
+      type?: string;
+      chainType?: string;
+      address?: string;
+    }
+    
+    const movementWalletAccount = user.linkedAccounts.find(
+      (account: PrivyLinkedAccount) => account.type === 'wallet' && account.chainType === 'aptos'
+    );
+    
+    if (movementWalletAccount?.address) {
+      setMovementWalletAddress(movementWalletAccount.address);
+    }
+  }, [user?.linkedAccounts]);
+
   const loadWallets = React.useCallback(async () => {
     try {
       // First, try to load from localStorage (faster and more reliable) - like test frontend
