@@ -328,6 +328,7 @@ export default function ProfilePage() {
     const movementWalletAccount = user.linkedAccounts.find(
       (account) => {
         // Type assertion to access properties - Privy's types are complex
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const acc = account as any;
         return acc.type === 'wallet' && acc.chainType === 'aptos';
       }
@@ -335,6 +336,7 @@ export default function ProfilePage() {
     
     // Access address property (Privy wallet accounts have address)
     if (movementWalletAccount) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const acc = movementWalletAccount as any;
       if (acc.address) {
         setMovementWalletAddress(acc.address);
