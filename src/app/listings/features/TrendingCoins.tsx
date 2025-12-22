@@ -27,19 +27,7 @@ import TimeframeFilterBar, {
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { ApiCoinItem } from "@/types/api";
 import FallbackImage from "@/components/FallbackImage";
-
-// Helper function to format relative age
-function formatRelativeAge(date: Date): string {
-  const diffMs = Date.now() - date.getTime();
-  const mins = Math.floor(diffMs / 60000);
-  if (mins < 60) return `${mins}min`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}hr`;
-  const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d`;
-  const months = Math.floor(days / 30);
-  return `${months}mo`;
-}
+import { formatRelativeAge, convertAgeToRelative } from "./utils/listingUtils";
 
 // Helper function to create shorter address for TrendingCoins
 function shortenAddressForTrending(address: string): string {
@@ -227,8 +215,15 @@ export default function TrendingCoins({
     const coinsWithScores = apiData
       .filter((item) => item.contractAddress) // Only include items with valid addresses
       .map((item) => {
-        const createdAt = item.createdAt ? new Date(item.createdAt) : null;
-        const ageStr = createdAt ? formatRelativeAge(createdAt) : item.age || "1h";
+        // Use backend-provided age (actual token age) or fallback to calculating from createdAt
+        let ageStr: string | null = null;
+        if (item.age && typeof item.age === 'string' && item.age.trim() !== '') {
+          // Convert "309 days" format to relative format like "309d" or "13hr"
+          ageStr = convertAgeToRelative(item.age) || item.age;
+        } else {
+          const createdAt = item.createdAt ? new Date(item.createdAt) : null;
+          ageStr = createdAt ? formatRelativeAge(createdAt) : "1h";
+        }
         
         // Calculate trending score based on multiple factors
         const trendingScore = calculateTrendingScore(item);
