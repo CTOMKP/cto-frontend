@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import Image from 'next/image';
-import { BackendWallet } from '@/types/privy';
+import { BackendWallet, isPrivyWalletAccount } from '@/types/privy';
 import { Button } from '@/components/ui/button';
 import CustomPieChart from '@/components/CustomPieChart';
 import {Eye, EyeOff, Edit, LogOut, Link, Wallet, ChevronDown, ChevronUp, MoveDown, MoveUp, ArrowUpDown, SquareArrowOutUpRight, Check } from 'lucide-react';
@@ -324,17 +324,16 @@ export default function ProfilePage() {
     if (!user?.linkedAccounts) return;
     
     // Check if user has Movement wallet in their linked accounts (Movement wallets are detected as 'aptos' chainType)
-    interface PrivyLinkedAccount {
-      type?: string;
-      chainType?: string;
-      address?: string;
-    }
-    
+    // Use type guard to ensure we're working with a wallet account
     const movementWalletAccount = user.linkedAccounts.find(
-      (account: PrivyLinkedAccount) => account.type === 'wallet' && account.chainType === 'aptos'
+      (account) => {
+        if (!isPrivyWalletAccount(account)) return false;
+        return account.type === 'wallet' && account.chainType === 'aptos';
+      }
     );
     
-    if (movementWalletAccount?.address) {
+    // TypeScript now knows movementWalletAccount is PrivyWalletAccount | undefined
+    if (movementWalletAccount && isPrivyWalletAccount(movementWalletAccount)) {
       setMovementWalletAddress(movementWalletAccount.address);
     }
   }, [user?.linkedAccounts]);
