@@ -336,7 +336,7 @@ export default function ProfilePage() {
       if (rawUrl) {
         const newAvatarUrl = getCloudFrontUrl(rawUrl);
         if (newAvatarUrl !== avatarUrl) {
-          setAvatarUrl(newAvatarUrl);
+        setAvatarUrl(newAvatarUrl);
           // No toast here - toast is shown in CardReveal component
         }
       }

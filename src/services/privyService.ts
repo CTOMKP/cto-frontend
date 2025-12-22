@@ -48,9 +48,9 @@ class PrivyService {
         console.log(`🔄 Sync attempt ${retryCount + 1}: Using token: ${freshToken.substring(0, 20)}...`);
         
         response = await axios.post(
-          `${API_BASE}/api/v1/auth/privy/sync`,
+        `${API_BASE}/api/v1/auth/privy/sync`,
           { privyToken: freshToken },
-          { 
+        {
             headers: { 'Content-Type': 'application/json' },
             timeout: 30000 // 30 second timeout (matching test frontend)
           }
@@ -101,7 +101,7 @@ class PrivyService {
       });
       const errorMessage = response.data?.message || response.data?.error || `Backend returned status ${response.status}`;
       throw new Error(`Failed to sync user: ${errorMessage} (Status: ${response.status})`);
-    }
+        }
 
     // Log the full response for debugging - CRITICAL for debugging
     const dataKeys = response.data ? Object.keys(response.data) : [];
@@ -125,7 +125,7 @@ class PrivyService {
     if (responseData?.data && typeof responseData.data === 'object') {
       console.log('⚠️ Response data appears to be nested, trying nested structure...');
       responseData = responseData.data;
-    }
+        }
 
     // Check if response has success flag (backend should return success: true)
     // Also allow response without success flag if it has user and token (more flexible)
@@ -139,7 +139,7 @@ class PrivyService {
       
       if (responseData.user.walletAddress) {
         localStorage.setItem('cto_wallet_address', responseData.user.walletAddress);
-      }
+          }
 
       // Store avatarUrl if available (from database) - transform to CloudFront URL
       if (responseData.user.avatarUrl) {
@@ -147,7 +147,7 @@ class PrivyService {
         console.log('✅ Storing avatarUrl from backend sync (CloudFront):', cloudfrontUrl);
         localStorage.setItem('cto_user_avatar_url', cloudfrontUrl);
         localStorage.setItem('profile_avatar_url', cloudfrontUrl);
-      } else {
+        } else {
         console.log('⚠️ No avatarUrl in sync response');
       }
 
@@ -158,7 +158,7 @@ class PrivyService {
       }
 
       return responseData;
-    }
+        }
 
     // If we get here, the response structure is unexpected
     // Try to extract user ID from any possible location in the response
@@ -168,7 +168,7 @@ class PrivyService {
       hasToken: !!responseData?.token,
       dataKeys: Object.keys(responseData || {}),
       fullResponse: responseData,
-    });
+        });
     
     // Last resort: try to find user ID in the response anywhere
     const possibleUserId = responseData?.user?.id || 
@@ -184,7 +184,7 @@ class PrivyService {
         localStorage.setItem('cto_user_email', responseData.user.email);
       }
       return responseData;
-    }
+          }
     
     throw new Error(`Failed to sync user: Invalid response structure. Keys: ${Object.keys(responseData || {}).join(', ')}, Success: ${responseData?.success}, Has User: ${!!responseData?.user}, Has Token: ${!!responseData?.token}`);
   }

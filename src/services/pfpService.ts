@@ -271,7 +271,7 @@ class PFPService {
         // Use a small delay to ensure localStorage is updated before event fires
         if (typeof window !== 'undefined') {
           setTimeout(() => {
-            window.dispatchEvent(new Event('avatarUpdated'));
+          window.dispatchEvent(new Event('avatarUpdated'));
           }, 100);
         }
         

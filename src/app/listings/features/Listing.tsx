@@ -14,7 +14,7 @@ import { MemeCategory } from "../../../components/MemeCategoryFilter";
 import { Network } from "../../../components/NetworkFilter";
 import { ApiCoinItem, ApiListingResponse } from "@/types/api";
 import { SortField, SortDirection, MockLikeCoin } from "./types/listing";
-import { formatRelativeAge } from "./utils/listingUtils";
+import { formatRelativeAge, convertAgeToRelative } from "./utils/listingUtils";
 import ListingTableSkeleton from "./ListingTableSkeleton";
 import ListingTableHeader from "./ListingTableHeader";
 import ListingTableRow from "./ListingTableRow";
@@ -102,14 +102,15 @@ export default function TopListings() {
           // Use backend-provided age (actual token age) or fallback to calculating from createdAt
           let ageStr: string | null = null;
           if (it.age && typeof it.age === 'string' && it.age.trim() !== '') {
-            ageStr = it.age;
+            // Convert "309 days" format to relative format like "309d" or "13hr"
+            ageStr = convertAgeToRelative(it.age) || it.age;
           } else {
             const createdAt = it.createdAt ? new Date(it.createdAt) : null;
             ageStr = createdAt ? formatRelativeAge(createdAt) : null;
           }
           
-          // Get holders from multiple possible sources
-          const holderCount = it.holders ?? it?.metadata?.market?.holders ?? 0;
+          // Get holders from multiple possible sources - preserve null for "N/A" display
+          const holderCount = it.holders ?? it?.metadata?.market?.holders ?? null;
           
           // Get tier and normalize it
           let tier: string | null = it.tier || null;
@@ -151,7 +152,7 @@ export default function TopListings() {
             marketCap: Number(it.marketCap ?? it?.metadata?.market?.fdv ?? 0),
             liquidity: Number(it.liquidityUsd ?? 0),
             volume: { amount: Number(it.volume24h ?? it?.metadata?.market?.volume?.h24 ?? 0) },
-            holders: Number(holderCount),
+            holders: holderCount !== null && holderCount !== undefined ? Number(holderCount) : null,
           } as MockLikeCoin;
         });
         setLiveItems(mapped);
@@ -307,14 +308,15 @@ export default function TopListings() {
       // Use backend-provided age (actual token age) or fallback to calculating from createdAt
       let ageStr: string | null = null;
       if (it.age && typeof it.age === 'string' && it.age.trim() !== '') {
-        ageStr = it.age;
+        // Convert "309 days" format to relative format like "309d" or "13hr"
+        ageStr = convertAgeToRelative(it.age) || it.age;
       } else {
         const createdAt = it.createdAt ? new Date(it.createdAt) : null;
         ageStr = createdAt ? formatRelativeAge(createdAt) : null;
       }
       
-      // Get holders from multiple possible sources
-      const holderCount = it.holders ?? it?.metadata?.market?.holders ?? 0;
+      // Get holders from multiple possible sources - preserve null for "N/A" display
+      const holderCount = it.holders ?? it?.metadata?.market?.holders ?? null;
       
       // Get tier and normalize it
       let tier: string | null = it.tier || null;

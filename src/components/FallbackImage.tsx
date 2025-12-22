@@ -243,3 +243,189 @@ const FallbackImage: React.FC<Props> = ({
 
 export default FallbackImage;
 
+
+    return (
+
+      <div 
+
+        className={`relative flex items-center justify-center bg-gray-800 rounded-full ${className || ''}`}
+
+        style={fill ? undefined : { width, height }}
+
+      >
+
+        <svg className="w-6 h-6 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" />
+
+        </svg>
+
+      </div>
+
+    );
+
+  }
+
+
+
+  if (fill) {
+
+    return (
+
+      <div className={`relative ${className || ''}`}>
+
+        {loading && (
+
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-800 rounded-full">
+
+            <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+
+          </div>
+
+        )}
+
+        {isCrossOrigin ? (
+          // Use regular img tag for cross-origin images to support CORS
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={current}
+            alt={alt}
+            className={`${className || ''} ${loading ? 'opacity-0' : 'opacity-100'} w-full h-full object-cover`}
+            style={{ transition: 'opacity 300ms', position: 'absolute', inset: 0 }}
+            onError={() => setIndex((i) => i + 1)}
+            onLoad={() => {
+              setLoading(false);
+              if (onLoad) onLoad();
+            }}
+            crossOrigin="anonymous"
+          />
+        ) : (
+        <Image
+
+          src={current}
+
+          alt={alt}
+
+          fill
+
+          className={`${className || ''} ${loading ? 'opacity-0' : 'opacity-100'}`}
+
+          style={{ transition: 'opacity 300ms' }}
+
+          onError={() => setIndex((i) => i + 1)}
+
+          onLoad={() => {
+
+            setLoading(false);
+
+            if (onLoad) onLoad();
+
+          }}
+
+          unoptimized
+
+        />
+
+        )}
+      </div>
+
+    );
+
+  }
+
+
+
+  return (
+
+    <div className={`relative ${className || ''}`}>
+
+      {loading && (
+
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-800 rounded-full">
+
+          <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+
+        </div>
+
+      )}
+
+      {isCrossOrigin ? (
+        // Use regular img tag for cross-origin images to support CORS
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={current}
+          alt={alt}
+          width={width}
+          height={height}
+          className={`${className || ''} ${loading ? 'opacity-0' : 'opacity-100'}`}
+          style={{ transition: 'opacity 300ms' }}
+          onError={() => setIndex((i) => i + 1)}
+          onLoad={() => {
+            setLoading(false);
+            if (onLoad) onLoad();
+          }}
+          crossOrigin="anonymous"
+        />
+      ) : (
+      <Image
+
+        src={current}
+
+        alt={alt}
+
+        width={width}
+
+        height={height}
+
+        className={`${className || ''} ${loading ? 'opacity-0' : 'opacity-100'}`}
+
+        style={{ transition: 'opacity 300ms' }}
+
+        onError={() => setIndex((i) => i + 1)}
+
+        onLoad={() => {
+
+          setLoading(false);
+
+          if (onLoad) onLoad();
+
+        }}
+
+        unoptimized
+
+      />
+
+      )}
+    </div>
+
+  );
+
+};
+
+
+
+export default FallbackImage;
+
+
+
+
+
+
+        unoptimized
+
+      />
+
+      )}
+    </div>
+
+  );
+
+};
+
+
+
+export default FallbackImage;
+
+
+
+
