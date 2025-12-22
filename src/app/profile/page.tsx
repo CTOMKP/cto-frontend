@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import Image from 'next/image';
-import { BackendWallet, isPrivyWalletAccount } from '@/types/privy';
+import { BackendWallet } from '@/types/privy';
 import { Button } from '@/components/ui/button';
 import CustomPieChart from '@/components/CustomPieChart';
 import {Eye, EyeOff, Edit, LogOut, Link, Wallet, ChevronDown, ChevronUp, MoveDown, MoveUp, ArrowUpDown, SquareArrowOutUpRight, Check } from 'lucide-react';
@@ -324,17 +324,21 @@ export default function ProfilePage() {
     if (!user?.linkedAccounts) return;
     
     // Check if user has Movement wallet in their linked accounts (Movement wallets are detected as 'aptos' chainType)
-    // Use type guard to ensure we're working with a wallet account
+    // Privy's linkedAccounts is LinkedAccountWithMetadata[], so we check properties directly
     const movementWalletAccount = user.linkedAccounts.find(
       (account) => {
-        if (!isPrivyWalletAccount(account)) return false;
-        return account.type === 'wallet' && account.chainType === 'aptos';
+        // Type assertion to access properties - Privy's types are complex
+        const acc = account as any;
+        return acc.type === 'wallet' && acc.chainType === 'aptos';
       }
     );
     
-    // TypeScript now knows movementWalletAccount is PrivyWalletAccount | undefined
-    if (movementWalletAccount && isPrivyWalletAccount(movementWalletAccount)) {
-      setMovementWalletAddress(movementWalletAccount.address);
+    // Access address property (Privy wallet accounts have address)
+    if (movementWalletAccount) {
+      const acc = movementWalletAccount as any;
+      if (acc.address) {
+        setMovementWalletAddress(acc.address);
+      }
     }
   }, [user?.linkedAccounts]);
 
