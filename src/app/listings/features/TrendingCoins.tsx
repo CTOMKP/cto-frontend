@@ -231,7 +231,6 @@ export default function TrendingCoins({
         return {
           item,
           trendingScore,
-          createdAt,
           ageStr
         };
       });
