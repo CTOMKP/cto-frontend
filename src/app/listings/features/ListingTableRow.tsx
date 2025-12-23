@@ -11,6 +11,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import { MockLikeCoin } from "./types/listing";
 import { getChainImage } from "./utils/listingUtils";
 import ListingEngagement from "./ListingEngagement";
+import FallbackImage from "@/components/FallbackImage";
 
 interface ListingTableRowProps {
   coin: MockLikeCoin;
@@ -48,11 +49,10 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
         <div className="flex items-center justify-between">
           <div className="flex items-center h-full gap-1">
             <div className="relative">
-              <Image
-                loading="lazy"
+              <FallbackImage
+                src={coin.image && coin.image.trim() !== "" ? coin.image : undefined}
+                alt={coin.name || "token"}
                 className="size-7 min-w-fit rounded-full border-[0.36px] border-white"
-                src={coin.image && coin.image.trim() !== "" ? coin.image : "/homepage/trending-coins/default-coin.png"}
-                alt="default-coin"
                 width={28}
                 height={28}
               />
@@ -71,17 +71,47 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
                 <span className="font-medium capitalize max-w-[120px] truncate" title={coin.name}>
                   {coin.name.length > 15 ? `${coin.name.substring(0, 15)}...` : coin.name}
                 </span>
-                <span
-                  className={`bg-[#15FF00]/20 rounded-[4px] p-[3px]`}
-                >
-                  <Image
-                    loading="lazy"
-                    src="/project-categories/bloom.svg"
-                    width={8.36}
-                    height={8.36}
-                    alt="green"
-                  />
-                </span>
+                {/* Tier Badge */}
+                {(() => {
+                  const rawTier = coin.tier;
+                  
+                  // Normalize tier - handle all invalid formats
+                  if (!rawTier || rawTier === null || rawTier === undefined) {
+                    return null;
+                  }
+                  
+                  const tierStr = String(rawTier).trim().toLowerCase();
+                  
+                  // Check for all invalid tier values (including dash variations)
+                  if (tierStr === 'none' || tierStr === 'null' || tierStr === 'undefined' || 
+                      tierStr === '' || tierStr === '—' || tierStr === '----' || tierStr === '------' ||
+                      tierStr.startsWith('---') || tierStr === 'n/a' || tierStr === 'na' ||
+                      /^[-—]+$/.test(tierStr)) { // Match any string that's only dashes/em-dashes
+                    return null;
+                  }
+                  
+                  const tier = tierStr;
+                  const tierIcons: Record<string, string> = {
+                    stellar: "/project-categories/stellar.svg",
+                    bloom: "/project-categories/bloom.svg",
+                    sprout: "/project-categories/sprout.svg",
+                    seed: "/project-categories/seed.svg",
+                  };
+                  
+                  const iconPath = tierIcons[tier] || "/project-categories/bloom.svg";
+                  
+                  return (
+                    <span className={`bg-[#15FF00]/20 rounded-[4px] p-[3px]`}>
+                      <Image
+                        loading="lazy"
+                        src={iconPath}
+                        width={8.36}
+                        height={8.36}
+                        alt={tier}
+                      />
+                    </span>
+                  );
+                })()}
               </div>
               <div className="flex items-center gap-0.5">
                 <span className="text-[#FFFFFF]/50 text-xs uppercase">
@@ -167,7 +197,7 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
         <div className="flex justify-center">
           <div className="flex flex-col items-start w-fit">
             <span className={`font-medium w-full text-right`}>
-              {compactNumber(coin.holders)}
+              {coin.holders && coin.holders > 0 ? compactNumber(coin.holders) : <span className="text-[#FFFFFF]/50 italic">N/A</span>}
             </span>
           </div>
         </div>
@@ -298,51 +328,126 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
       {/* Community */}
       <TableCell className="text-center">
         <div className="flex justify-center gap-1">
+          {/* Always show 0% with bad-red gauge (community score not calculated yet) */}
           <Image
             loading="lazy"
-            src={
-              coin.communityScore < 50
-                ? "/communitry-score-icons/bad-red.svg"
-                : coin.communityScore >= 50 && coin.communityScore < 70
-                ? "/communitry-score-icons/average-yellow.svg"
-                : "/communitry-score-icons/good-green.svg"
-            }
-            alt={
-              coin.communityScore < 50
-                ? "bad-red"
-                : coin.communityScore >= 50 && coin.communityScore < 70
-                ? "average-yellow"
-                : "good-green"
-            }
+            src="/communitry-score-icons/bad-red.svg"
+            alt="community-score"
             width={16}
             height={16}
-          />{" "}
-          <span>{coin.communityScore}%</span>
+          />
+          <span>0%</span>
         </div>
       </TableCell>
 
-      {/* Audit */}
+      {/* Risk Score */}
       <TableCell className="text-right">
         <span
           className={`flex items-center justify-center gap-1 text-right`}
         >
-          {coin.degenAudit}
-          <span>
-            <Image
-              loading="lazy"
-              src={`${
-                coin.degenAudit >= 70
-                  ? "/risk-score/good.svg"
-                  : coin.degenAudit >= 50
-                  ? "/risk-score/average.svg"
-                  : "/risk-score/bad.svg"
-              }`}
-              alt="degen-audit"
-              width={10}
-              height={13}
-            />
-          </span>
+          {coin.degenAudit !== null && coin.degenAudit !== undefined && coin.degenAudit > 0 ? (
+            <>
+              {coin.degenAudit.toFixed(1)}
+              <span>
+                <Image
+                  loading="lazy"
+                  src={`${
+                    coin.degenAudit >= 70
+                      ? "/risk-score/good.svg"
+                      : coin.degenAudit >= 50
+                      ? "/risk-score/average.svg"
+                      : "/risk-score/bad.svg"
+                  }`}
+                  alt="risk-score"
+                  width={10}
+                  height={13}
+                />
+              </span>
+            </>
+          ) : (
+            <span className="text-[#FFFFFF]/50 italic">
+              {(() => {
+                // Check if token is too young (< 14 days)
+                if (coin.age) {
+                  // Parse age string (e.g., "5d", "13d", "14d", "365d", "1y 2mo 3d")
+                  const ageStr = coin.age.toLowerCase().trim();
+                  
+                  // Extract days from age string
+                  let days = 0;
+                  
+                  // Check for years (y)
+                  const yearMatch = ageStr.match(/(\d+)\s*y/);
+                  if (yearMatch) {
+                    days += parseInt(yearMatch[1]) * 365;
+                  }
+                  
+                  // Check for months (mo or m)
+                  const monthMatch = ageStr.match(/(\d+)\s*mo/);
+                  if (monthMatch) {
+                    days += parseInt(monthMatch[1]) * 30;
+                  }
+                  
+                  // Check for days (d)
+                  const dayMatch = ageStr.match(/(\d+)\s*d/);
+                  if (dayMatch) {
+                    days += parseInt(dayMatch[1]);
+                  }
+                  
+                  // Check for hours (h) - treat as < 1 day
+                  const hourMatch = ageStr.match(/(\d+)\s*h/);
+                  if (hourMatch && days === 0) {
+                    return "Too Young";
+                  }
+                  
+                  // If we have days and it's < 14, show "Too Young"
+                  if (days > 0 && days < 14) {
+                    return "Too Young";
+                  }
+                }
+                
+                // Default message for tokens without risk score
+                return "Not Scanned";
+              })()}
+            </span>
+          )}
         </span>
+      </TableCell>
+      {/* Tier */}
+      <TableCell className="text-center">
+        {(() => {
+          const rawTier = coin.tier;
+          
+          // Normalize tier - handle all invalid formats
+          if (!rawTier || rawTier === null || rawTier === undefined) {
+            return <span className="text-[#FFFFFF]/50">—</span>;
+          }
+          
+          const tierStr = String(rawTier).trim().toLowerCase();
+          
+          // Check for all invalid tier values (including dash variations)
+          if (tierStr === 'none' || tierStr === 'null' || tierStr === 'undefined' || 
+              tierStr === '' || tierStr === '—' || tierStr === '----' || tierStr === '------' ||
+              tierStr.startsWith('---') || tierStr === 'n/a' || tierStr === 'na' ||
+              /^[-—]+$/.test(tierStr)) { // Match any string that's only dashes/em-dashes
+            return <span className="text-[#FFFFFF]/50">—</span>;
+          }
+          
+          const tier = tierStr;
+          const tierColors: Record<string, { bg: string; text: string }> = {
+            stellar: { bg: 'bg-purple-900/30', text: 'text-purple-200' },
+            bloom: { bg: 'bg-blue-900/30', text: 'text-blue-200' },
+            sprout: { bg: 'bg-green-900/30', text: 'text-green-200' },
+            seed: { bg: 'bg-yellow-900/30', text: 'text-yellow-200' },
+          };
+          
+          const colors = tierColors[tier] || { bg: 'bg-gray-700/30', text: 'text-gray-300' };
+          
+          return (
+            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${colors.bg} ${colors.text}`}>
+              {tier.toUpperCase()}
+            </span>
+          );
+        })()}
       </TableCell>
       <TableCell>
         <ListingEngagement />

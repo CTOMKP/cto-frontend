@@ -4,14 +4,15 @@ import React, { useState, useEffect } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
-import { getMovementWallet } from '@/lib/movement-wallet';
 import axios from 'axios';
 import Image from 'next/image';
-import { BackendWallet, PrivyWalletAccount, PrivyUser } from '@/types/privy';
+import { BackendWallet } from '@/types/privy';
 import { Button } from '@/components/ui/button';
 import CustomPieChart from '@/components/CustomPieChart';
 import {Eye, EyeOff, Edit, LogOut, Link, Wallet, ChevronDown, ChevronUp, MoveDown, MoveUp, ArrowUpDown, SquareArrowOutUpRight, Check } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import FallbackImage from '@/components/FallbackImage';
+import { getCloudFrontUrl } from '@/lib/image-url-helper';
 
 // Helper function to get wallet chain info
 // function getWalletChainInfo(wallet: BackendWallet | PrivyWalletAccount) {
@@ -294,10 +295,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, authenticated, ready } = usePrivy();
+  const { user, authenticated, ready, logout } = usePrivy();
+  // Keep allWallets for potential future use (displaying all wallets)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [allWallets, setAllWallets] = useState<BackendWallet[]>([]);
+  const [movementWalletAddress, setMovementWalletAddress] = useState<string | null>(null);
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [copiedAddress, setCopiedAddress] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
+    // Initialize from localStorage
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
+    }
+    return null;
+  });
 
   useEffect(() => {
     if (ready && !authenticated) {
@@ -307,39 +318,85 @@ export default function ProfilePage() {
 
   const walletsLoadedRef = React.useRef<string | null>(null);
 
-  useEffect(() => {
-    if (authenticated && user && ready) {
-      const userId = user.id;
-      if (walletsLoadedRef.current !== userId) {
-        loadWallets();
-        walletsLoadedRef.current = userId;
+  // Check Movement wallet from Privy's linkedAccounts (like test frontend)
+  // Define this FIRST so it can be used in loadWallets
+  const checkMovementWallet = React.useCallback(() => {
+    if (!user?.linkedAccounts) return;
+    
+    // Check if user has Movement wallet in their linked accounts (Movement wallets are detected as 'aptos' chainType)
+    // Privy's linkedAccounts is LinkedAccountWithMetadata[], so we check properties directly
+    const movementWalletAccount = user.linkedAccounts.find(
+      (account) => {
+        // Type assertion to access properties - Privy's types are complex
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const acc = account as any;
+        return acc.type === 'wallet' && acc.chainType === 'aptos';
+      }
+    );
+    
+    // Access address property (Privy wallet accounts have address)
+    if (movementWalletAccount) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const acc = movementWalletAccount as any;
+      if (acc.address) {
+        setMovementWalletAddress(acc.address);
       }
     }
-  }, [authenticated, user, ready]);
+  }, [user?.linkedAccounts]);
 
-  const loadWallets = async () => {
+  const loadWallets = React.useCallback(async () => {
     try {
+      // First, try to load from localStorage (faster and more reliable) - like test frontend
       const walletsJson = localStorage.getItem('cto_user_wallets');
       if (walletsJson) {
         try {
-          const wallets = JSON.parse(walletsJson);
+          const wallets = JSON.parse(walletsJson) as BackendWallet[];
+          console.log('💼 Loading wallets from localStorage:', wallets);
           setAllWallets(wallets);
-          return;
+          
+          // Check if Movement wallet exists (Movement wallets are detected as 'aptos' chainType or 'MOVEMENT' blockchain)
+          interface WalletWithMovement {
+            blockchain?: string;
+            chainType?: string;
+            walletClient?: string;
+            address?: string;
+          }
+          
+          const movementWallet = wallets.find((w: WalletWithMovement) => 
+            w.blockchain === 'MOVEMENT' || 
+            w.blockchain === 'APTOS' || 
+            w.chainType === 'aptos' || 
+            w.walletClient === 'APTOS_EMBEDDED'
+          );
+          if (movementWallet?.address) {
+            setMovementWalletAddress(movementWallet.address);
+          }
+          
+          // If we have wallets in localStorage, we're done (but still check Privy as fallback)
+          if (wallets.length > 0) {
+            console.log('✅ Loaded wallets from localStorage successfully');
+            // Still check Privy as fallback
+            checkMovementWallet();
+            return;
+          }
         } catch (parseError) {
           console.error('Failed to parse wallets from localStorage:', parseError);
         }
       }
-
+      
+      // Fallback: Fetch from backend if localStorage is empty or invalid
       const token = localStorage.getItem('cto_auth_token');
       const userId = localStorage.getItem('cto_user_id');
       
       if (!token || !userId) {
+        console.warn('No user ID or token found');
         return;
       }
 
+      console.log('🔄 Fetching wallets from backend...');
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await axios.get(
-        `${backendUrl}/api/auth/privy/wallets`,
+        `${backendUrl}/api/v1/auth/privy/wallets`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -349,14 +406,98 @@ export default function ProfilePage() {
       );
 
       if (response.data.success && response.data.wallets) {
-        const wallets = response.data.wallets;
+        const wallets = response.data.wallets as BackendWallet[];
+        console.log('💼 Loaded wallets from backend:', wallets);
         setAllWallets(wallets);
+        
+        // Check if Movement wallet exists (Movement wallets are detected as 'aptos' chainType or 'MOVEMENT' blockchain)
+        interface WalletWithMovement {
+          blockchain?: string;
+          chainType?: string;
+          walletClient?: string;
+          address?: string;
+        }
+        
+        const movementWallet = wallets.find((w: WalletWithMovement) => 
+          w.blockchain === 'MOVEMENT' || 
+          w.blockchain === 'APTOS' || 
+          w.chainType === 'aptos' || 
+          w.walletClient === 'APTOS_EMBEDDED'
+        );
+        if (movementWallet?.address) {
+          setMovementWalletAddress(movementWallet.address);
+        }
+        
+        // Update localStorage with fresh data
         localStorage.setItem('cto_user_wallets', JSON.stringify(wallets));
       }
     } catch (error) {
-      console.error('Failed to load wallets:', error);
+      console.error('Failed to load wallets from backend:', error);
+      // If backend fails, Privy wallets will be used via checkMovementWallet()
     }
-  };
+  }, [checkMovementWallet]);
+
+  useEffect(() => {
+    if (authenticated && user && ready) {
+      const userId = user.id;
+      if (walletsLoadedRef.current !== userId) {
+        checkMovementWallet();
+        loadWallets();
+        walletsLoadedRef.current = userId;
+      }
+    }
+  }, [authenticated, user, ready, checkMovementWallet, loadWallets]);
+
+  // Listen for avatar updates from PFP flow
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Listen for custom event (dispatched by pfpService)
+    const handleAvatarUpdate = () => {
+      const rawUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
+      if (rawUrl) {
+        const newAvatarUrl = getCloudFrontUrl(rawUrl);
+        if (newAvatarUrl !== avatarUrl) {
+        setAvatarUrl(newAvatarUrl);
+          // No toast here - toast is shown in CardReveal component
+        }
+      }
+    };
+
+    // Listen for localStorage changes (cross-tab updates)
+    const handleStorageChange = (e: StorageEvent) => {
+      if ((e.key === 'cto_user_avatar_url' || e.key === 'profile_avatar_url') && e.newValue) {
+        const cloudfrontUrl = getCloudFrontUrl(e.newValue);
+        setAvatarUrl(cloudfrontUrl);
+        // Only show toast for cross-tab updates (different session), not same-tab updates
+        if (e.newValue !== e.oldValue) {
+          toast.success('Profile picture updated');
+        }
+      }
+    };
+
+    // Check localStorage periodically (same-tab updates)
+    const checkAvatar = () => {
+      const rawUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
+      if (rawUrl) {
+        const cloudfrontUrl = getCloudFrontUrl(rawUrl);
+        if (cloudfrontUrl !== avatarUrl) {
+          setAvatarUrl(cloudfrontUrl);
+        }
+      }
+    };
+
+    window.addEventListener('avatarUpdated', handleAvatarUpdate);
+    window.addEventListener('storage', handleStorageChange);
+    const interval = setInterval(checkAvatar, 1000);
+
+    return () => {
+      window.removeEventListener('avatarUpdated', handleAvatarUpdate);
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [avatarUrl]);
+
 
   // const handleLogout = async () => {
   //   try {
@@ -372,6 +513,15 @@ export default function ProfilePage() {
     setCopiedAddress(true);
     toast.success('Address copied!');
     setTimeout(() => setCopiedAddress(false), 2000);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
   if (!ready) {
@@ -395,26 +545,13 @@ export default function ProfilePage() {
     );
   }
 
-  const privyWallets = user?.linkedAccounts?.filter(
-    (account) => account.type === 'wallet'
-  ) as PrivyWalletAccount[] || [];
-  const displayWallets = allWallets.length > 0 ? allWallets : privyWallets;
-  
-  const uniqueWallets = displayWallets.filter((wallet, index, self) => 
-    index === self.findIndex((w) => w.address.toLowerCase() === wallet.address.toLowerCase())
-  );
-  
+  // Use movementWalletAddress state (set from backend wallets or Privy linkedAccounts)
+  // This matches the test frontend pattern
   const email = user?.email?.address || user?.wallet?.address || 'Privy User';
-  const movementWallet = getMovementWallet(user as PrivyUser);
   
-  const avatarUrl = typeof window !== 'undefined' 
-    ? localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url')
-    : null;
-
-  // Get primary wallet address for display
-  const primaryWalletAddress = uniqueWallets.length > 0 
-    ? uniqueWallets[0].address 
-    : movementWallet?.address || '';
+  // Primary wallet address for display (Movement wallet only)
+  // Prioritize movementWalletAddress state (from backend or Privy check)
+  const primaryWalletAddress = movementWalletAddress || '';
 
   // Calculate wallet stats
   // const cosmosWallets = uniqueWallets.filter(w => {
@@ -454,13 +591,11 @@ export default function ProfilePage() {
               <div className="flex items-start gap-4">
                 <div className="relative w-20 h-20 rounded-full overflow-hidden">
                   {avatarUrl ? (
-                    <Image
+                    <FallbackImage
                       src={avatarUrl}
                       alt="Profile"
                       fill
                       className="object-cover size-15 rounded-full border-[0.6px] border-white"
-                      loading="lazy"
-                      unoptimized
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-2xl">
@@ -468,7 +603,7 @@ export default function ProfilePage() {
                     </div>
                   )}
                 </div>
-                <div>
+            <div>
                   <div className="">
                     <h1 className="text-white/70 font-semibold mb-2">
                       Username
@@ -480,18 +615,25 @@ export default function ProfilePage() {
                     {/* <h2 className="text-2xl font-bold text-white">
                         {email.split('@')[0] || 'User'}
                       </h2> */}
-                  </div>
+            </div>
                   <div className="flex items-center gap-2 mt-1">
                     <p className="text-white/70 font-semibold">
-                      Smart wallet{" "}
+                      Movement wallet{" "}
                       <span className="bg-white/20 rounded-[25px] p-1 font-normal">
-                        {primaryWalletAddress.slice(0, 8)}...
-                        {primaryWalletAddress.slice(-8)}
+                        {primaryWalletAddress ? (
+                          <>
+                            {primaryWalletAddress.slice(0, 8)}...
+                            {primaryWalletAddress.slice(-8)}
+                          </>
+                        ) : (
+                          'Not available'
+                        )}
                       </span>
                     </p>
-                    <button
-                      onClick={() => copyAddress(primaryWalletAddress)}
-                      className="text-white/70 hover:text-white transition-colors bg-white/20 rounded-[25px] p-1"
+            <button
+                      onClick={() => primaryWalletAddress && copyAddress(primaryWalletAddress)}
+                      disabled={!primaryWalletAddress}
+                      className="text-white/70 hover:text-white transition-colors bg-white/20 rounded-[25px] p-1 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {copiedAddress ? (
                         <Check size={14} className="text-[#16C784]" />
@@ -503,12 +645,12 @@ export default function ProfilePage() {
                           height={14}
                         />
                       )}
-                    </button>
-                  </div>
+            </button>
+          </div>
                 </div>
               </div>
               <div className="flex flex-col justify-between items-end self-stretch">
-                <Button className="p-2 w-fit bg-none ronded-lg border-[0.2px] border-white/20">
+                <Button className="p-2 w-fit bg-none ronded-lg border-[0.2px] border-white/20" onClick={handleLogout}>
                   <LogOut size={32} />
                 </Button>
                 <Button className="text-[#9F9FA9] p-2 ronded-lg border-[0.2px] border-white/20">
@@ -597,8 +739,8 @@ export default function ProfilePage() {
                   className="h-full bg-gradient-to-r from-[#FF0075] via-[#FF4A15] to-[#FFCB45] transition-all duration-300"
                   style={{ width: `${xpProgress}%` }}
                 />
-              </div>
-            </div>
+        </div>
+      </div>
 
             <div className="flex gap-4">
               {/* referral */}
@@ -619,7 +761,7 @@ export default function ProfilePage() {
                     Invite friends
                   </Button>
                 </div>
-              </div>
+            </div>
 
               {/* Connect social account */}
               <div className="min-w-[190px] rounded-lg space-y-2.5 border-[0.5px] border-white/20 p-3">
@@ -661,15 +803,15 @@ export default function ProfilePage() {
                   <div className="flex items-center gap-2">
                     <div className="text-sm text-[#A1A1AA] flex items-center gap-2.5">
                       <Wallet size={18} /> Wallet Balance:
+                      </div>
                     </div>
-                  </div>
-                  <button
+                    <button
                     onClick={() => setBalanceVisible(!balanceVisible)}
                     className="text-gray-400 hover:text-white transition-colors"
                   >
                     {balanceVisible ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
+                    </button>
+                  </div>
 
                 <div className="flex w-full justify-center mb-4">
                   <Button className="border-[0.5px] border-[#27272A] rounded-lg py-2 px-1 text-white/50">
@@ -684,13 +826,13 @@ export default function ProfilePage() {
                       <span className="text-[58px] font-semibold text-white">
                         ${walletBalance.toLocaleString()}
                       </span>
-                    </div>
+            </div>
                   ) : (
                     <div className="text-4xl font-bold text-white text-center">
                       ••••••
-                    </div>
-                  )}
-                </div>
+            </div>
+          )}
+        </div>
 
                 <div className="flex justify-center items-center">
                   <span
