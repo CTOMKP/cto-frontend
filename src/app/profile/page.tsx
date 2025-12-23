@@ -6,6 +6,13 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import { BackendWallet, PrivyWalletAccount, PrivyUser } from '@/types/privy';
+
+// Helper interface for wallet with Movement/Aptos support
+interface WalletWithMovement extends BackendWallet {
+  blockchain?: string;
+  walletClient?: string;
+}
+
 import UserProfileHeader from './features/UserProfileHeader';
 import LevelXPProgress from './features/LevelXPProgress';
 import ReferralSection from './features/ReferralSection';
@@ -333,10 +340,6 @@ export default function ProfilePage() {
           const wallets = JSON.parse(walletsJson);
           
           // Find Movement wallet from localStorage wallets
-          interface WalletWithMovement extends BackendWallet {
-            blockchain?: string;
-            walletClient?: string;
-          }
           const movementWallet = wallets.find((w: WalletWithMovement) => 
             w.blockchain === 'MOVEMENT' ||
             w.blockchain === 'APTOS' ||
@@ -380,19 +383,15 @@ export default function ProfilePage() {
       if (response.data.success && response.data.wallets) {
         const wallets = response.data.wallets;
         
-        // Find Movement wallet from backend wallets
-        interface WalletWithMovement extends BackendWallet {
-          blockchain?: string;
-          walletClient?: string;
-        }
-        const movementWallet = wallets.find((w: WalletWithMovement) => 
+        // Find Movement wallet from backend wallets  
+        const movementWalletFromBackend = wallets.find((w: WalletWithMovement) => 
           w.blockchain === 'MOVEMENT' ||
           w.blockchain === 'APTOS' ||
           w.chainType === 'aptos' ||
           w.walletClient === 'APTOS_EMBEDDED'
         );
-        if (movementWallet?.address) {
-          setMovementWalletAddress(movementWallet.address);
+        if (movementWalletFromBackend?.address) {
+          setMovementWalletAddress(movementWalletFromBackend.address);
         }
 
         setAllWallets(wallets);
