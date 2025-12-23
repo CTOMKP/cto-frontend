@@ -296,7 +296,7 @@ import WalletsDialog from './features/WalletsDialog';
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, authenticated, ready, logout } = usePrivy();
+  const { user, authenticated, ready } = usePrivy();
   // Keep allWallets for potential future use (displaying all wallets)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [allWallets, setAllWallets] = useState<BackendWallet[]>([]);
@@ -453,15 +453,6 @@ export default function ProfilePage() {
     setCopiedAddress(true);
     toast.success('Address copied!');
     setTimeout(() => setCopiedAddress(false), 2000);
-  };
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      router.push('/');
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
   };
 
   if (!ready) {

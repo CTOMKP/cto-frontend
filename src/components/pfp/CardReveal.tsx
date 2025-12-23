@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -148,8 +148,6 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
   const [isAutoSaved, setIsAutoSaved] = useState(false);
   const [imagesLoaded, setImagesLoaded] = useState({ base: false, stage: false, trait: false });
   const [compositeFile, setCompositeFile] = useState<File | null>(null);
-  const { user } = usePrivy();
-  const containerRef = useRef<HTMLDivElement>(null);
   
   const allImagesLoaded = imagesLoaded.base && imagesLoaded.stage && imagesLoaded.trait;
 
@@ -175,6 +173,118 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
       a = ((a << 5) - a) + b.charCodeAt(0);
       return a & a;
     }, 0);
+
+    // All available traits
+    const allTraits: TraitType[] = Object.keys(TRAIT_INFO) as TraitType[];
+
+    // Select trait based on weighted rarity
+    const rarityRoll = Math.abs(seedHash) % 100;
+    let targetRarity: Rarity;
+    if (rarityRoll < 40) targetRarity = 'Common'; // 40%
+    else if (rarityRoll < 65) targetRarity = 'Uncommon'; // 25%
+    else if (rarityRoll < 82) targetRarity = 'Rare'; // 17%
+    else if (rarityRoll < 94) targetRarity = 'Epic'; // 12%
+    else targetRarity = 'Legendary'; // 6%
+
+    // Filter traits by rarity
+    const traitsOfRarity = allTraits.filter(t => TRAIT_INFO[t].rarity === targetRarity);
+    const selectedTrait = traitsOfRarity[Math.abs(seedHash >> 2) % traitsOfRarity.length];
+
+    const traitInfo = TRAIT_INFO[selectedTrait];
+    
+    // Generate composite image
+    const compositeImage = await createCompositeImage(selectedTrait);
+
+    return {
+      id: `mascot_${Date.now()}`,
+      trait: selectedTrait,
+      name: traitInfo.name,
+      rarity: traitInfo.rarity,
+      description: traitInfo.description,
+      compositeImage,
+    };
+  };
+
+  // Composite mascot image (baseSkin + trait, without stage) and return as File
+  const compositeMascotImage = useCallback(async (baseSkinPath: string, traitPath: string): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Canvas not supported'));
+        return;
+      }
+
+      canvas.width = 800;
+      canvas.height = 800;
+
+      const baseSkinImg = document.createElement('img');
+      const traitImg = document.createElement('img');
+      let loadedCount = 0;
+      const totalImages = 2;
+
+      const onImageLoad = () => {
+        loadedCount++;
+        if (loadedCount === totalImages) {
+          // Draw layers: baseSkin -> trait (no stage)
+          ctx.drawImage(baseSkinImg, 0, 0, canvas.width, canvas.height);
+          ctx.drawImage(traitImg, 0, 0, canvas.width, canvas.height);
+          
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const file = new File([blob], `mascot-${Date.now()}.png`, { type: 'image/png' });
+              resolve(file);
+            } else {
+              reject(new Error('Failed to create blob'));
+            }
+          }, 'image/png');
+        }
+      };
+
+      const isCloudFrontUrl = baseSkinPath.startsWith('http');
+      if (isCloudFrontUrl) {
+        baseSkinImg.crossOrigin = 'anonymous';
+        traitImg.crossOrigin = 'anonymous';
+      }
+
+      baseSkinImg.onload = onImageLoad;
+      baseSkinImg.onerror = () => reject(new Error(`Failed to load base skin: ${baseSkinPath}`));
+      baseSkinImg.src = baseSkinPath;
+
+      traitImg.onload = onImageLoad;
+      traitImg.onerror = () => reject(new Error(`Failed to load trait: ${traitPath}`));
+      traitImg.src = traitPath;
+    });
+  }, []);
+
+  // Handle reveal button click
+  const handleReveal = async () => {
+    if (isRevealed || isRevealing) return;
+
+    setIsRevealing(true);
+    try {
+      const mascot = await generateMascot();
+      setMascotCard(mascot);
+
+      // Animation delay
+      setTimeout(() => {
+        setIsRevealed(true);
+        setIsRevealing(false);
+        toast.success(`🎴 You got a ${mascot.rarity} ${mascot.name}!`);
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to generate mascot:', error);
+      toast.error('Failed to generate mascot. Please try again.');
+      setIsRevealing(false);
+    }
+  };
+
+  // Get derived values from mascotCard
+  const selectedCardId = mascotCard?.id || null;
+  const baseSkinPath = mascotCard ? getMascotImageUrl('mascots/SKIN/BASE SKIN.png') : '';
+  const stagePath = mascotCard ? getMascotImageUrl('mascots/STAGE/STAGE.png') : '';
+  const traitPath = mascotCard ? getMascotImageUrl(`mascots/TRAITS/${mascotCard.trait}.png`) : '';
+  const traitName = mascotCard ? TRAIT_INFO[mascotCard.trait].name : '';
 
   // Get user ID from localStorage with fallback to Privy user.id
   const getUserId = useCallback((): string | null => {
@@ -257,7 +367,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
     if (selectedCardId && allImagesLoaded) {
       autoSavePFP();
     }
-  }, [selectedCardId, allImagesLoaded, isAutoSaved, isSaving, baseSkinPath, traitPath]);
+  }, [selectedCardId, allImagesLoaded, isAutoSaved, isSaving, baseSkinPath, traitPath, compositeMascotImage, getUserId]);
 
   const handleSavePFP = async () => {
     if (!selectedCardId) return;
