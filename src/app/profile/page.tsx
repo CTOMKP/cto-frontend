@@ -493,6 +493,18 @@ export default function ProfilePage() {
     ? localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url')
     : null;
 
+  // Combine Privy wallets with backend wallets
+  // Privy's user.linkedAccounts is LinkedAccountWithMetadata[], so we need to filter and cast
+  const privyWallets = user?.linkedAccounts?.filter(
+    (account) => account.type === 'wallet'
+  ) as PrivyWalletAccount[] || [];
+  const displayWallets = allWallets.length > 0 ? allWallets : privyWallets;
+  
+  // Deduplicate wallets by address to prevent duplicate display
+  const uniqueWallets = displayWallets.filter((wallet, index, self) => 
+    index === self.findIndex((w) => w.address.toLowerCase() === wallet.address.toLowerCase())
+  );
+
   // Primary wallet address for display (Movement wallet only)
   // Prioritize movementWalletAddress state (from backend or Privy check)
   const primaryWalletAddress = movementWalletAddress || '';
