@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -146,6 +146,10 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
   const [mascotCard, setMascotCard] = useState<MascotCard | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isAutoSaved, setIsAutoSaved] = useState(false);
+  const [imagesLoaded, setImagesLoaded] = useState({ base: false, stage: false, trait: false });
+  const [compositeFile, setCompositeFile] = useState<File | null>(null);
+  
+  const allImagesLoaded = imagesLoaded.base && imagesLoaded.stage && imagesLoaded.trait;
 
   // Generate mascot based on wallet address + timestamp + random (like test frontend)
   const generateMascot = async (): Promise<MascotCard> => {
@@ -172,7 +176,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
 
     // All available traits
     const allTraits: TraitType[] = Object.keys(TRAIT_INFO) as TraitType[];
-    
+
     // Select trait based on weighted rarity
     const rarityRoll = Math.abs(seedHash) % 100;
     let targetRarity: Rarity;
@@ -185,7 +189,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
     // Filter traits by rarity
     const traitsOfRarity = allTraits.filter(t => TRAIT_INFO[t].rarity === targetRarity);
     const selectedTrait = traitsOfRarity[Math.abs(seedHash >> 2) % traitsOfRarity.length];
-    
+
     const traitInfo = TRAIT_INFO[selectedTrait];
     
     // Generate composite image
@@ -201,20 +205,72 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
     };
   };
 
-  // Handle reveal button click (like test frontend)
+  // Composite mascot image (baseSkin + trait, without stage) and return as File
+  const compositeMascotImage = useCallback(async (baseSkinPath: string, traitPath: string): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Canvas not supported'));
+        return;
+      }
+
+      canvas.width = 800;
+      canvas.height = 800;
+
+      const baseSkinImg = document.createElement('img');
+      const traitImg = document.createElement('img');
+      let loadedCount = 0;
+      const totalImages = 2;
+
+      const onImageLoad = () => {
+        loadedCount++;
+        if (loadedCount === totalImages) {
+          // Draw layers: baseSkin -> trait (no stage)
+          ctx.drawImage(baseSkinImg, 0, 0, canvas.width, canvas.height);
+          ctx.drawImage(traitImg, 0, 0, canvas.width, canvas.height);
+          
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const file = new File([blob], `mascot-${Date.now()}.png`, { type: 'image/png' });
+              resolve(file);
+            } else {
+              reject(new Error('Failed to create blob'));
+            }
+          }, 'image/png');
+        }
+      };
+
+      const isCloudFrontUrl = baseSkinPath.startsWith('http');
+      if (isCloudFrontUrl) {
+        baseSkinImg.crossOrigin = 'anonymous';
+        traitImg.crossOrigin = 'anonymous';
+      }
+
+      baseSkinImg.onload = onImageLoad;
+      baseSkinImg.onerror = () => reject(new Error(`Failed to load base skin: ${baseSkinPath}`));
+      baseSkinImg.src = baseSkinPath;
+
+      traitImg.onload = onImageLoad;
+      traitImg.onerror = () => reject(new Error(`Failed to load trait: ${traitPath}`));
+      traitImg.src = traitPath;
+    });
+  }, []);
+
+  // Handle reveal button click
   const handleReveal = async () => {
     if (isRevealed || isRevealing) return;
-    
+
     setIsRevealing(true);
     try {
       const mascot = await generateMascot();
       setMascotCard(mascot);
-      
+
       // Animation delay
       setTimeout(() => {
         setIsRevealed(true);
         setIsRevealing(false);
-        toast.success(`🎉 You got a ${mascot.rarity} ${mascot.name}!`);
+        toast.success(`🎴 You got a ${mascot.rarity} ${mascot.name}!`);
       }, 2000);
     } catch (error) {
       console.error('Failed to generate mascot:', error);
@@ -223,37 +279,76 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
     }
   };
 
-  // Get user ID from localStorage (matching test frontend exactly)
-  // The test frontend assumes cto_user_id is already stored from initial auth sync
-  const getUserId = (): string | null => {
+  // Get derived values from mascotCard
+  const selectedCardId = mascotCard?.id || null;
+  const baseSkinPath = mascotCard ? getMascotImageUrl('mascots/SKIN/BASE SKIN.png') : '';
+  const stagePath = mascotCard ? getMascotImageUrl('mascots/STAGE/STAGE.png') : '';
+  const traitPath = mascotCard ? getMascotImageUrl(`mascots/TRAITS/${mascotCard.trait}.png`) : '';
+  const traitName = mascotCard ? TRAIT_INFO[mascotCard.trait].name : '';
+
+  // Get user ID from localStorage with fallback to Privy user.id
+  const getUserId = useCallback((): string | null => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('cto_user_id');
+      const storedUserId = localStorage.getItem('cto_user_id');
+      if (storedUserId) {
+        return storedUserId;
+      }
+      // Fallback to Privy user.id if localStorage not available
+      if (user?.id) {
+        return user.id;
+      }
     }
     return null;
+  }, [user?.id]);
+
+  // Check if authentication token exists
+  const hasAuthToken = (): boolean => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('cto_auth_token');
+      return !!token;
+    }
+    return false;
   };
 
-  // Auto-save PFP when mascot is revealed (like test frontend)
+  // Reset state when card changes
   useEffect(() => {
-    const handleSavePFP = async () => {
-      if (!mascotCard || !isRevealed || isAutoSaved || isSaving) return;
+    setIsAutoSaved(false);
+    setImagesLoaded({ base: false, stage: false, trait: false });
+    setCompositeFile(null);
+    
+    // Fallback: Mark all images as loaded after 2 seconds to prevent infinite loader
+    // (in case onLoad events don't fire for any reason)
+    const fallbackTimer = setTimeout(() => {
+      setImagesLoaded({ base: true, stage: true, trait: true });
+    }, 2000);
+    
+    return () => clearTimeout(fallbackTimer);
+  }, [selectedCardId]);
+
+  // Auto-save when images are loaded (card is revealed) - simplified trigger like main branch
+  useEffect(() => {
+    const autoSavePFP = async () => {
+      if (!selectedCardId || !allImagesLoaded || isAutoSaved || isSaving) return;
 
       try {
-        // Convert data URL to File
-        const dataUrl = mascotCard.compositeImage;
-        const response = await fetch(dataUrl);
-        const blob = await response.blob();
-        const file = new File([blob], `mascot-${mascotCard.id}.png`, { type: 'image/png' });
-
-        // Get user ID from localStorage (matching test frontend: localStorage.getItem('cto_user_id'))
-        const userId = getUserId();
-
-        if (!userId) {
-          console.warn('User ID not found, skipping auto-save. Please ensure you are logged in.');
-          // Don't show error toast - just log it, as the user can still use the mascot
+        // Check if authentication token exists before proceeding
+        if (!hasAuthToken()) {
+          console.warn('Authentication token not found, skipping auto-save. Please ensure you are logged in.');
           return;
         }
 
-        // Save PFP automatically (silent - no toast)
+        // Composite the mascot layers into a single image file (without stage)
+        const file = await compositeMascotImage(baseSkinPath, traitPath);
+        setCompositeFile(file); // Store for reuse in manual save
+        
+        // Get user ID from localStorage with fallback
+        const userId = getUserId();
+        if (!userId) {
+          console.warn('User ID not found, skipping auto-save. Please ensure you are logged in.');
+          return;
+        }
+
+        // Save PFP automatically with toast notification
         const result = await pfpService.savePFP(file, userId);
         
         if (result.success) {
@@ -263,35 +358,45 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
         }
       } catch (error) {
         console.error('Failed to auto-save PFP:', error);
-        // Don't show error toast - just log it, as the user can still use the mascot
+        // Don't show error toast on auto-save failure - user can manually save
+        // Only log it for debugging
       }
     };
 
-    // Trigger auto-save when mascot is revealed
-    if (isRevealed && mascotCard) {
-      handleSavePFP();
+    // Trigger auto-save when card is revealed
+    if (selectedCardId && allImagesLoaded) {
+      autoSavePFP();
     }
-  }, [mascotCard, isRevealed, isAutoSaved, isSaving]);
+  }, [selectedCardId, allImagesLoaded, isAutoSaved, isSaving, baseSkinPath, traitPath, compositeMascotImage, getUserId]);
 
   const handleSavePFP = async () => {
-    if (!mascotCard) return;
+    if (!selectedCardId) return;
+    
+    // Check if authentication token exists before proceeding
+    if (!hasAuthToken()) {
+      toast.error('Please ensure you are logged in and try again.');
+      return;
+    }
     
     setIsSaving(true);
     try {
-      // Convert data URL to File
-      const dataUrl = mascotCard.compositeImage;
-      const response = await fetch(dataUrl);
-      const blob = await response.blob();
-      const file = new File([blob], `mascot-${mascotCard.id}.png`, { type: 'image/png' });
-
-      // Get user ID from localStorage (matching test frontend: localStorage.getItem('cto_user_id'))
+      // Reuse existing composite file if available, otherwise create it
+      let fileToSave = compositeFile;
+      
+      if (!fileToSave) {
+        // Only regenerate if we don't have a stored file
+        fileToSave = await compositeMascotImage(baseSkinPath, traitPath);
+        setCompositeFile(fileToSave);
+      }
+      
+      // Get user ID from localStorage with fallback
       const userId = getUserId();
       if (!userId) {
         throw new Error('User ID not found. Please ensure you are logged in and try again.');
       }
 
       // Upload and save the PFP
-      const result = await pfpService.savePFP(file, userId);
+      const result = await pfpService.savePFP(fileToSave, userId);
       
       if (result.success) {
         setIsAutoSaved(true);
@@ -333,6 +438,63 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
             </div>
           </div>
         )}
+
+        {/* Base Skin Layer (background) */}
+        <div className="absolute inset-0 z-10">
+          <Image
+            key={`base-${selectedCardId}`}
+            src={baseSkinPath}
+            alt="Base Skin"
+            fill
+            className="object-contain"
+            priority
+            unoptimized
+            onLoad={() => setImagesLoaded(prev => ({ ...prev, base: true }))}
+            onError={(e) => {
+              console.error('Failed to load base skin:', baseSkinPath);
+              e.currentTarget.style.display = 'none';
+              setImagesLoaded(prev => ({ ...prev, base: true })); // Mark as loaded even on error to hide spinner
+            }}
+          />
+        </div>
+        
+        {/* Stage Layer (middle) */}
+        <div className="absolute inset-0 z-0">
+          <Image
+            key={`stage-${selectedCardId}`}
+            src={stagePath}
+            alt="Stage"
+            fill
+            className="object-contain"
+            priority
+            unoptimized
+            onLoad={() => setImagesLoaded(prev => ({ ...prev, stage: true }))}
+            onError={(e) => {
+              console.error('Failed to load stage:', stagePath);
+              e.currentTarget.style.display = 'none';
+              setImagesLoaded(prev => ({ ...prev, stage: true })); // Mark as loaded even on error to hide spinner
+            }}
+          />
+        </div>
+        
+        {/* Trait Layer (foreground) */}
+        <div className="absolute inset-0 z-20">
+          <Image
+            key={`trait-${selectedCardId}-${traitPath}`}
+            src={traitPath}
+            alt={traitName}
+            fill
+            className="object-contain"
+            priority
+            unoptimized
+            onLoad={() => setImagesLoaded(prev => ({ ...prev, trait: true }))}
+            onError={(e) => {
+              console.error('Failed to load trait:', traitPath);
+              e.currentTarget.style.display = 'none';
+              setImagesLoaded(prev => ({ ...prev, trait: true })); // Mark as loaded even on error to hide spinner
+            }}
+          />
+        </div>
 
         {/* Card Front (After Reveal) */}
         {isRevealed && mascotCard && (
