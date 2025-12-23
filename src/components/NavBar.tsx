@@ -47,10 +47,12 @@ export default function NavBar() {
   const [hasAvatar, setHasAvatar] = useState(false);
   const pathname = usePathname();
 
-
-  const showAuthenticatedUI = (privyAuthenticated && ready) || isAuthenticated;
+  // Wait for Privy to be ready before determining authentication state
+  // This prevents the login button from flashing on page load
+  const showAuthenticatedUI = ready && (privyAuthenticated || isAuthenticated);
 
   // Check if user has avatar and listen for changes
+  // This is only used to show AvatarDropdown alongside HarvestGrape
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const checkAvatar = () => {
@@ -290,9 +292,13 @@ export default function NavBar() {
         ) : null}
 
         <div className="border-l-[0.2px] ml-4 border-[#FFFFFF20] h-full flex items-center justify-center gap-2">
-          {showAuthenticatedUI ? (
+          {!ready ? (
+            // Show nothing while Privy is initializing to prevent login button flash
+            <div className="w-20 h-9" /> // Placeholder to maintain layout
+          ) : showAuthenticatedUI ? (
             <>
-              {hasAvatar ? <AvatarDropdown /> : <HarvestGrape />}
+              <HarvestGrape />
+              {hasAvatar && <AvatarDropdown />}
             </>
           ) : (
             <LoginButton />

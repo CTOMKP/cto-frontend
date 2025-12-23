@@ -26,19 +26,8 @@ import TimeframeFilterBar, {
 } from "../../../components/TimeframeFilterBar";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { ApiCoinItem } from "@/types/api";
-
-// Helper function to format relative age
-function formatRelativeAge(date: Date): string {
-  const diffMs = Date.now() - date.getTime();
-  const mins = Math.floor(diffMs / 60000);
-  if (mins < 60) return `${mins}min`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}hr`;
-  const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d`;
-  const months = Math.floor(days / 30);
-  return `${months}mo`;
-}
+import FallbackImage from "@/components/FallbackImage";
+import { formatRelativeAge, convertAgeToRelative } from "./utils/listingUtils";
 
 // Helper function to create shorter address for TrendingCoins
 function shortenAddressForTrending(address: string): string {
@@ -216,30 +205,53 @@ export default function TrendingCoins({
 
   // Convert API data to the format expected by the component
   const trendingData = useMemo(() => {
+    console.log('TrendingCoins - apiData received:', apiData?.length || 0, 'items');
     if (!apiData || apiData.length === 0) {
+      console.log('TrendingCoins - No apiData, returning empty array');
       return [];
     }
     
     // Calculate trending score for each coin
-    const coinsWithScores = apiData.map((item) => {
-      const createdAt = item.createdAt ? new Date(item.createdAt) : null;
-      const ageStr = createdAt ? formatRelativeAge(createdAt) : item.age || "1h";
-      
-      // Calculate trending score based on multiple factors
-      const trendingScore = calculateTrendingScore(item);
-      
-      return {
-        item,
-        trendingScore,
-        createdAt,
-        ageStr
-      };
-    });
+    const coinsWithScores = apiData
+      .filter((item) => item.contractAddress) // Only include items with valid addresses
+      .map((item) => {
+        // Use backend-provided age (actual token age) or fallback to calculating from createdAt
+        let ageStr: string | null = null;
+        if (item.age && typeof item.age === 'string' && item.age.trim() !== '') {
+          // Convert "309 days" format to relative format like "309d" or "13hr"
+          ageStr = convertAgeToRelative(item.age) || item.age;
+        } else {
+          const createdAt = item.createdAt ? new Date(item.createdAt) : null;
+          ageStr = createdAt ? formatRelativeAge(createdAt) : "1h";
+        }
+        
+        // Calculate trending score based on multiple factors
+        const trendingScore = calculateTrendingScore(item);
+        
+        return {
+          item,
+          trendingScore,
+          ageStr
+        };
+      });
     
     // Sort by trending score (highest first) and take top 6
+    // If no coins have a score > 0, still show top 6 by score (even if 0)
+    // This ensures we always show something if there's data
     const sortedCoins = coinsWithScores
-      .sort((a, b) => b.trendingScore - a.trendingScore)
+      .sort((a, b) => {
+        // Primary sort: trending score
+        if (b.trendingScore !== a.trendingScore) {
+          return b.trendingScore - a.trendingScore;
+        }
+        // Secondary sort: volume (if available)
+        const aVolume = Number(a.item.volume24h ?? a.item?.metadata?.market?.volume?.h24 ?? 0);
+        const bVolume = Number(b.item.volume24h ?? b.item?.metadata?.market?.volume?.h24 ?? 0);
+        return bVolume - aVolume;
+      })
       .slice(0, 6);
+    
+    console.log('TrendingCoins - Processed coins:', sortedCoins.length);
     
     return sortedCoins.map(({ item, ageStr }) => {
       
@@ -417,9 +429,9 @@ export default function TrendingCoins({
                   <TableCell className="!py-1">
                     <div className="flex items-center gap-1">
                       <div className="relative">
-                        <Image
-                          className="size-7 rounded-full border-[0.36px] border-white"
-                          src={data.image || ""}
+                        <FallbackImage
+                          className="size-7 rounded-full border-[0.36px] border-white object-cover"
+                          src={data.image}
                           alt="coin-image"
                           width={28}
                           height={28}

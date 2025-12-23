@@ -21,8 +21,8 @@ export default function Listings() {
       setIsLoading(true);
       const base = process.env.NEXT_PUBLIC_BACKEND_URL;
       
-      // Fetch from all chains initially
-      const url = `${base}/api/listing/listings?category=MEME&sort=updatedAt%3Adesc&limit=10000&chain=SOLANA`;
+      // Fetch from all chains initially (remove chain filter to get all chains)
+      const url = `${base}/api/v1/listing/listings?category=MEME&sort=updatedAt%3Adesc&limit=10000`;
       
       try {
         const res = await fetch(url);
@@ -30,7 +30,15 @@ export default function Listings() {
           setIsLoading(false);
           return;
         }
-        const data: ApiListingResponse = await res.json();
+        const response = await res.json();
+        console.log('Highlights - Raw API response:', response);
+        console.log('Highlights - Response.data:', response.data);
+        
+        // Backend wraps response in { data, statusCode, timestamp } via TransformInterceptor
+        const data: ApiListingResponse = response.data || response;
+        console.log('Highlights - Parsed data:', data);
+        console.log('Highlights - Items count:', data.items?.length || 0);
+        console.log('Highlights - First item sample:', data.items?.[0]);
         setApiData(data.items || []);
         setIsLoading(false);
       } catch (e) {
