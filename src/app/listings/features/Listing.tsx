@@ -14,7 +14,7 @@ import { MemeCategory } from "../../../components/MemeCategoryFilter";
 import { Network } from "../../../components/NetworkFilter";
 import { ApiCoinItem, ApiListingResponse } from "@/types/api";
 import { SortField, SortDirection, MockLikeCoin } from "./types/listing";
-import { formatRelativeAge } from "./utils/listingUtils";
+import { formatRelativeAge, convertAgeToRelative } from "./utils/listingUtils";
 import ListingTableSkeleton from "./ListingTableSkeleton";
 import ListingTableHeader from "./ListingTableHeader";
 import ListingTableRow from "./ListingTableRow";
@@ -53,27 +53,78 @@ export default function TopListings() {
       let url;
       if (selectedNetwork === null) {
         // No network selected - fetch from all chains
-        url = `${base}/api/listing/listings?category=MEME&sort=updatedAt%3Adesc&page=${page}&limit=${limit}`;
+        url = `${base}/api/v1/listing/listings?category=MEME&sort=updatedAt%3Adesc&page=${page}&limit=${limit}`;
       } else {
         // Specific network selected - fetch from that chain only
         const chainParam = selectedNetwork.toUpperCase();
-        url = `${base}/api/listing/listings?chain=${chainParam}&category=MEME&sort=updatedAt%3Adesc&page=${page}&limit=${limit}`;
+        url = `${base}/api/v1/listing/listings?chain=${chainParam}&category=MEME&sort=updatedAt%3Adesc&page=${page}&limit=${limit}`;
       }
       
       try {
         const res = await fetch(url);
         if (!res.ok) {
+          console.error('Failed to fetch listings:', res.status, res.statusText);
           setIsLoading(false);
           return;
         }
-        const data: ApiListingResponse = await res.json();
+        const response = await res.json();
+        console.log('Raw API response:', response);
+        console.log('Response type:', typeof response);
+        console.log('Response keys:', response ? Object.keys(response) : 'response is null/undefined');
+        console.log('Response.data:', response?.data);
+        console.log('Response.statusCode:', response?.statusCode);
+        
+        // Backend wraps response in { data, statusCode, timestamp } via TransformInterceptor
+        // Handle both wrapped and unwrapped responses
+        let data: ApiListingResponse;
+        if (response && typeof response === 'object') {
+          if ('data' in response && response.data) {
+            data = response.data;
+          } else if ('items' in response || 'total' in response) {
+            // Response is already unwrapped (shouldn't happen but handle it)
+            data = response as ApiListingResponse;
+          } else {
+            console.error('Unexpected response structure:', response);
+            data = { total: 0, items: [], page: 1, limit: 20 };
+          }
+        } else {
+          console.error('Invalid response:', response);
+          data = { total: 0, items: [], page: 1, limit: 20 };
+        }
+        
+        console.log('Parsed data:', data);
+        console.log('Listings API response:', { total: data.total, itemsCount: data.items?.length, items: data.items });
 
         setTotal(data.total || 0);
         setRawApiItems(data.items || []);
         
         const mapped: MockLikeCoin[] = (data.items || []).map((it) => {
-          const createdAt = it.createdAt ? new Date(it.createdAt) : null;
-          const ageStr = createdAt ? formatRelativeAge(createdAt) : it.age || null;
+          // Use backend-provided age (actual token age) or fallback to calculating from createdAt
+          let ageStr: string | null = null;
+          if (it.age && typeof it.age === 'string' && it.age.trim() !== '') {
+            // Convert "309 days" format to relative format like "309d" or "13hr"
+            ageStr = convertAgeToRelative(it.age) || it.age;
+          } else {
+            const createdAt = it.createdAt ? new Date(it.createdAt) : null;
+            ageStr = createdAt ? formatRelativeAge(createdAt) : null;
+          }
+          
+          // Get holders from multiple possible sources - preserve null for "N/A" display
+          const holderCount = it.holders ?? it?.metadata?.market?.holders ?? null;
+          
+          // Get tier and normalize it
+          let tier: string | null = it.tier || null;
+          if (tier) {
+            tier = String(tier).trim().toLowerCase();
+            // Normalize various invalid tier values to null (including all dash variations)
+            if (tier === 'none' || tier === 'null' || tier === 'undefined' || tier === '' || 
+                tier === '—' || tier === '----' || tier === '------' || 
+                tier.startsWith('---') || tier === 'n/a' || tier === 'na' ||
+                /^[-—]+$/.test(tier)) { // Match any string that's only dashes/em-dashes
+              tier = null;
+            }
+          }
+          
           return {
             name: it.name || it.symbol || "",
             whale: false,
@@ -86,6 +137,7 @@ export default function TopListings() {
             category: it.category || "meme",
             communityScore: typeof it.communityScore === "number" ? it.communityScore : (it?.metadata?.market?.communityScore ?? 0),
             degenAudit: typeof it.riskScore === "number" ? it.riskScore : (it?.metadata?.market?.riskScore ?? 0),
+            tier: tier,
             mindshare: undefined,
             price: {
               amount: Number(it.priceUsd ?? 0),
@@ -100,7 +152,7 @@ export default function TopListings() {
             marketCap: Number(it.marketCap ?? it?.metadata?.market?.fdv ?? 0),
             liquidity: Number(it.liquidityUsd ?? 0),
             volume: { amount: Number(it.volume24h ?? it?.metadata?.market?.volume?.h24 ?? 0) },
-            holders: Number(it.holders ?? it?.metadata?.market?.holders ?? 0),
+            holders: holderCount !== null && holderCount !== undefined ? Number(holderCount) : null,
           } as MockLikeCoin;
         });
         setLiveItems(mapped);
@@ -253,8 +305,32 @@ export default function TopListings() {
   const handleFilterChange = (filteredItems: ApiCoinItem[]) => {
     // Convert filtered API items to MockLikeCoin format for display
     const mapped: MockLikeCoin[] = filteredItems.map((it) => {
-      const createdAt = it.createdAt ? new Date(it.createdAt) : null;
-      const ageStr = createdAt ? formatRelativeAge(createdAt) : it.age || null;
+      // Use backend-provided age (actual token age) or fallback to calculating from createdAt
+      let ageStr: string | null = null;
+      if (it.age && typeof it.age === 'string' && it.age.trim() !== '') {
+        // Convert "309 days" format to relative format like "309d" or "13hr"
+        ageStr = convertAgeToRelative(it.age) || it.age;
+      } else {
+        const createdAt = it.createdAt ? new Date(it.createdAt) : null;
+        ageStr = createdAt ? formatRelativeAge(createdAt) : null;
+      }
+      
+      // Get holders from multiple possible sources - preserve null for "N/A" display
+      const holderCount = it.holders ?? it?.metadata?.market?.holders ?? null;
+      
+      // Get tier and normalize it
+      let tier: string | null = it.tier || null;
+      if (tier) {
+        tier = String(tier).trim().toLowerCase();
+        // Normalize various invalid tier values to null (including all dash variations)
+        if (tier === 'none' || tier === 'null' || tier === 'undefined' || tier === '' || 
+            tier === '—' || tier === '----' || tier === '------' || 
+            tier.startsWith('---') || tier === 'n/a' || tier === 'na' ||
+            /^[-—]+$/.test(tier)) { // Match any string that's only dashes/em-dashes
+          tier = null;
+        }
+      }
+      
       return {
         name: it.name || it.symbol || "",
         age: ageStr,
@@ -265,7 +341,8 @@ export default function TopListings() {
         chain: it.chain || "solana", // Default to solana if no chain specified
         category: it.category || "meme", // Include category from API
         communityScore: typeof it.communityScore === "number" ? it.communityScore : (it?.metadata?.market?.communityScore ?? 0),
-        degenAudit: 0,
+        degenAudit: typeof it.riskScore === "number" ? it.riskScore : (it?.metadata?.market?.riskScore ?? 0),
+        tier: tier,
         mindshare: undefined,
         price: {
           amount: Number(it.priceUsd ?? 0),
@@ -280,7 +357,7 @@ export default function TopListings() {
         marketCap: Number(it.marketCap ?? it?.metadata?.market?.fdv ?? 0),
         liquidity: Number(it.liquidityUsd ?? 0),
         volume: { amount: Number(it.volume24h ?? it?.metadata?.market?.volume?.h24 ?? 0) },
-        holders: Number(it.holders ?? it?.metadata?.market?.holders ?? 0),
+        holders: Number(holderCount),
       } as MockLikeCoin;
     });
     setLiveItems(mapped);

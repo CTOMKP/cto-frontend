@@ -296,7 +296,9 @@ import WalletsDialog from './features/WalletsDialog';
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, authenticated, ready } = usePrivy();
+  const { user, authenticated, ready, logout } = usePrivy();
+  // Keep allWallets for potential future use (displaying all wallets)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [allWallets, setAllWallets] = useState<BackendWallet[]>([]);
   const [movementWalletAddress, setMovementWalletAddress] = useState<string | null>(null);
   const [copiedAddress, setCopiedAddress] = useState(false);
@@ -359,7 +361,8 @@ export default function ProfilePage() {
           console.error('Failed to parse wallets from localStorage:', parseError);
         }
       }
-
+      
+      // Fallback: Fetch from backend if localStorage is empty or invalid
       const token = localStorage.getItem('cto_auth_token');
       const userId = localStorage.getItem('cto_user_id');
       
@@ -369,9 +372,10 @@ export default function ProfilePage() {
         return;
       }
 
+      console.log('🔄 Fetching wallets from backend...');
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await axios.get(
-        `${backendUrl}/api/auth/privy/wallets`,
+        `${backendUrl}/api/v1/auth/privy/wallets`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -395,6 +399,26 @@ export default function ProfilePage() {
         }
 
         setAllWallets(wallets);
+        
+        // Check if Movement wallet exists (Movement wallets are detected as 'aptos' chainType or 'MOVEMENT' blockchain)
+        interface WalletWithMovement {
+          blockchain?: string;
+          chainType?: string;
+          walletClient?: string;
+          address?: string;
+        }
+        
+        const movementWallet = wallets.find((w: WalletWithMovement) => 
+          w.blockchain === 'MOVEMENT' || 
+          w.blockchain === 'APTOS' || 
+          w.chainType === 'aptos' || 
+          w.walletClient === 'APTOS_EMBEDDED'
+        );
+        if (movementWallet?.address) {
+          setMovementWalletAddress(movementWallet.address);
+        }
+        
+        // Update localStorage with fresh data
         localStorage.setItem('cto_user_wallets', JSON.stringify(wallets));
       }
     } catch (error) {
@@ -431,6 +455,15 @@ export default function ProfilePage() {
     setTimeout(() => setCopiedAddress(false), 2000);
   };
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
   if (!ready) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -452,15 +485,8 @@ export default function ProfilePage() {
     );
   }
 
-  const privyWallets = user?.linkedAccounts?.filter(
-    (account) => account.type === 'wallet'
-  ) as PrivyWalletAccount[] || [];
-  const displayWallets = allWallets.length > 0 ? allWallets : privyWallets;
-  
-  const uniqueWallets = displayWallets.filter((wallet, index, self) => 
-    index === self.findIndex((w) => w.address.toLowerCase() === wallet.address.toLowerCase())
-  );
-  
+  // Use movementWalletAddress state (set from backend wallets or Privy linkedAccounts)
+  // This matches the test frontend pattern
   const email = user?.email?.address || user?.wallet?.address || 'Privy User';
   
   const avatarUrl = typeof window !== 'undefined' 

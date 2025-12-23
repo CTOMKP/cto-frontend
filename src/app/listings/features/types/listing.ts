@@ -12,7 +12,8 @@ export type MockLikeCoin = {
   chain?: string;
   category?: string;
   communityScore: number;
-  degenAudit: number; // not in API; filled with 0 to keep UI stable
+  degenAudit: number; // Risk score (0-100, higher = safer)
+  tier?: string | null; // Tier badge: STELLAR, BLOOM, SPROUT, SEED, or null
   mindshare?: { mentions: number; sentiment: string; volume: number };
   price: {
     amount: number;

@@ -14,9 +14,20 @@ import { Check, SquareArrowOutUpRight } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Link from 'next/link';
 import { BackendWallet } from '@/types/privy';
+import FallbackImage from './FallbackImage';
+import { getCloudFrontUrl } from '@/lib/image-url-helper';
 
 export default function AvatarDropdown() {
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  // Initialize exactly like profile page - read raw URL from localStorage
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
+    // Initialize from localStorage
+    if (typeof window !== 'undefined') {
+      const raw = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
+      console.log('[AvatarDropdown] 🎯 Initial state - raw from localStorage:', raw);
+      return raw; // Return raw URL, transformation happens in useEffect (like profile page)
+    }
+    return null;
+  });
   const [copiedAddress, setCopiedAddress] = useState(false);
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
@@ -27,25 +38,84 @@ export default function AvatarDropdown() {
   const { logout } = usePrivyAuth();
   const { user } = usePrivy();
 
+  // Set email and username on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const updateAvatar = () => {
-        const url = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
-        setAvatarUrl(url);
-      };
-      
-      updateAvatar();
       const userEmail = user?.email?.address || localStorage.getItem('cto_user_email') || '';
       setEmail(userEmail);
-      // Get username from localStorage or use email prefix
       const storedUsername = localStorage.getItem('cto_user_username') || userEmail.split('@')[0] || 'User';
       setUsername(storedUsername);
-
-      // Listen for storage changes (when avatar is updated)
-      window.addEventListener('storage', updateAvatar);
-      return () => window.removeEventListener('storage', updateAvatar);
     }
   }, [user]);
+
+  // Listen for avatar updates from PFP flow - EXACT COPY from profile page
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    console.log('[AvatarDropdown] 🔄 useEffect running, current avatarUrl state:', avatarUrl);
+
+    // Listen for custom event (dispatched by pfpService)
+    const handleAvatarUpdate = () => {
+      console.log('[AvatarDropdown] 📢 avatarUpdated event received');
+      const rawUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
+      console.log('[AvatarDropdown] 📢 Raw URL from localStorage:', rawUrl);
+      if (rawUrl) {
+        const newAvatarUrl = getCloudFrontUrl(rawUrl);
+        console.log('[AvatarDropdown] 📢 Transformed URL:', newAvatarUrl, 'Current state:', avatarUrl);
+        if (newAvatarUrl !== avatarUrl) {
+          console.log('[AvatarDropdown] ✅ Updating avatarUrl state to:', newAvatarUrl);
+          setAvatarUrl(newAvatarUrl);
+        } else {
+          console.log('[AvatarDropdown] ⏭️ URLs match, skipping update');
+        }
+      } else {
+        console.log('[AvatarDropdown] ⚠️ No raw URL found in localStorage');
+      }
+    };
+
+    // Listen for localStorage changes (cross-tab updates)
+    const handleStorageChange = (e: StorageEvent) => {
+      console.log('[AvatarDropdown] 💾 Storage event:', e.key, e.newValue);
+      if ((e.key === 'cto_user_avatar_url' || e.key === 'profile_avatar_url') && e.newValue) {
+        const cloudfrontUrl = getCloudFrontUrl(e.newValue);
+        console.log('[AvatarDropdown] ✅ Updating from storage event:', cloudfrontUrl);
+        setAvatarUrl(cloudfrontUrl);
+      }
+    };
+
+    // Check localStorage periodically (same-tab updates)
+    const checkAvatar = () => {
+      const rawUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
+      if (rawUrl) {
+        const cloudfrontUrl = getCloudFrontUrl(rawUrl);
+        if (cloudfrontUrl !== avatarUrl) {
+          console.log('[AvatarDropdown] ⏰ Periodic check - updating from', avatarUrl, 'to', cloudfrontUrl);
+          setAvatarUrl(cloudfrontUrl);
+        }
+      } else if (avatarUrl) {
+        console.log('[AvatarDropdown] ⏰ Periodic check - clearing avatar (no localStorage value)');
+        setAvatarUrl(null);
+      }
+    };
+
+    // Transform immediately on mount (like profile page)
+    checkAvatar();
+
+    window.addEventListener('avatarUpdated', handleAvatarUpdate);
+    window.addEventListener('storage', handleStorageChange);
+    const interval = setInterval(checkAvatar, 1000);
+
+    return () => {
+      window.removeEventListener('avatarUpdated', handleAvatarUpdate);
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [avatarUrl]);
+
+  // Log current avatarUrl on every render
+  useEffect(() => {
+    console.log('[AvatarDropdown] 🖼️ Render - avatarUrl state:', avatarUrl);
+  });
 
   // Get primary wallet address
   const primaryWalletAddress = React.useMemo(() => {
@@ -79,27 +149,28 @@ export default function AvatarDropdown() {
 
   const xpProgress = nextLevelXP > 0 ? (currentXP / nextLevelXP) * 100 : 0;
 
+  console.log('[AvatarDropdown] 🎨 Rendering - avatarUrl:', avatarUrl, 'will render FallbackImage:', !!avatarUrl);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className='mx-8.5'>
-        <span className="relative flex justify-center items-center rounded-lg size-13 border-[0.2px] border-[#FFFFFF20]">
-          <span className="relative bg-[#FFFFFF0D] rounded-full size-9 flex items-center justify-center overflow-hidden">
+        <div className="relative w-9 h-9 rounded-full overflow-hidden">
             {avatarUrl ? (
-              <Image
+            <FallbackImage
                 src={avatarUrl}
                 alt="Profile"
                 fill
-                className="object-cover"
-                loading="lazy"
-                unoptimized
+              className="object-cover rounded-full"
+              onLoad={() => console.log('[AvatarDropdown] ✅ FallbackImage onLoad fired for:', avatarUrl)}
               />
             ) : (
+            <div className="w-full h-full bg-[#FFFFFF0D] flex items-center justify-center">
               <span className="text-white text-xs font-bold">
                 {email.charAt(0).toUpperCase() || 'U'}
               </span>
+            </div>
             )}
-          </span>
-        </span>
+        </div>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="bg-[#010101] text-white p-6 w-[300px] border-2 border-[#86868630]">
         {/* Profile Section */}
@@ -107,13 +178,11 @@ export default function AvatarDropdown() {
           <div className="flex items-center gap-3 mb-4">
             <div className="relative w-16 h-16 rounded-full overflow-hidden flex-shrink-0">
               {avatarUrl ? (
-                <Image
+                <FallbackImage
                   src={avatarUrl}
                   alt="Profile"
                   fill
                   className="object-cover rounded-full"
-                  loading="lazy"
-                  unoptimized
                 />
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-xl text-white font-bold">
