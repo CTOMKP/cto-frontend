@@ -5,8 +5,6 @@
  */
 
 const CLOUDFRONT_DOMAIN = process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN || 'd2cjbd1iqkwr9j.cloudfront.net';
-const OLD_S3_BUCKET = 'baze-bucket';
-const NEW_S3_BUCKET = 'ctom-bucket-backup';
 
 /**
  * Transforms an S3 URL or path to CloudFront URL
@@ -47,7 +45,7 @@ export function getCloudFrontUrl(url: string | null | undefined): string {
       try {
         const urlObj = new URL(url);
         imagePath = urlObj.pathname.startsWith('/') ? urlObj.pathname.substring(1) : urlObj.pathname;
-      } catch (e) {
+      } catch {
         // If URL parsing fails, try to extract path manually
         const match = url.match(/\/memes\/.+/) || 
                      url.match(/\/user-uploads\/.+/) || 

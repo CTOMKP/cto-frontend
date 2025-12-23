@@ -9,25 +9,6 @@ import { toast } from "react-toastify";
 import { CardReveal } from "./pfp/CardReveal";
 import { MoonLoader } from "react-spinners";
 
-const sharelinks = [
-  {
-    icon: "/social-icons/reddit.svg",
-    name: "Reddit", 
-  },
-  {
-    icon: "/social-icons/facebook-meta.svg",
-    name: "Facebook", 
-  },
-  {
-    icon: "/social-icons/x.svg",
-    name: "X", 
-  },
-  {
-    icon: "/social-icons/export-link.svg",
-    name: "Export Link", 
-  }
-]
-
 const PfpSelection = () => {
   const [phase, setPhase] = useState<"stacked" | "spread" | "selected">(
     "stacked"
