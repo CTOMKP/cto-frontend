@@ -17,11 +17,13 @@ function getWalletChainInfo(wallet: BackendWallet | PrivyWalletAccount) {
 interface WalletsDialogProps {
   uniqueWallets: (BackendWallet | PrivyWalletAccount)[];
   user: PrivyUser | null;
+  primaryWalletAddress?: string | null;
 }
 
 export default function WalletsDialog({
   uniqueWallets,
   user,
+  primaryWalletAddress,
 }: WalletsDialogProps) {
   const movementWallet = user ? getMovementWallet(user) : null;
 
@@ -38,6 +40,10 @@ export default function WalletsDialog({
             const { chainType, blockchain } = getWalletChainInfo(wallet);
             const chain = (chainType || blockchain || '').toLowerCase();
             const chainUpper = (chainType || blockchain || '').toUpperCase();
+            
+            // Check if this wallet is the primary (Movement/Aptos) wallet
+            const isPrimary = primaryWalletAddress && 
+              wallet.address.toLowerCase() === primaryWalletAddress.toLowerCase();
             
             return (
               <div key={index} className="border border-gray-700 rounded-lg p-4 hover:border-purple-500 transition-colors">
@@ -56,7 +62,7 @@ export default function WalletsDialog({
                           ? 'Movement Wallet' 
                           : (chain || 'Unknown') + ' Wallet'}
                       </span>
-                      {index === 0 && (
+                      {isPrimary && (
                         <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
                           Primary
                         </span>

@@ -3,7 +3,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import Image from 'next/image';
 
 interface PreviewStepProps {
   formData: {
@@ -205,7 +204,7 @@ export default function PreviewStep({ formData, onBack, onPublish }: PreviewStep
         {/* Boost Ad's Reach Section */}
         <div className="mb-8">
           <h3 className="text-sm font-semibold text-white mb-4">
-            Boost your ad's reach
+            Boost your ad&apos;s reach
           </h3>
           <div className="space-y-3">
             {boostOptions.map((option) => (

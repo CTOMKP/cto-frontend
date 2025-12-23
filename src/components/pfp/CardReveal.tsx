@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -112,9 +112,9 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
   const [isSaving, setIsSaving] = useState(false);
   const [isAutoSaved, setIsAutoSaved] = useState(false);
   const [imagesLoaded, setImagesLoaded] = useState({ base: false, stage: false, trait: false });
+  const [compositeFile, setCompositeFile] = useState<File | null>(null);
   const { user } = usePrivy();
   const containerRef = useRef<HTMLDivElement>(null);
-  const autoSaveAttemptedRef = useRef(false);
   
   const allImagesLoaded = imagesLoaded.base && imagesLoaded.stage && imagesLoaded.trait;
 
@@ -123,39 +123,70 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
   const stagePath = '/mascots/STAGE/STAGE.png';
   const traitPath = getTraitImage(traitName, selectedCardId || 0);
 
-  // Reset auto-save ref when card changes
+  // Get user ID from localStorage with fallback to Privy user.id
+  const getUserId = useCallback((): string | null => {
+    if (typeof window !== 'undefined') {
+      const storedUserId = localStorage.getItem('cto_user_id');
+      if (storedUserId) {
+        return storedUserId;
+      }
+      // Fallback to Privy user.id if localStorage not available
+      if (user?.id) {
+        return user.id;
+      }
+    }
+    return null;
+  }, [user?.id]);
+
+  // Check if authentication token exists
+  const hasAuthToken = (): boolean => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('cto_auth_token');
+      return !!token;
+    }
+    return false;
+  };
+
+  // Reset state when card changes
   useEffect(() => {
-    autoSaveAttemptedRef.current = false;
     setIsAutoSaved(false);
     setImagesLoaded({ base: false, stage: false, trait: false });
+    setCompositeFile(null);
+    
+    // Fallback: Mark all images as loaded after 2 seconds to prevent infinite loader
+    // (in case onLoad events don't fire for any reason)
+    const fallbackTimer = setTimeout(() => {
+      setImagesLoaded({ base: true, stage: true, trait: true });
+    }, 2000);
+    
+    return () => clearTimeout(fallbackTimer);
   }, [selectedCardId]);
 
-  // Auto-save when component mounts and images are loaded (card is revealed)
+  // Auto-save when images are loaded (card is revealed) - simplified trigger like main branch
   useEffect(() => {
-    if (!selectedCardId || autoSaveAttemptedRef.current) return;
-    
-    // Wait for all images to be loaded before attempting auto-save
-    if (!allImagesLoaded) return;
-
     const autoSavePFP = async () => {
-      // Double-check to prevent duplicate saves
-      if (autoSaveAttemptedRef.current || isSaving || isAutoSaved) return;
-      
-      autoSaveAttemptedRef.current = true;
-      setIsSaving(true);
-      
+      if (!selectedCardId || !allImagesLoaded || isAutoSaved || isSaving) return;
+
       try {
-        // Composite the mascot layers into a single image file (without stage)
-        const compositeFile = await compositeMascotImage(baseSkinPath, traitPath);
-        
-        // Get user ID
-        const userId = user?.id || localStorage.getItem('cto_user_id') || '';
-        if (!userId) {
-          throw new Error('User ID not found');
+        // Check if authentication token exists before proceeding
+        if (!hasAuthToken()) {
+          console.warn('Authentication token not found, skipping auto-save. Please ensure you are logged in.');
+          return;
         }
 
-        // Upload and save the PFP automatically
-        const result = await pfpService.savePFP(compositeFile, userId);
+        // Composite the mascot layers into a single image file (without stage)
+        const file = await compositeMascotImage(baseSkinPath, traitPath);
+        setCompositeFile(file); // Store for reuse in manual save
+        
+        // Get user ID from localStorage with fallback
+        const userId = getUserId();
+        if (!userId) {
+          console.warn('User ID not found, skipping auto-save. Please ensure you are logged in.');
+          return;
+        }
+
+        // Save PFP automatically with toast notification
+        const result = await pfpService.savePFP(file, userId);
         
         if (result.success) {
           setIsAutoSaved(true);
@@ -163,43 +194,50 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
         }
       } catch (error: unknown) {
         console.error('Failed to auto-save PFP:', error);
-        // Reset the ref on error so user can manually save
-        autoSaveAttemptedRef.current = false;
         // Don't show error toast on auto-save failure - user can manually save
         // Only log it for debugging
-      } finally {
-        setIsSaving(false);
       }
     };
 
-    // Auto-save after a short delay to ensure everything is ready
-    const timer = setTimeout(() => {
+    // Trigger auto-save when card is revealed
+    if (selectedCardId && allImagesLoaded) {
       autoSavePFP();
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [selectedCardId, allImagesLoaded, user?.id]);
+    }
+  }, [selectedCardId, allImagesLoaded, isAutoSaved, isSaving, baseSkinPath, traitPath]);
 
   const handleSavePFP = async () => {
+    if (!selectedCardId) return;
+    
+    // Check if authentication token exists before proceeding
+    if (!hasAuthToken()) {
+      toast.error('Please ensure you are logged in and try again.');
+      return;
+    }
+    
     setIsSaving(true);
     try {
-      // Composite the mascot layers into a single image file (without stage)
-      const compositeFile = await compositeMascotImage(baseSkinPath, traitPath);
+      // Reuse existing composite file if available, otherwise create it
+      let fileToSave = compositeFile;
       
-      // Get user ID
-      const userId = user?.id || localStorage.getItem('cto_user_id') || '';
+      if (!fileToSave) {
+        // Only regenerate if we don't have a stored file
+        fileToSave = await compositeMascotImage(baseSkinPath, traitPath);
+        setCompositeFile(fileToSave);
+      }
+      
+      // Get user ID from localStorage with fallback
+      const userId = getUserId();
       if (!userId) {
-        throw new Error('User ID not found');
+        throw new Error('User ID not found. Please ensure you are logged in and try again.');
       }
 
-      console.log('userId', userId);
-
       // Upload and save the PFP
-      const result = await pfpService.savePFP(compositeFile, userId);
+      const result = await pfpService.savePFP(fileToSave, userId);
       
       if (result.success) {
         setIsAutoSaved(true);
-        toast.success(result.message || 'Profile picture saved successfully!');
+        // Show single professional success message
+        toast.success('Profile picture updated successfully');
         if (onClose) {
           setTimeout(() => onClose(), 1000);
         }
@@ -235,6 +273,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
           {/* Base Skin Layer (background) */}
           <div className="absolute inset-0 z-10">
             <Image
+              key={`base-${selectedCardId}`}
               src={baseSkinPath}
               alt="Base Skin"
               fill
@@ -253,6 +292,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
           {/* Stage Layer (middle) */}
           <div className="absolute inset-0 z-0">
             <Image
+              key={`stage-${selectedCardId}`}
               src={stagePath}
               alt="Stage"
               fill
@@ -271,6 +311,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
           {/* Trait Layer (foreground) */}
           <div className="absolute inset-0 z-20">
             <Image
+              key={`trait-${selectedCardId}-${traitPath}`}
               src={traitPath}
               alt={traitName}
               fill

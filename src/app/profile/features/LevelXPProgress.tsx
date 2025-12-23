@@ -14,8 +14,6 @@ interface LevelXPProgressProps {
 
 export default function LevelXPProgress({
   level,
-  currentXP,
-  nextLevelXP,
   xpProgress,
 }: LevelXPProgressProps) {
   return (

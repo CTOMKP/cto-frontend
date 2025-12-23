@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -9,7 +9,6 @@ import { usePrivy } from '@privy-io/react-auth';
 import axios from 'axios';
 import { BackendWallet, PrivyWalletAccount, PrivyUser } from '@/types/privy';
 import { getMovementWallet } from '@/lib/movement-wallet';
-import { formatUnits } from 'viem';
 
 interface WalletAsset {
   name: string;
@@ -75,93 +74,156 @@ function getChainImage(chainType?: string, blockchain?: string): string {
   return '/listings-chains/solana.png';
 }
 
-// Fetch balance for a wallet based on chain type
+// Map chain types to Privy API chain enum values
+function mapToPrivyChain(chainType?: string, blockchain?: string): string | null {
+  const chain = (chainType || blockchain || '').toLowerCase();
+  const chainUpper = (chainType || blockchain || '').toUpperCase();
+  
+  const chainMap: Record<string, string> = {
+    'ethereum': 'ethereum',
+    'base': 'base',
+    'polygon': 'polygon',
+    'solana': 'solana',
+    'aptos': 'solana', // Aptos/Movement wallets use solana for balance check in Privy
+    'movement': 'solana',
+  };
+  
+  if (chainMap[chain]) {
+    return chainMap[chain];
+  }
+  
+  // Handle uppercase
+  const upperMap: Record<string, string> = {
+    'ETHEREUM': 'ethereum',
+    'BASE': 'base',
+    'POLYGON': 'polygon',
+    'SOLANA': 'solana',
+    'APTOS': 'solana',
+    'MOVEMENT': 'solana',
+  };
+  
+  if (upperMap[chainUpper]) {
+    return upperMap[chainUpper];
+  }
+  
+  return null;
+}
+
+// Map chain types to Privy API asset enum values
+function mapToPrivyAsset(chainType?: string, blockchain?: string): string | null {
+  const chain = (chainType || blockchain || '').toLowerCase();
+  const chainUpper = (chainType || blockchain || '').toUpperCase();
+  
+  const assetMap: Record<string, string> = {
+    'ethereum': 'eth',
+    'base': 'eth',
+    'polygon': 'pol',
+    'solana': 'sol',
+    'aptos': 'aptos', // Using SOL as fallback for Aptos/Movement
+    'movement': 'aptos',
+  };
+  
+  if (assetMap[chain]) {
+    return assetMap[chain];
+  }
+  
+  const upperMap: Record<string, string> = {
+    'ETHEREUM': 'eth',
+    'BASE': 'eth',
+    'POLYGON': 'pol',
+    'SOLANA': 'sol',
+    'APTOS': 'aptos',
+    'MOVEMENT': 'aptos',
+  };
+  
+  if (upperMap[chainUpper]) {
+    return upperMap[chainUpper];
+  }
+  
+  return null;
+}
+
+// Fetch balance for a wallet using Privy API
+// See: https://docs.privy.io/api-reference/wallets/get-balance#get-balance
 async function fetchWalletBalance(wallet: BackendWallet | PrivyWalletAccount): Promise<number> {
   try {
+    // Privy API requires wallet ID - only works for PrivyWalletAccount with valid ID
+    if (!('id' in wallet) || !wallet.id) {
+      console.warn('Wallet ID not available for Privy balance API');
+      return 0;
+    }
+    
     const { chainType, blockchain } = getWalletChainInfo(wallet);
-    const chain = (chainType || blockchain || '').toLowerCase();
-    const chainUpper = (chainType || blockchain || '').toUpperCase();
-
-    // For Ethereum-based chains (Ethereum, Base, Polygon)
-    if (chain === 'ethereum' || chain === 'base' || chain === 'polygon' || chainUpper === 'ETHEREUM' || chainUpper === 'BASE' || chainUpper === 'POLYGON') {
-      const rpcUrl = 
-        chain === 'base' || chainUpper === 'BASE' ? 'https://mainnet.base.org' :
-        chain === 'polygon' || chainUpper === 'POLYGON' ? 'https://polygon-rpc.com' :
-        'https://eth.llamarpc.com';
-      
-      const response = await fetch(rpcUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          method: 'eth_getBalance',
-          params: [wallet.address, 'latest'],
-          id: 1,
-        }),
-      });
-      
-      const data = await response.json();
-      if (data.result) {
-        // Convert from wei to ETH and then to USD (simplified - should use actual price API)
-        const balanceInWei = BigInt(data.result);
-        const balanceInEth = parseFloat(formatUnits(balanceInWei, 18));
-        // Using approximate ETH price of $3000 (should fetch from API)
-        return balanceInEth * 3000;
+    const privyChain = mapToPrivyChain(chainType, blockchain);
+    const privyAsset = mapToPrivyAsset(chainType, blockchain);
+    
+    if (!privyChain || !privyAsset) {
+      console.warn(`Unsupported chain for Privy balance API: ${chainType || blockchain}`);
+      return 0;
+    }
+    
+    const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
+    const privyAppSecret = process.env.NEXT_PUBLIC_PRIVY_APP_SECRET;
+    
+    // Note: App secret should ideally be stored on backend for security
+    // This is a frontend implementation per user's request
+    if (!privyAppId || !privyAppSecret) {
+      console.warn('Privy App ID or Secret not configured');
+      return 0;
+    }
+    
+    // Create Basic Auth header: base64(appId:appSecret)
+    const authString = Buffer.from(`${privyAppId}:${privyAppSecret}`).toString('base64');
+    
+    const url = new URL(`https://api.privy.io/v1/wallets/${wallet.id}/balance`);
+    url.searchParams.set('chain', privyChain);
+    url.searchParams.set('asset', privyAsset);
+    url.searchParams.set('include_currency', 'usd');
+    
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'Authorization': `Basic ${authString}`,
+        'privy-app-id': privyAppId,
+      },
+    });
+    
+    if (!response.ok) {
+      console.error(`Privy balance API error: ${response.status} ${response.statusText}`);
+      return 0;
+    }
+    
+    const data = await response.json();
+    
+    if (data.balances && data.balances.length > 0) {
+      // Get the first balance and return USD value if available, otherwise use native asset value
+      const balance = data.balances[0];
+      if (balance.display_values?.usd) {
+        return parseFloat(balance.display_values.usd);
+      }
+      // Fallback to native asset value if USD not available
+      if (balance.display_values && Object.values(balance.display_values).length > 0) {
+        const nativeValue = Object.values(balance.display_values)[0];
+        return typeof nativeValue === 'string' ? parseFloat(nativeValue) : 0;
       }
     }
-
-    // For Solana
-    if (chain === 'solana' || chainUpper === 'SOLANA') {
-      const response = await fetch('https://api.mainnet-beta.solana.com', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          method: 'getBalance',
-          params: [wallet.address],
-          id: 1,
-        }),
-      });
-      
-      const data = await response.json();
-      if (data.result?.value) {
-        // Convert from lamports to SOL and then to USD (simplified)
-        const balanceInSol = data.result.value / 1e9;
-        // Using approximate SOL price of $150 (should fetch from API)
-        return balanceInSol * 150;
-      }
-    }
-
-    // For Aptos/Movement - would need Aptos SDK
-    // For now, return 0 or fetch from API if available
+    
     return 0;
   } catch (error) {
-    console.error('Error fetching wallet balance:', error);
+    console.error('Error fetching wallet balance from Privy:', error);
     return 0;
   }
 }
 
 export default function WalletBalance() {
   const { user, authenticated, ready } = usePrivy();
-  const [allWallets, setAllWallets] = useState<BackendWallet[]>([]);
   const [walletAssets, setWalletAssets] = useState<WalletAsset[]>([]);
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [selectedAsset, setSelectedAsset] = useState<WalletAsset | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const walletsLoadedRef = useRef<string | null>(null);
 
-  // Load wallets
-  useEffect(() => {
-    if (authenticated && user && ready) {
-      const userId = user.id;
-      if (walletsLoadedRef.current !== userId) {
-        loadWallets();
-        walletsLoadedRef.current = userId;
-      }
-    }
-  }, [authenticated, user, ready]);
-
-  const loadWallets = async () => {
+  const loadWallets = useCallback(async () => {
     try {
       setIsLoading(true);
       let wallets: BackendWallet[] = [];
@@ -224,15 +286,6 @@ export default function WalletBalance() {
         } as BackendWallet);
       }
 
-      // Convert to BackendWallet format for state
-      const walletsForState: BackendWallet[] = uniqueWallets.map(wallet => ({
-        address: wallet.address,
-        chainType: 'chainType' in wallet ? wallet.chainType : undefined,
-        blockchain: 'blockchain' in wallet ? wallet.blockchain : undefined,
-      }));
-      
-      setAllWallets(walletsForState);
-
       // Fetch balances for all wallets
       const assetsWithBalances = await Promise.all(
         uniqueWallets.map(async (wallet) => {
@@ -260,7 +313,18 @@ export default function WalletBalance() {
       console.error('Failed to load wallets:', error);
       setIsLoading(false);
     }
-  };
+  }, [user]);
+
+  // Load wallets
+  useEffect(() => {
+    if (authenticated && user && ready) {
+      const userId = user.id;
+      if (walletsLoadedRef.current !== userId) {
+        loadWallets();
+        walletsLoadedRef.current = userId;
+      }
+    }
+  }, [authenticated, user, ready, loadWallets]);
 
   // Calculate wallet balance from selected asset
   const walletBalance = selectedAsset?.value || 0;

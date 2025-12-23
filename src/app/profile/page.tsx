@@ -4,12 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
-import { getMovementWallet } from '@/lib/movement-wallet';
 import axios from 'axios';
 import { BackendWallet, PrivyWalletAccount, PrivyUser } from '@/types/privy';
 import UserProfileHeader from './features/UserProfileHeader';
 import LevelXPProgress from './features/LevelXPProgress';
-import MissionStats from './features/MissionStats';
 import ReferralSection from './features/ReferralSection';
 import SocialAccounts from './features/SocialAccounts';
 import WalletBalance from './features/WalletBalance';
@@ -293,6 +291,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const { user, authenticated, ready } = usePrivy();
   const [allWallets, setAllWallets] = useState<BackendWallet[]>([]);
+  const [movementWalletAddress, setMovementWalletAddress] = useState<string | null>(null);
   const [copiedAddress, setCopiedAddress] = useState(false);
   const [walletsDialogOpen, setWalletsDialogOpen] = useState(false);
 
@@ -304,23 +303,54 @@ export default function ProfilePage() {
 
   const walletsLoadedRef = React.useRef<string | null>(null);
 
-  useEffect(() => {
-    if (authenticated && user && ready) {
-      const userId = user.id;
-      if (walletsLoadedRef.current !== userId) {
-        loadWallets();
-        walletsLoadedRef.current = userId;
+  // Check Movement wallet from Privy's linkedAccounts (like test frontend)
+  // Define this FIRST so it can be used in loadWallets
+  const checkMovementWallet = React.useCallback(() => {
+    if (!user?.linkedAccounts) return;
+
+    const movementWalletAccount = user.linkedAccounts.find((account) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const acc = account as any;
+      return acc.type === 'wallet' && acc.chainType === 'aptos';
+    });
+
+    // Access address property (Privy wallet accounts have address)
+    if (movementWalletAccount) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const acc = movementWalletAccount as any;
+      if (acc.address) {
+        setMovementWalletAddress(acc.address);
       }
     }
-  }, [authenticated, user, ready]);
+  }, [user?.linkedAccounts]);
 
-  const loadWallets = async () => {
+  const loadWallets = React.useCallback(async () => {
     try {
+      // First, try to load from localStorage (faster and more reliable)
       const walletsJson = localStorage.getItem('cto_user_wallets');
       if (walletsJson) {
         try {
           const wallets = JSON.parse(walletsJson);
+          
+          // Find Movement wallet from localStorage wallets
+          interface WalletWithMovement extends BackendWallet {
+            blockchain?: string;
+            walletClient?: string;
+          }
+          const movementWallet = wallets.find((w: WalletWithMovement) => 
+            w.blockchain === 'MOVEMENT' ||
+            w.blockchain === 'APTOS' ||
+            w.chainType === 'aptos' ||
+            w.walletClient === 'APTOS_EMBEDDED'
+          );
+          if (movementWallet?.address) {
+            setMovementWalletAddress(movementWallet.address);
+          }
+
           setAllWallets(wallets);
+          
+          // Still check Privy as fallback
+          checkMovementWallet();
           return;
         } catch (parseError) {
           console.error('Failed to parse wallets from localStorage:', parseError);
@@ -331,6 +361,8 @@ export default function ProfilePage() {
       const userId = localStorage.getItem('cto_user_id');
       
       if (!token || !userId) {
+        // If no token, still check Privy
+        checkMovementWallet();
         return;
       }
 
@@ -347,13 +379,42 @@ export default function ProfilePage() {
 
       if (response.data.success && response.data.wallets) {
         const wallets = response.data.wallets;
+        
+        // Find Movement wallet from backend wallets
+        interface WalletWithMovement extends BackendWallet {
+          blockchain?: string;
+          walletClient?: string;
+        }
+        const movementWallet = wallets.find((w: WalletWithMovement) => 
+          w.blockchain === 'MOVEMENT' ||
+          w.blockchain === 'APTOS' ||
+          w.chainType === 'aptos' ||
+          w.walletClient === 'APTOS_EMBEDDED'
+        );
+        if (movementWallet?.address) {
+          setMovementWalletAddress(movementWallet.address);
+        }
+
         setAllWallets(wallets);
         localStorage.setItem('cto_user_wallets', JSON.stringify(wallets));
       }
     } catch (error) {
       console.error('Failed to load wallets:', error);
+      // If backend fails, Privy wallets will be used via checkMovementWallet()
+      checkMovementWallet();
     }
-  };
+  }, [checkMovementWallet]);
+
+  useEffect(() => {
+    if (authenticated && user && ready) {
+      const userId = user.id;
+      if (walletsLoadedRef.current !== userId) {
+        checkMovementWallet();
+        loadWallets();
+        walletsLoadedRef.current = userId;
+      }
+    }
+  }, [authenticated, user, ready, checkMovementWallet, loadWallets]);
 
   // const handleLogout = async () => {
   //   try {
@@ -402,16 +463,14 @@ export default function ProfilePage() {
   );
   
   const email = user?.email?.address || user?.wallet?.address || 'Privy User';
-  const movementWallet = getMovementWallet(user as PrivyUser);
   
   const avatarUrl = typeof window !== 'undefined' 
     ? localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url')
     : null;
 
-  // Get primary wallet address for display
-  const primaryWalletAddress = uniqueWallets.length > 0 
-    ? uniqueWallets[0].address 
-    : movementWallet?.address || '';
+  // Primary wallet address for display (Movement wallet only)
+  // Prioritize movementWalletAddress state (from backend or Privy check)
+  const primaryWalletAddress = movementWalletAddress || '';
 
   // Calculate wallet stats
   // const cosmosWallets = uniqueWallets.filter(w => {
@@ -456,6 +515,7 @@ export default function ProfilePage() {
                 <WalletsDialog
                   uniqueWallets={uniqueWallets}
                   user={user as PrivyUser}
+                  primaryWalletAddress={movementWalletAddress}
                 />
               }
             />

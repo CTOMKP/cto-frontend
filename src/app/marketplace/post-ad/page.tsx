@@ -2,15 +2,14 @@
 
 import React, { useState } from 'react';
 import CategorySelectionStep from './components/CategorySelectionStep';
-import ProjectDetailsStep from './components/ProjectDetailsStep';
+import ProjectDetailsStep, { ProjectDetailsData } from './components/ProjectDetailsStep';
 import PreviewStep from './components/PreviewStep';
 
 type Step = 'category' | 'details' | 'preview';
 
-interface FormData {
+interface FormData extends ProjectDetailsData {
   category?: string;
   subcategory?: string;
-  [key: string]: any;
 }
 
 export default function MarketplacePage() {
@@ -22,7 +21,7 @@ export default function MarketplacePage() {
     setCurrentStep('details');
   };
 
-  const handleDetailsNext = (data: any) => {
+  const handleDetailsNext = (data: ProjectDetailsData) => {
     setFormData((prev: FormData) => ({ ...prev, ...data }));
     setCurrentStep('preview');
   };

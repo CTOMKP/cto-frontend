@@ -6,12 +6,27 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ChevronDown, Calendar, Upload, Plus } from 'lucide-react';
+import { Calendar, Upload, Plus } from 'lucide-react';
+
+export interface ProjectDetailsData {
+  projectName?: string;
+  adTitle?: string;
+  projectDescription?: string;
+  blockchainFocus?: string;
+  roleType?: string;
+  toolsStack?: string;
+  paymentType?: string;
+  amount?: string;
+  deadline?: string;
+  noFixedDeadline?: boolean;
+  visibility?: string;
+  boostOptions?: Record<string, boolean>;
+}
 
 interface ProjectDetailsStepProps {
-  onNext: (data: any) => void;
+  onNext: (data: ProjectDetailsData) => void;
   onBack: () => void;
-  initialData?: any;
+  initialData?: ProjectDetailsData;
 }
 
 export default function ProjectDetailsStep({ onNext, onBack, initialData }: ProjectDetailsStepProps) {
@@ -304,7 +319,7 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
         {/* Boost Options */}
         <div className="mb-6">
           <h3 className="text-[18px] text-white mb-4">
-            Boost your ad's reach
+            Boost your ads&apos; reach
           </h3>
           <div className='border-t-[0.2px] border-0 border-white/20 mt-5 mb-6'></div>
           <div className="space-y-3">
