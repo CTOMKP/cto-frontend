@@ -326,64 +326,64 @@ export const CardReveal: React.FC<CardRevealProps> = ({ onClose }) => {
                 {isRevealing ? 'Revealing your mascot...' : 'Click to reveal your mascot!'}
               </div>
             </div>
-          )}
-          
-          {/* Base Skin Layer (background) */}
-          <div className="absolute inset-0 z-10">
-            <Image
-              key={`base-${selectedCardId}`}
-              src={baseSkinPath}
-              alt="Base Skin"
-              fill
-              className="object-contain"
-              priority
-              unoptimized
-              onLoad={() => setImagesLoaded(prev => ({ ...prev, base: true }))}
-              onError={(e) => {
-                console.error('Failed to load base skin:', baseSkinPath);
-                e.currentTarget.style.display = 'none';
-                setImagesLoaded(prev => ({ ...prev, base: true })); // Mark as loaded even on error to hide spinner
-              }}
-            />
           </div>
-          
-          {/* Stage Layer (middle) */}
-          <div className="absolute inset-0 z-0">
-            <Image
-              key={`stage-${selectedCardId}`}
-              src={stagePath}
-              alt="Stage"
-              fill
-              className="object-contain"
-              priority
-              unoptimized
-              onLoad={() => setImagesLoaded(prev => ({ ...prev, stage: true }))}
-              onError={(e) => {
-                console.error('Failed to load stage:', stagePath);
-                e.currentTarget.style.display = 'none';
-                setImagesLoaded(prev => ({ ...prev, stage: true })); // Mark as loaded even on error to hide spinner
-              }}
-            />
-          </div>
-          
-          {/* Trait Layer (foreground) */}
-          <div className="absolute inset-0 z-20">
-            <Image
-              key={`trait-${selectedCardId}-${traitPath}`}
-              src={traitPath}
-              alt={traitName}
-              fill
-              className="object-contain"
-              priority
-              unoptimized
-              onLoad={() => setImagesLoaded(prev => ({ ...prev, trait: true }))}
-              onError={(e) => {
-                console.error('Failed to load trait:', traitPath);
-                e.currentTarget.style.display = 'none';
-                setImagesLoaded(prev => ({ ...prev, trait: true })); // Mark as loaded even on error to hide spinner
-              }}
-            />
-          </div>
+        )}
+
+        {/* Base Skin Layer (background) */}
+        <div className="absolute inset-0 z-10">
+          <Image
+            key={`base-${selectedCardId}`}
+            src={baseSkinPath}
+            alt="Base Skin"
+            fill
+            className="object-contain"
+            priority
+            unoptimized
+            onLoad={() => setImagesLoaded(prev => ({ ...prev, base: true }))}
+            onError={(e) => {
+              console.error('Failed to load base skin:', baseSkinPath);
+              e.currentTarget.style.display = 'none';
+              setImagesLoaded(prev => ({ ...prev, base: true })); // Mark as loaded even on error to hide spinner
+            }}
+          />
+        </div>
+        
+        {/* Stage Layer (middle) */}
+        <div className="absolute inset-0 z-0">
+          <Image
+            key={`stage-${selectedCardId}`}
+            src={stagePath}
+            alt="Stage"
+            fill
+            className="object-contain"
+            priority
+            unoptimized
+            onLoad={() => setImagesLoaded(prev => ({ ...prev, stage: true }))}
+            onError={(e) => {
+              console.error('Failed to load stage:', stagePath);
+              e.currentTarget.style.display = 'none';
+              setImagesLoaded(prev => ({ ...prev, stage: true })); // Mark as loaded even on error to hide spinner
+            }}
+          />
+        </div>
+        
+        {/* Trait Layer (foreground) */}
+        <div className="absolute inset-0 z-20">
+          <Image
+            key={`trait-${selectedCardId}-${traitPath}`}
+            src={traitPath}
+            alt={traitName}
+            fill
+            className="object-contain"
+            priority
+            unoptimized
+            onLoad={() => setImagesLoaded(prev => ({ ...prev, trait: true }))}
+            onError={(e) => {
+              console.error('Failed to load trait:', traitPath);
+              e.currentTarget.style.display = 'none';
+              setImagesLoaded(prev => ({ ...prev, trait: true })); // Mark as loaded even on error to hide spinner
+            }}
+          />
         </div>
 
         {/* Card Front (After Reveal) */}
