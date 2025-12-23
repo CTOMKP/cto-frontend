@@ -114,6 +114,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
   const [imagesLoaded, setImagesLoaded] = useState({ base: false, stage: false, trait: false });
   const { user } = usePrivy();
   const containerRef = useRef<HTMLDivElement>(null);
+  const autoSaveAttemptedRef = useRef(false);
   
   const allImagesLoaded = imagesLoaded.base && imagesLoaded.stage && imagesLoaded.trait;
 
@@ -122,13 +123,27 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
   const stagePath = '/mascots/STAGE/STAGE.png';
   const traitPath = getTraitImage(traitName, selectedCardId || 0);
 
-  // Auto-save when component mounts (card is revealed)
+  // Reset auto-save ref when card changes
   useEffect(() => {
-    if (!selectedCardId) return;
+    autoSaveAttemptedRef.current = false;
+    setIsAutoSaved(false);
+    setImagesLoaded({ base: false, stage: false, trait: false });
+  }, [selectedCardId]);
+
+  // Auto-save when component mounts and images are loaded (card is revealed)
+  useEffect(() => {
+    if (!selectedCardId || autoSaveAttemptedRef.current) return;
+    
+    // Wait for all images to be loaded before attempting auto-save
+    if (!allImagesLoaded) return;
+
     const autoSavePFP = async () => {
-      if (isAutoSaved || isSaving) return; // Prevent duplicate saves
+      // Double-check to prevent duplicate saves
+      if (autoSaveAttemptedRef.current || isSaving || isAutoSaved) return;
       
+      autoSaveAttemptedRef.current = true;
       setIsSaving(true);
+      
       try {
         // Composite the mascot layers into a single image file (without stage)
         const compositeFile = await compositeMascotImage(baseSkinPath, traitPath);
@@ -148,6 +163,8 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
         }
       } catch (error: unknown) {
         console.error('Failed to auto-save PFP:', error);
+        // Reset the ref on error so user can manually save
+        autoSaveAttemptedRef.current = false;
         // Don't show error toast on auto-save failure - user can manually save
         // Only log it for debugging
       } finally {
@@ -155,13 +172,13 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
       }
     };
 
-    // Auto-save after a short delay to ensure images are loaded
+    // Auto-save after a short delay to ensure everything is ready
     const timer = setTimeout(() => {
       autoSavePFP();
-    }, 500);
+    }, 300);
 
     return () => clearTimeout(timer);
-  }, [selectedCardId, baseSkinPath, traitPath, user?.id, isAutoSaved, isSaving]);
+  }, [selectedCardId, allImagesLoaded, user?.id]);
 
   const handleSavePFP = async () => {
     setIsSaving(true);
@@ -174,6 +191,8 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
       if (!userId) {
         throw new Error('User ID not found');
       }
+
+      console.log('userId', userId);
 
       // Upload and save the PFP
       const result = await pfpService.savePFP(compositeFile, userId);

@@ -6,19 +6,16 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { getMovementWallet } from '@/lib/movement-wallet';
 import axios from 'axios';
-import Image from 'next/image';
 import { BackendWallet, PrivyWalletAccount, PrivyUser } from '@/types/privy';
-import { Button } from '@/components/ui/button';
-import CustomPieChart from '@/components/CustomPieChart';
-import {Eye, EyeOff, Edit, LogOut, Link, Wallet, ChevronDown, ChevronUp, MoveDown, MoveUp, ArrowUpDown, SquareArrowOutUpRight, Check } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-// Helper function to get wallet chain info
-// function getWalletChainInfo(wallet: BackendWallet | PrivyWalletAccount) {
-//   const chainType = 'chainType' in wallet ? wallet.chainType : undefined;
-//   const blockchain = 'blockchain' in wallet ? wallet.blockchain : undefined;
-//   return { chainType, blockchain };
-// }
+import UserProfileHeader from './features/UserProfileHeader';
+import LevelXPProgress from './features/LevelXPProgress';
+import MissionStats from './features/MissionStats';
+import ReferralSection from './features/ReferralSection';
+import SocialAccounts from './features/SocialAccounts';
+import WalletBalance from './features/WalletBalance';
+import PortfolioSection from './features/PortfolioSection';
+import TransactionHistory from './features/TransactionHistory';
+import WalletsDialog from './features/WalletsDialog';
 
 // COMMENTED CODE FOR REFERENCE - DO NOT REMOVE
 // "use client";
@@ -296,8 +293,8 @@ export default function ProfilePage() {
   const router = useRouter();
   const { user, authenticated, ready } = usePrivy();
   const [allWallets, setAllWallets] = useState<BackendWallet[]>([]);
-  const [balanceVisible, setBalanceVisible] = useState(true);
   const [copiedAddress, setCopiedAddress] = useState(false);
+  const [walletsDialogOpen, setWalletsDialogOpen] = useState(false);
 
   useEffect(() => {
     if (ready && !authenticated) {
@@ -436,9 +433,6 @@ export default function ProfilePage() {
     { name: 'Others', value: 10, color: '#EF4444' },
   ];
 
-  // Mock data
-  const walletBalance = 2000000;
-
   const level = 4;
   const currentXP = 45;
   const nextLevelXP = 150;
@@ -450,438 +444,44 @@ export default function ProfilePage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
           {/* Left Container - User Profile, Level/XP, Achievement Task, Wallet Stats */}
           <div className="border-none w-full">
-            <div className="flex items-start justify-between mb-4 border-[0.5px] border-white/20 py-5 px-3 rounded-lg bg-[#FFFFFF]/3">
-              <div className="flex items-start gap-4">
-                <div className="relative w-20 h-20 rounded-full overflow-hidden">
-                  {avatarUrl ? (
-                    <Image
-                      src={avatarUrl}
-                      alt="Profile"
-                      fill
-                      className="object-cover size-15 rounded-full border-[0.6px] border-white"
-                      loading="lazy"
-                      unoptimized
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-2xl">
-                      {email.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <div className="">
-                    <h1 className="text-white/70 font-semibold mb-2">
-                      Username
-                    </h1>
-                    <div className="flex items-center gap-1">
-                      <h2 className="font-bold text-[32px] ">User234353hgfk</h2>
-                      <Edit size={14} />
-                    </div>
-                    {/* <h2 className="text-2xl font-bold text-white">
-                        {email.split('@')[0] || 'User'}
-                      </h2> */}
-                  </div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <p className="text-white/70 font-semibold">
-                      Smart wallet{" "}
-                      <span className="bg-white/20 rounded-[25px] p-1 font-normal">
-                        {primaryWalletAddress.slice(0, 8)}...
-                        {primaryWalletAddress.slice(-8)}
-                      </span>
-                    </p>
-                    <button
-                      onClick={() => copyAddress(primaryWalletAddress)}
-                      className="text-white/70 hover:text-white transition-colors bg-white/20 rounded-[25px] p-1"
-                    >
-                      {copiedAddress ? (
-                        <Check size={14} className="text-[#16C784]" />
-                      ) : (
-                        <Image
-                          src="/copy.svg"
-                          alt="copy"
-                          width={14}
-                          height={14}
-                        />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div className="flex flex-col justify-between items-end self-stretch">
-                <Button className="p-2 w-fit bg-none ronded-lg border-[0.2px] border-white/20">
-                  <LogOut size={32} />
-                </Button>
-                <Button className="text-[#9F9FA9] p-2 ronded-lg border-[0.2px] border-white/20">
-                  View wallets
-                </Button>
-              </div>
-            </div>
-
-            {/* Level and XP Progress */}
-            <div className="mb-4 rounded-lg border-[0.5px] border-white/20 py-[13px] px-3">
-              <div className=" mb-2">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex gap-1">
-                    <Image
-                      alt="badge"
-                      src={"/badge.svg"}
-                      width={15}
-                      height={15}
-                    />
-                    <span className="font-bold">
-                      Level {level} - Senior Sapling
-                    </span>
-                  </div>
-                  <Button className="text-[#9F9FA9] p-2 ronded-lg border-[0.2px] border-white/20">
-                    View more
-                  </Button>
-                </div>
-                {/* <span className="text-sm text-gray-400">
-                  {currentXP} / {nextLevelXP} XP
-                </span> */}
-              </div>
-
-              {/* mission stats */}
-              <div className="mb-4">
-                <h3 className="text-[10.5px] text-[#E4E4E7] mb-4">
-                  Mission Stats
-                </h3>
-                <div className="flex justify-between items-center mb-4">
-                  <div>
-                    <h4 className="text-[#71717B] text-[9px] leading-[12px] mb-1">
-                      Completed Missions
-                    </h4>
-                    <div className="text-[#71717B] text-[9px] leading-[12px]">
-                      <span className="text-white text-[13.5px] leading-5">
-                        6
-                      </span>{" "}
-                      / 7
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="text-[#71717B] text-[9px] leading-[12px] mb-1">
-                      Total XP
-                    </h4>
-                    <div className="text-[#71717B] text-[9px] leading-[12px]">
-                      <span className="text-white text-[13.5px] leading-5">
-                        35
-                      </span>{" "}
-                      / 135
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="text-[#71717B] text-[9px] leading-[12px] mb-1">
-                      Total XP
-                    </h4>
-                    <div className="text-[#71717B] text-[9px] leading-[12px]">
-                      <span className="text-white text-[13.5px] leading-5">
-                        35
-                      </span>{" "}
-                      / 135
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="text-[#71717B] text-[9px] leading-[12px] mb-1">
-                    Completion Rate
-                  </h4>
-                  <div className="text-[#71717B] text-[13.5px] leading-5">
-                    86%
-                  </div>
-                </div>
-              </div>
-              {/* progress */}
-              <div className="w-full h-1 bg-[#27272A] rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-[#FF0075] via-[#FF4A15] to-[#FFCB45] transition-all duration-300"
-                  style={{ width: `${xpProgress}%` }}
+            <UserProfileHeader
+              avatarUrl={avatarUrl}
+              email={email}
+              primaryWalletAddress={primaryWalletAddress}
+              copiedAddress={copiedAddress}
+              onCopyAddress={copyAddress}
+              walletsDialogOpen={walletsDialogOpen}
+              onWalletsDialogOpenChange={setWalletsDialogOpen}
+              walletsDialogContent={
+                <WalletsDialog
+                  uniqueWallets={uniqueWallets}
+                  user={user as PrivyUser}
                 />
-              </div>
-            </div>
+              }
+            />
+
+            <LevelXPProgress
+              level={level}
+              currentXP={currentXP}
+              nextLevelXP={nextLevelXP}
+              xpProgress={xpProgress}
+            />
 
             <div className="flex gap-4">
-              {/* referral */}
-              <div className="rounded-lg border-[0.5px] border-white/20 p-3 w-full">
-                <h3 className="text-white/70 mb-4 font-semibold">
-                  Invite friends
-                </h3>
-                <p className="mb-6">
-                  Share your code and get 20% Rebates anytime a referred friend
-                  completes a trade
-                </p>
-
-                <div className="flex items-center justify-between py-3 px-2 rounded-lg border-[0.2px] border-white/20">
-                  <p className="text-white/50 ">
-                    https://CTOmarketplace.com/referal.98hydv
-                  </p>
-                  <Button className="bg-gradient-to-r from-[#FF0075] via-[#FF4A15] to-[#FFCB45] py-2 px-1 rounded-lg">
-                    Invite friends
-                  </Button>
-                </div>
-              </div>
-
-              {/* Connect social account */}
-              <div className="min-w-[190px] rounded-lg space-y-2.5 border-[0.5px] border-white/20 p-3">
-                <h3 className="text-[#FFFFFF]/70 font-semibold mb-4">
-                  Social accounts
-                </h3>
-
-                <div className="flex items-center justify-between">
-                  <span className="size-1 rounded-full bg-[#006FC9]"></span>{" "}
-                  <span className="text-sm">Telegram</span>
-                  <Button className="p-2 w-fit bg-none rounded-lg border-[0.2px] border-white/20">
-                    <LogOut size={30} />
-                  </Button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="size-1 rounded-full bg-[#006FC9]"></span>{" "}
-                  <span className="text-sm">Telegram</span>
-                  <Button className="p-2 w-fit bg-none rounded-lg border-[0.2px] border-white/20">
-                    <LogOut size={30} />
-                  </Button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="size-1 rounded-full bg-[#C71624]"></span>{" "}
-                  <span className="text-sm">Discord</span>
-                  <Button className="p-2 w-fit bg-none rounded-lg border-[0.2px] border-white/20">
-                    <Link size={14} />
-                  </Button>
-                </div>
-              </div>
+              <ReferralSection />
+              <SocialAccounts />
             </div>
-                      </div>
+          </div>
 
           {/* Right Column - My Assets */}
           <div className='h-full flex flex-col'>
-            <div className="rounded-lg border-[0.5px] border-white/20 p-5">
-              {/* Wallet Balance Header */}
-              <div className="bg-white/6 rounded-lg py-3 px-2.5">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm text-[#A1A1AA] flex items-center gap-2.5">
-                      <Wallet size={18} /> Wallet Balance:
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setBalanceVisible(!balanceVisible)}
-                    className="text-gray-400 hover:text-white transition-colors"
-                  >
-                    {balanceVisible ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
+            <WalletBalance />
 
-                <div className="flex w-full justify-center mb-4">
-                  <Button className="border-[0.5px] border-[#27272A] rounded-lg py-2 px-1 text-white/50">
-                    USDC <ChevronDown size={18} />
-                  </Button>
-                </div>
-
-                {/* Balance Display */}
-                <div className="mb-6">
-                  {balanceVisible ? (
-                    <div className="flex justify-center gap-2">
-                      <span className="text-[58px] font-semibold text-white">
-                        ${walletBalance.toLocaleString()}
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="text-4xl font-bold text-white text-center">
-                      ••••••
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex justify-center items-center">
-                  <span
-                    className={`flex font-medium items-center text-xs text-[#16C784]`}
-                  >
-                    <ChevronUp
-                      size={16}
-                      stroke="false"
-                      className="border-none p-0 -mb-0.5"
-                      fill="#16C784"
-                    />
-                    <span className="font-medium">6.00%</span>
-
-                    <span className="text-xs text-[#16C784]">
-                      ($1,5960,324)
-                    </span>
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-5 flex items-center gap-2">
-                <Button className="bg-gradient-to-r from-[#FF0075] via-[#FF4A15] to-[#FFCB45] flex-1 h-12 py-3.5 px-6 rounded-full">
-                  {" "}
-                  <MoveDown /> Deposit
-                </Button>
-                <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[1px] rounded-full flex-1">
-                  <Button className="bg-[#010101] h-12 w-full py-3.5 px-6 rounded-full text-white border-none">
-                    {" "}
-                    <MoveUp /> Withdraw
-                  </Button>
-                </div>
-                <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[1px] rounded-full">
-                  <Button className="bg-[#010101] size-12 rounded-full text-white border-none">
-                    {" "}
-                    <ArrowUpDown />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              {/* <div className="flex gap-3 mb-6">
-                <Button className="flex-1 cta-gradient text-white">
-                  Deposit
-                </Button>
-                <Button className="flex-1 cta-gradient text-white">
-                  Withdraw
-                </Button>
-                <Button className="flex-1 cta-gradient text-white">
-                  Transfer
-                </Button>
-              </div> */}
-
-              {/* Asset Breakdown */}
-              {/* <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-400">Assets</h3>
-                {assets.map((asset, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="relative w-8 h-8">
-                        <Image
-                          src={asset.logo}
-                          alt={asset.name}
-                          fill
-                          className="object-contain"
-                          loading="lazy"
-                        />
-                      </div>
-                      <span className="text-white font-medium">
-                        {asset.name}
-                      </span>
-                    </div>
-                    <span className="text-white font-semibold">
-                      ${asset.value.toLocaleString()}
-                    </span>
-                  </div>
-                ))}
-              </div> */}
-            </div>
-
-            <div className="rounded-lg border-[0.5px] border-white/20 py-3 px-5 mt-5 flex-1 flex flex-col justify-between">
-              <h3 className='font-bold leading-6'>Portfolio</h3>
-              <div className="flex items-center justify-start flex-shrink-0 mt-4">
-                <CustomPieChart
-                  data={achievementData}
-                  height={100}
-                  innerRadius={15}
-                  outerRadius={35}
-                  paddingAngle={2}
-                />
-              </div>
-              
-              {/* Stats Section */}
-              <div className='flex items-center flex-shrink-0 mt-4'>
-                <div className="flex-1">
-                  <div className="text-xs font-medium mb-2">Volume traded</div>
-                  <div className="text-xl font-medium">$124,560,986</div>
-                </div>
-                <div className="w-px h-12 bg-white/20 mx-4"></div>
-                <div className="flex-1">
-                  <div className="text-xs font-medium mb-2">Position value</div>
-                  <div className="text-xl font-medium">$1,000</div>
-                </div>
-                <div className="w-px h-12 bg-white/20 mx-4"></div>
-                <div className="flex-1">
-                  <div className="text-xs font-medium mb-2">Pnl</div>
-                  <div className="text-[#16C784] text-xl font-medium">+$13,000</div>
-                </div>
-              </div>
-            </div>
+            <PortfolioSection achievementData={achievementData} />
           </div>
         </div>
 
-        {/* Transaction History Table */}
-        <div className="mt-10">
-          <Tabs defaultValue="tx-history" className="w-full">
-            <TabsList className="flex gap-1.5 h-9 border-[0.2px] border-[#FFFFFF]/20 rounded-lg items-center px-1 w-fit bg-transparent">
-              <TabsTrigger
-                value="holdings"
-                className="text-xs px-2 py-1 w-fit font-bold h-[20px] rounded-lg data-[state=active]:bg-[#17171C] data-[state=active]:text-white text-[#A1A1AA]"
-              >
-                Holdings
-              </TabsTrigger>
-              <TabsTrigger
-                value="tx-history"
-                className="text-xs px-2 py-1 w-fit font-bold h-[20px] rounded-lg data-[state=active]:bg-[#17171C] data-[state=active]:text-white text-[#A1A1AA]"
-              >
-                Tx history
-              </TabsTrigger>
-              <TabsTrigger
-                value="orders"
-                className="text-xs px-2 py-1 w-fit font-bold h-[20px] rounded-lg data-[state=active]:bg-[#17171C] data-[state=active]:text-white text-[#A1A1AA]"
-              >
-                Orders
-              </TabsTrigger>
-            </TabsList>
-            <div className="border-t-[0.5px] border-white/20 mt-4"></div>
-            
-            <TabsContent value="tx-history">
-              <div className="overflow-x-auto">
-                <table className="min-w-full border-separate border-spacing-y-1">
-                  <thead>
-                    <tr className="text-left">
-                      <th className="text-xs font-bold text-white/50 py-2 pr-4">Timestamp</th>
-                      <th className="text-xs font-bold text-white/50 py-2 pr-4">Value (USDC)</th>
-                      <th className="text-xs font-bold text-white/50 py-2 pr-4">Amount</th>
-                      <th className="text-xs font-bold text-white/50 py-2 pr-4">Type</th>
-                      <th className="text-xs font-bold text-white/50 py-2 pr-4">Address</th>
-                      <th className="text-xs font-bold text-white/50 py-2 pr-0 text-right">Hash ID</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[
-                      { timestamp: "07/07/2025, 10:09:06", value: "$100.61", amount: "1.78M", type: "deposit", address: "7RET3F...YGS5", hash: "#" },
-                      { timestamp: "07/07/2025, 09:45:23", value: "$250.00", amount: "4.50M", type: "withdraw", address: "7RET3F...YGS5", hash: "#" },
-                      { timestamp: "07/07/2025, 08:30:15", value: "$500.00", amount: "9.00M", type: "deposit", address: "7RET3F...YGS5", hash: "#" },
-                      { timestamp: "07/06/2025, 15:20:42", value: "$75.25", amount: "1.35M", type: "withdraw", address: "7RET3F...YGS5", hash: "#" },
-                    ].map((row, idx) => (
-                      <tr key={idx} className="bg-white/2">
-                        <td className="text-xs font-medium text-white py-3 pr-4 whitespace-nowrap">{row.timestamp}</td>
-                        <td className="text-xs font-medium text-white py-3 pr-4 whitespace-nowrap">{row.value}</td>
-                        <td className="text-xs font-medium text-white py-3 pr-4 whitespace-nowrap">{row.amount}</td>
-                        <td className="text-xs font-medium py-3 pr-4 whitespace-nowrap">
-                          <span className={row.type === "deposit" ? "text-[#16C784]" : "text-[#C71624]"}>
-                            {row.type === "deposit" ? "Deposit" : "Withdraw"}
-                          </span>
-                        </td>
-                        <td className="text-xs font-medium text-white py-3 pr-4 whitespace-nowrap">{row.address}</td>
-                        <td className="text-xs font-medium text-white py-3 pr-0 whitespace-nowrap text-right">
-                          <a href={row.hash} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-white/80 hover:text-white">
-                            <SquareArrowOutUpRight size={16} />
-                          </a>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="holdings">
-              <div></div>
-            </TabsContent>
-            
-            <TabsContent value="orders">
-              <div></div>
-            </TabsContent>
-          </Tabs>
-        </div>
+        <TransactionHistory />
       </div>
     </div>
   );
