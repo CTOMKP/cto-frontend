@@ -3,6 +3,7 @@
 import { usePrivy } from '@privy-io/react-auth';
 import { useCreateWallet } from '@privy-io/react-auth/extended-chains';
 import { useCallback, useEffect, useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { privyService } from '@/services/privyService';
 import { createMovementWallet, getMovementWallet } from '@/lib/movement-wallet';
 
@@ -20,6 +21,7 @@ export function usePrivyAuth() {
     getAccessToken 
   } = usePrivy();
   
+  const router = useRouter();
   const { createWallet } = useCreateWallet();
   const [isSyncing, setIsSyncing] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -301,15 +303,20 @@ export function usePrivyAuth() {
       // Reset authentication state
       setIsAuthenticated(false);
       
+      // Redirect to /listings page after logout
+      router.push('/listings');
+      
       console.log('✅ Logout successful');
     } catch (error) {
       console.error('Logout failed:', error);
       // Even if Privy logout fails, clear localStorage
       privyService.logout();
       setIsAuthenticated(false);
+      // Still redirect even if logout had errors
+      router.push('/listings');
       throw error;
     }
-  }, [privyLogout]);
+  }, [privyLogout, router]);
 
   return {
     user,

@@ -12,6 +12,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "../../../components/ui/button";
 import { compactNumber } from "@/utils/helper/compactNumber";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Card,
   CardAction,
@@ -292,6 +293,7 @@ export default function TrendingCoins({
         },
         holders: Number(item.holders ?? item?.metadata?.market?.holders ?? 0),
         riskScore: typeof item.riskScore === "number" ? item.riskScore : (item?.metadata?.market?.riskScore ?? 0),
+        tier: item.tier || null,
       };
       
       return convertedItem;
@@ -300,8 +302,8 @@ export default function TrendingCoins({
 
   if (isLoading) {
     return (
-      <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[1px] w-full rounded-xl lg:flex-1">
-        <Card className="border-none p-3 bg-[#010101] w-full">
+      <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[1px] w-full rounded-xl lg:flex-1 h-full">
+        <Card className="border-none p-3 bg-[#010101] w-full h-full">
           <CardHeader className="flex justify-between items-center px-0">
             <CardTitle className="flex items-center gap-1 text-base">
               <span>What&apos;s Hot?</span>
@@ -331,8 +333,8 @@ export default function TrendingCoins({
   // If no data available, show empty state
   if (trendingData.length === 0) {
     return (
-      <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[1px] w-full rounded-xl xl:w-auto xl:flex-1">
-        <Card className="border-none p-3 bg-[#010101] w-full">
+      <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[1px] w-full rounded-xl xl:w-auto xl:flex-1 h-full">
+        <Card className="border-none p-3 bg-[#010101] w-full h-full">
           <CardHeader className="flex justify-between items-center px-0">
             <CardTitle className="flex items-center gap-1 text-base">
               <span>What&apos;s Hot?</span>
@@ -362,8 +364,8 @@ export default function TrendingCoins({
   }
 
   return (
-    <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[1px] w-full rounded-xl lg:flex-1">
-      <Card className="border-none p-3 bg-[#010101] w-full">
+    <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[1px] w-full rounded-xl lg:flex-1 h-full">
+      <Card className="border-none p-3 bg-[#010101] w-full h-full">
         <CardHeader className="flex justify-between items-center px-0">
           <CardTitle className="flex items-center gap-1 text-base">
             <span>What&apos;s Hot?</span>
@@ -453,16 +455,107 @@ export default function TrendingCoins({
                           <span className="font-medium capitalize max-w-[80px] truncate" title={data.name}>
                             {data.name.length > 10 ? `${data.name.substring(0, 10)}...` : data.name}
                           </span>
-                          <span
-                            className={`bg-[#15FF00]/20 rounded-[4px] p-[3px]`}
-                          >
-                            <Image
-                              src="/project-categories/bloom.svg"
-                              width={8.36}
-                              height={8.36}
-                              alt="green"
-                            />
-                          </span>
+                          {/* Tier Badge */}
+                          {(() => {
+                            const rawTier = data.tier;
+                            
+                            // Normalize tier - handle all invalid formats
+                            if (!rawTier || rawTier === null || rawTier === undefined) {
+                              return null;
+                            }
+                            
+                            const tierStr = String(rawTier).trim().toLowerCase();
+                            
+                            // Check for all invalid tier values (including dash variations)
+                            if (tierStr === 'none' || tierStr === 'null' || tierStr === 'undefined' || 
+                                tierStr === '' || tierStr === '—' || tierStr === '----' || tierStr === '------' ||
+                                tierStr.startsWith('---') || tierStr === 'n/a' || tierStr === 'na' ||
+                                /^[-—]+$/.test(tierStr)) { // Match any string that's only dashes/em-dashes
+                              return null;
+                            }
+                            
+                            const tier = tierStr;
+                            const tierIcons: Record<string, string> = {
+                              stellar: "/project-categories/stellar.svg",
+                              bloom: "/project-categories/bloom.svg",
+                              sprout: "/project-categories/sprout.svg",
+                              seed: "/project-categories/seed.svg",
+                            };
+                            
+                            const tierBgColors: Record<string, string> = {
+                              seed: "bg-[#6D6D6D]/20",
+                              sprout: "bg-[#FF5900]/20",
+                              bloom: "bg-[#15FF00]/20",
+                              stellar: "bg-[#FFBB00]/20",
+                            };
+                            
+                            const tierDescriptions: Record<string, string> = {
+                              seed: "Entry-level tier, 14-21 days old with minimal liquidity and early activity",
+                              sprout: "Mid-level tier, >21 days old, with moderate liquidity and stability",
+                              bloom: "Premium tier, >1 month old, with significant liquidity and security",
+                              stellar: "Elite tier, >1 month old, with significant liquidity and security",
+                            };
+                            
+                            const tierLpRequirements: Record<string, { lp: string; lpLockBurn: string }> = {
+                              seed: { lp: ">$10,000", lpLockBurn: ">30% / 6mo" },
+                              sprout: { lp: ">$20,000", lpLockBurn: ">30% / 18mo" },
+                              bloom: { lp: ">$50,000", lpLockBurn: ">30% / 24mo" },
+                              stellar: { lp: ">$100,000", lpLockBurn: ">30% / 36mo" },
+                            };
+                            
+                            const iconPath = tierIcons[tier] || "/project-categories/bloom.svg";
+                            const bgColor = tierBgColors[tier] || "bg-[#15FF00]/20";
+                            const description = tierDescriptions[tier] || "";
+                            const lpRequirements = tierLpRequirements[tier] || { lp: "", lpLockBurn: "" };
+                            const tierName = tier.charAt(0).toUpperCase() + tier.slice(1);
+                            
+                            return (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className={`${bgColor} rounded-[4px] p-[3px] cursor-help`}>
+                                    <Image
+                                      loading="lazy"
+                                      src={iconPath}
+                                      width={8.36}
+                                      height={8.36}
+                                      alt={tier}
+                                    />
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent className="bg-[#010101] p-2 rounded-lg border-[0.5px] border-white max-w-[180px]">
+                                  <div className="flex flex-col gap-1">
+                                    <div className="flex justify-between items-center">
+                                      <span className="font-semibold text-white">{tierName}</span>
+                                      <span className={`${bgColor} rounded-[4px] p-[3px] cursor-help`}>
+                                        <Image
+                                          loading="lazy"
+                                          src={iconPath}
+                                          width={8.36}
+                                          height={8.36}
+                                          alt={tier}
+                                        />
+                                      </span>
+                                    </div>
+                                    {description && (
+                                      <p className="text-xs font-medium text-white/70 w-full text-wrap">{description}</p>
+                                    )}
+                                    {lpRequirements.lp && (
+                                      <>
+                                        <div className="flex flex-col gap-0.5 mt-1 ">
+                                          <span className="text-xs font-medium flex justify-between items-center text-white/70">
+                                            <span className="text-white/70">Lp: </span> <span>{lpRequirements.lp}</span>
+                                          </span>
+                                          <span className="text-xs font-medium flex justify-between items-center text-white/70">
+                                            <span className="text-white/70">Lp lock/burn: </span> <span>{lpRequirements.lpLockBurn}</span>
+                                          </span>
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            );
+                          })()}
                         </div>
                         <div className="flex items-center gap-0.5">
                           <span className="text-[#FFFFFF]/50 text-xs uppercase" title={data.address}>

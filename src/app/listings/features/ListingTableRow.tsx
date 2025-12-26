@@ -12,6 +12,7 @@ import { MockLikeCoin } from "./types/listing";
 import { getChainImage } from "./utils/listingUtils";
 import ListingEngagement from "./ListingEngagement";
 import FallbackImage from "@/components/FallbackImage";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ListingTableRowProps {
   coin: MockLikeCoin;
@@ -98,18 +99,78 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
                     seed: "/project-categories/seed.svg",
                   };
                   
+                  const tierBgColors: Record<string, string> = {
+                    seed: "bg-[#6D6D6D]/20",
+                    sprout: "bg-[#FF5900]/20",
+                    bloom: "bg-[#15FF00]/20",
+                    stellar: "bg-[#FFBB00]/20",
+                  };
+                  
+                  const tierDescriptions: Record<string, string> = {
+                    seed: "Entry-level tier, 14-21 days old with minimal liquidity and early activity",
+                    sprout: "Mid-level tier, >21 days old, with moderate liquidity and stability",
+                    bloom: "Premium tier, >1 month old, with significant liquidity and security",
+                    stellar: "Elite tier, >1 month old, with significant liquidity and security",
+                  };
+                  
+                  const tierLpRequirements: Record<string, { lp: string; lpLockBurn: string }> = {
+                    seed: { lp: ">$10,000", lpLockBurn: ">30% / 6mo" },
+                    sprout: { lp: ">$20,000", lpLockBurn: ">30% / 18mo" },
+                    bloom: { lp: ">$50,000", lpLockBurn: ">30% / 24mo" },
+                    stellar: { lp: ">$100,000", lpLockBurn: ">30% / 36mo" },
+                  };
+                  
                   const iconPath = tierIcons[tier] || "/project-categories/bloom.svg";
+                  const bgColor = tierBgColors[tier] || "bg-[#15FF00]/20";
+                  const description = tierDescriptions[tier] || "";
+                  const lpRequirements = tierLpRequirements[tier] || { lp: "", lpLockBurn: "" };
+                  const tierName = tier.charAt(0).toUpperCase() + tier.slice(1);
                   
                   return (
-                    <span className={`bg-[#15FF00]/20 rounded-[4px] p-[3px]`}>
-                      <Image
-                        loading="lazy"
-                        src={iconPath}
-                        width={8.36}
-                        height={8.36}
-                        alt={tier}
-                      />
-                    </span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className={`${bgColor} rounded-[4px] p-[3px] cursor-help`}>
+                          <Image
+                            loading="lazy"
+                            src={iconPath}
+                            width={8.36}
+                            height={8.36}
+                            alt={tier}
+                          />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent className="bg-[#010101] p-2 rounded-lg border-[0.5px] border-white max-w-[180px]">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex justify-between items-center">
+                          <span className="font-semibold text-white">{tierName}</span>
+                          <span className={`${bgColor} rounded-[4px] p-[3px] cursor-help`}>
+                          <Image
+                            loading="lazy"
+                            src={iconPath}
+                            width={8.36}
+                            height={8.36}
+                            alt={tier}
+                          />
+                        </span>
+                          </div>
+                          {description && (
+                            <p className="text-xs font-medium text-white/70 w-full text-wrap">{description}</p>
+                          )}
+                          {lpRequirements.lp && (
+                            <>
+                              <div className="flex flex-col gap-0.5 mt-1 ">
+                                <span className="text-xs font-medium flex justify-between items-center text-white/70">
+                                  <span className="text-white/70">Lp: </span> <span>{lpRequirements.lp}</span>
+                                </span>
+                                <span className="text-xs font-medium flex justify-between items-center text-white/70">
+                                  <span className="text-white/70">Lp lock/burn: </span> <span>{lpRequirements.lpLockBurn}</span>
+                                </span>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
                   );
                 })()}
               </div>
@@ -411,43 +472,6 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
             </span>
           )}
         </span>
-      </TableCell>
-      {/* Tier */}
-      <TableCell className="text-center">
-        {(() => {
-          const rawTier = coin.tier;
-          
-          // Normalize tier - handle all invalid formats
-          if (!rawTier || rawTier === null || rawTier === undefined) {
-            return <span className="text-[#FFFFFF]/50">—</span>;
-          }
-          
-          const tierStr = String(rawTier).trim().toLowerCase();
-          
-          // Check for all invalid tier values (including dash variations)
-          if (tierStr === 'none' || tierStr === 'null' || tierStr === 'undefined' || 
-              tierStr === '' || tierStr === '—' || tierStr === '----' || tierStr === '------' ||
-              tierStr.startsWith('---') || tierStr === 'n/a' || tierStr === 'na' ||
-              /^[-—]+$/.test(tierStr)) { // Match any string that's only dashes/em-dashes
-            return <span className="text-[#FFFFFF]/50">—</span>;
-          }
-          
-          const tier = tierStr;
-          const tierColors: Record<string, { bg: string; text: string }> = {
-            stellar: { bg: 'bg-purple-900/30', text: 'text-purple-200' },
-            bloom: { bg: 'bg-blue-900/30', text: 'text-blue-200' },
-            sprout: { bg: 'bg-green-900/30', text: 'text-green-200' },
-            seed: { bg: 'bg-yellow-900/30', text: 'text-yellow-200' },
-          };
-          
-          const colors = tierColors[tier] || { bg: 'bg-gray-700/30', text: 'text-gray-300' };
-          
-          return (
-            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${colors.bg} ${colors.text}`}>
-              {tier.toUpperCase()}
-            </span>
-          );
-        })()}
       </TableCell>
       <TableCell>
         <ListingEngagement />
