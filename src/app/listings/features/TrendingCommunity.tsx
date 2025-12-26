@@ -183,8 +183,8 @@ export default function TrendingCommunity({
 
   if (isLoading) {
     return (
-      <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[1px] w-full rounded-xl lg:w-auto lg:flex-1">
-        <Card className="border-none p-3 bg-[#010101] w-full">
+      <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[1px] w-full rounded-xl lg:w-auto lg:flex-1 h-full">
+        <Card className="border-none p-3 bg-[#010101] w-full h-full">
           <CardHeader className="px-0">
             <CardTitle className="flex items-center gap-1 text-base font-bold">
               Community trending{" "}
@@ -208,8 +208,8 @@ export default function TrendingCommunity({
   // If no data available, show empty state
   if (communityData.length === 0) {
     return (
-      <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[1px] w-full rounded-xl xl:w-auto xl:flex-1">
-        <Card className="border-none p-3 bg-[#010101] w-full">
+      <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[1px] w-full rounded-xl xl:w-auto xl:flex-1 h-full">
+        <Card className="border-none p-3 bg-[#010101] w-full h-full">
           <CardHeader className="px-0">
             <CardTitle className="flex items-center gap-1 text-base font-bold">
               Community trending{" "}

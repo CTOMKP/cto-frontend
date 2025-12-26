@@ -21,203 +21,211 @@ const images = [
 export default function Breadcrumbs() {
   return (
     <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[1px] w-full rounded-xl lg:max-w-[300px]">
-      <Card className="w-full border-none p-3 bg-[#010101] h-full">
-        <CardHeader className="px-0">
-          <CardTitle className="flex items-center gap-1 text-base font-bold">
-            Breadcrumbs{" "}
-            <Image
-              className="mt-0.5"
-              src="/info.svg"
-              alt="info"
-              width={13}
-              height={13}
-            />
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-0 -mt-4">
-          <Table>
-            <TableHeader className="text-[#FFFFFF50] hidden">
-              <TableRow className="border-none">
-                <TableHead className="!font-bold">Space Title</TableHead>
-                <TableHead className="!font-bold">
-                  <span className="flex items-center gap-1">
-                    Community space
-                  </span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow className="border-none">
-                <TableCell className="!py-1">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <Image
-                        className="rounded-full border-[0.3px] border-white"
-                        src="/default-trending-coin-img.png"
-                        alt="profile picture"
-                        width={24}
-                        height={24}
-                      />
-                      <span className="flex gap-1 items-center">
-                        <h1 className="font-bold">Bawsbarbie</h1>
+      <Card className="w-full border-none p-3 bg-[#010101] h-full relative">
+        <div className="blur-sm">
+          <CardHeader className="px-0">
+            <CardTitle className="flex items-center gap-1 text-base font-bold">
+              Breadcrumbs{" "}
+              <Image
+                className="mt-0.5"
+                src="/info.svg"
+                alt="info"
+                width={13}
+                height={13}
+              />
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-0 -mt-4">
+            <Table>
+              <TableHeader className="text-[#FFFFFF50] hidden">
+                <TableRow className="border-none">
+                  <TableHead className="!font-bold">Space Title</TableHead>
+                  <TableHead className="!font-bold">
+                    <span className="flex items-center gap-1">
+                      Community space
+                    </span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow className="border-none">
+                  <TableCell className="!py-1">
+                    <div>
+                      <div className="flex items-center gap-2">
                         <Image
-                          className="rounded-full"
-                          src="/certified.svg"
+                          className="rounded-full border-[0.3px] border-white"
+                          src="/default-trending-coin-img.png"
                           alt="profile picture"
-                          width={16}
-                          height={16}
+                          width={24}
+                          height={24}
                         />
-                      </span>
-                      <span className="text-xs font-light text-[#6E767D]">
-                        is hosting
-                      </span>
+                        <span className="flex gap-1 items-center">
+                          <h1 className="font-bold">Bawsbarbie</h1>
+                          <Image
+                            className="rounded-full"
+                            src="/certified.svg"
+                            alt="profile picture"
+                            width={16}
+                            height={16}
+                          />
+                        </span>
+                        <span className="text-xs font-light text-[#6E767D]">
+                          is hosting
+                        </span>
+                      </div>
+                      <h2 className="font-bold text-[15px] text-wrap leading-5 w-[190px] my-2">
+                    Breadcrumbs EP 10- community vibes
+                  </h2>
                     </div>
-                    <h2 className="font-bold text-[15px] text-wrap leading-5 w-[190px] my-2">
-                  Breadcrumbs EP 10- community vibes
-                </h2>
+                  </TableCell>
+                  <TableCell className="!py-1">
+                    <div className="flex justify-end mt-10">
+                      <div className="bg-gradient-to-r from-pink-500 to-yellow-400 p-[1px] rounded-[50px] w-fit">
+                    <div className="flex gap-1 items-center bg-[#010101] h-[28px] w-24  rounded-[50px] pr-1">
+                      <div className="flex -space-x-3">
+                        {images.map((img, index) => (
+                          <Image
+                            key={index}
+                            className={`rounded-full size-[29px] border-[0.3px] border-white relative z-[${
+                              images.length - index
+                            }]`}
+                            src={img}
+                            alt="profile picture"
+                            width={29}
+                            height={29}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-[10px] font-bold">+802</span>
+                    </div>
                   </div>
-                </TableCell>
-                <TableCell className="!py-1">
-                  <div className="flex justify-end mt-10">
-                    <div className="bg-gradient-to-r from-pink-500 to-yellow-400 p-[1px] rounded-[50px] w-fit">
-                  <div className="flex gap-1 items-center bg-[#010101] h-[28px] w-24  rounded-[50px] pr-1">
-                    <div className="flex -space-x-3">
-                      {images.map((img, index) => (
+                    </div>
+                  </TableCell>
+                </TableRow>
+                <TableRow className="border-none">
+                  <TableCell className="!py-1">
+                    <div>
+                      <div className="flex items-center gap-2">
                         <Image
-                          key={index}
-                          className={`rounded-full size-[29px] border-[0.3px] border-white relative z-[${
-                            images.length - index
-                          }]`}
-                          src={img}
+                          className="rounded-full border-[0.3px] border-white"
+                          src="/default-trending-coin-img.png"
                           alt="profile picture"
-                          width={29}
-                          height={29}
+                          width={24}
+                          height={24}
                         />
-                      ))}
+                        <span className="flex gap-1 items-center">
+                          <h1 className="font-bold">Bawsbarbie</h1>
+                          <Image
+                            className="rounded-full"
+                            src="/certified.svg"
+                            alt="profile picture"
+                            width={16}
+                            height={16}
+                          />
+                        </span>
+                        <span className="text-xs font-light text-[#6E767D]">
+                          is hosting
+                        </span>
+                      </div>
+                      <h2 className="font-bold text-[15px] text-wrap leading-5 w-[190px] my-2">
+                    Breadcrumbs EP 10- community vibes
+                  </h2>
                     </div>
-                    <span className="text-[10px] font-bold">+802</span>
+                  </TableCell>
+                  <TableCell className="!py-1">
+                    <div className="flex justify-end mt-10">
+                      <div className="bg-gradient-to-r from-pink-500 to-yellow-400 p-[1px] rounded-[50px] w-fit">
+                    <div className="flex gap-1 items-center bg-[#010101] h-[28px] w-24  rounded-[50px] pr-1">
+                      <div className="flex -space-x-3">
+                        {images.map((img, index) => (
+                          <Image
+                            key={index}
+                            className={`rounded-full size-[29px] border-[0.3px] border-white relative z-[${
+                              images.length - index
+                            }]`}
+                            src={img}
+                            alt="profile picture"
+                            width={29}
+                            height={29}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-[10px] font-bold">+802</span>
+                    </div>
                   </div>
-                </div>
-                  </div>
-                </TableCell>
-              </TableRow>
-              <TableRow className="border-none">
-                <TableCell className="!py-1">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <Image
-                        className="rounded-full border-[0.3px] border-white"
-                        src="/default-trending-coin-img.png"
-                        alt="profile picture"
-                        width={24}
-                        height={24}
-                      />
-                      <span className="flex gap-1 items-center">
-                        <h1 className="font-bold">Bawsbarbie</h1>
+                    </div>
+                  </TableCell>
+                </TableRow>
+                <TableRow className="border-none">
+                  <TableCell className="!py-1">
+                    <div>
+                      <div className="flex items-center gap-2">
                         <Image
-                          className="rounded-full"
-                          src="/certified.svg"
+                          className="rounded-full border-[0.3px] border-white"
+                          src="/default-trending-coin-img.png"
                           alt="profile picture"
-                          width={16}
-                          height={16}
+                          width={24}
+                          height={24}
                         />
-                      </span>
-                      <span className="text-xs font-light text-[#6E767D]">
-                        is hosting
-                      </span>
+                        <span className="flex gap-1 items-center">
+                          <h1 className="font-bold">Bawsbarbie</h1>
+                          <Image
+                            className="rounded-full"
+                            src="/certified.svg"
+                            alt="profile picture"
+                            width={16}
+                            height={16}
+                          />
+                        </span>
+                        <span className="text-xs font-light text-[#6E767D]">
+                          is hosting
+                        </span>
+                      </div>
+                      <h2 className="font-bold text-[15px] text-wrap leading-5 w-[190px] my-2">
+                    Breadcrumbs EP 10- community vibes
+                  </h2>
                     </div>
-                    <h2 className="font-bold text-[15px] text-wrap leading-5 w-[190px] my-2">
-                  Breadcrumbs EP 10- community vibes
-                </h2>
-                  </div>
-                </TableCell>
-                <TableCell className="!py-1">
-                  <div className="flex justify-end mt-10">
-                    <div className="bg-gradient-to-r from-pink-500 to-yellow-400 p-[1px] rounded-[50px] w-fit">
-                  <div className="flex gap-1 items-center bg-[#010101] h-[28px] w-24  rounded-[50px] pr-1">
-                    <div className="flex -space-x-3">
-                      {images.map((img, index) => (
-                        <Image
-                          key={index}
-                          className={`rounded-full size-[29px] border-[0.3px] border-white relative z-[${
-                            images.length - index
-                          }]`}
-                          src={img}
-                          alt="profile picture"
-                          width={29}
-                          height={29}
-                        />
-                      ))}
+                  </TableCell>
+                  <TableCell className="!py-1">
+                    <div className="flex justify-end mt-10">
+                      <div className="bg-gradient-to-r from-pink-500 to-yellow-400 p-[1px] rounded-[50px] w-fit">
+                    <div className="flex gap-1 items-center bg-[#010101] h-[28px] w-24  rounded-[50px] pr-1">
+                      <div className="flex -space-x-3">
+                        {images.map((img, index) => (
+                          <Image
+                            key={index}
+                            className={`rounded-full size-[29px] border-[0.3px] border-white relative z-[${
+                              images.length - index
+                            }]`}
+                            src={img}
+                            alt="profile picture"
+                            width={29}
+                            height={29}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-[10px] font-bold">+802</span>
                     </div>
-                    <span className="text-[10px] font-bold">+802</span>
                   </div>
-                </div>
-                  </div>
-                </TableCell>
-              </TableRow>
-              <TableRow className="border-none">
-                <TableCell className="!py-1">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <Image
-                        className="rounded-full border-[0.3px] border-white"
-                        src="/default-trending-coin-img.png"
-                        alt="profile picture"
-                        width={24}
-                        height={24}
-                      />
-                      <span className="flex gap-1 items-center">
-                        <h1 className="font-bold">Bawsbarbie</h1>
-                        <Image
-                          className="rounded-full"
-                          src="/certified.svg"
-                          alt="profile picture"
-                          width={16}
-                          height={16}
-                        />
-                      </span>
-                      <span className="text-xs font-light text-[#6E767D]">
-                        is hosting
-                      </span>
                     </div>
-                    <h2 className="font-bold text-[15px] text-wrap leading-5 w-[190px] my-2">
-                  Breadcrumbs EP 10- community vibes
-                </h2>
-                  </div>
-                </TableCell>
-                <TableCell className="!py-1">
-                  <div className="flex justify-end mt-10">
-                    <div className="bg-gradient-to-r from-pink-500 to-yellow-400 p-[1px] rounded-[50px] w-fit">
-                  <div className="flex gap-1 items-center bg-[#010101] h-[28px] w-24  rounded-[50px] pr-1">
-                    <div className="flex -space-x-3">
-                      {images.map((img, index) => (
-                        <Image
-                          key={index}
-                          className={`rounded-full size-[29px] border-[0.3px] border-white relative z-[${
-                            images.length - index
-                          }]`}
-                          src={img}
-                          alt="profile picture"
-                          width={29}
-                          height={29}
-                        />
-                      ))}
-                    </div>
-                    <span className="text-[10px] font-bold">+802</span>
-                  </div>
-                </div>
-                  </div>
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-          <Link
-            href="#"
-            className="text-[#FFFFFFB2] text-sm mt-5 flex items-center"
-          >
-            Show more <ChevronRight size={16} />
-          </Link>
-        </CardContent>
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+            <Link
+              href="#"
+              className="text-[#FFFFFFB2] text-sm mt-5 flex items-center"
+            >
+              Show more <ChevronRight size={16} />
+            </Link>
+          </CardContent>
+        </div>
+        {/* Coming soon overlay - covers entire component to edges */}
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm rounded-xl z-10">
+          <div className="bg-white/16 px-2 py-1 rounded-[4px]">
+            <span className="text-white">Coming soon</span>
+          </div>
+        </div>
       </Card>
     </div>
   );
