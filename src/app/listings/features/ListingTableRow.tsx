@@ -113,9 +113,17 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
                     stellar: "Elite tier, >1 month old, with significant liquidity and security",
                   };
                   
+                  const tierLpRequirements: Record<string, { lp: string; lpLockBurn: string }> = {
+                    seed: { lp: ">$10,000", lpLockBurn: ">30% / 6mo" },
+                    sprout: { lp: ">$20,000", lpLockBurn: ">30% / 18mo" },
+                    bloom: { lp: ">$50,000", lpLockBurn: ">30% / 24mo" },
+                    stellar: { lp: ">$100,000", lpLockBurn: ">30% / 36mo" },
+                  };
+                  
                   const iconPath = tierIcons[tier] || "/project-categories/bloom.svg";
                   const bgColor = tierBgColors[tier] || "bg-[#15FF00]/20";
                   const description = tierDescriptions[tier] || "";
+                  const lpRequirements = tierLpRequirements[tier] || { lp: "", lpLockBurn: "" };
                   const tierName = tier.charAt(0).toUpperCase() + tier.slice(1);
                   
                   return (
@@ -131,11 +139,34 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
                           />
                         </span>
                       </TooltipTrigger>
-                      <TooltipContent>
+                      <TooltipContent className="bg-[#010101] p-2 rounded-lg border-[0.5px] border-white max-w-[180px]">
                         <div className="flex flex-col gap-1">
-                          <span className="font-semibold">{tierName}</span>
+                          <div className="flex justify-between items-center">
+                          <span className="font-semibold text-white">{tierName}</span>
+                          <span className={`${bgColor} rounded-[4px] p-[3px] cursor-help`}>
+                          <Image
+                            loading="lazy"
+                            src={iconPath}
+                            width={8.36}
+                            height={8.36}
+                            alt={tier}
+                          />
+                        </span>
+                          </div>
                           {description && (
-                            <span className="text-xs">{description}</span>
+                            <p className="text-xs font-medium text-white/70 w-full text-wrap">{description}</p>
+                          )}
+                          {lpRequirements.lp && (
+                            <>
+                              <div className="flex flex-col gap-0.5 mt-1 ">
+                                <span className="text-xs font-medium flex justify-between items-center text-white/70">
+                                  <span className="text-white/70">Lp: </span> <span>{lpRequirements.lp}</span>
+                                </span>
+                                <span className="text-xs font-medium flex justify-between items-center text-white/70">
+                                  <span className="text-white/70">Lp lock/burn: </span> <span>{lpRequirements.lpLockBurn}</span>
+                                </span>
+                              </div>
+                            </>
                           )}
                         </div>
                       </TooltipContent>
