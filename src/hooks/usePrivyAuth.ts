@@ -3,6 +3,7 @@
 import { usePrivy } from '@privy-io/react-auth';
 import { useCreateWallet } from '@privy-io/react-auth/extended-chains';
 import { useCallback, useEffect, useState, useRef } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { privyService } from '@/services/privyService';
 import { createMovementWallet, getMovementWallet } from '@/lib/movement-wallet';
 
@@ -20,6 +21,8 @@ export function usePrivyAuth() {
     getAccessToken 
   } = usePrivy();
   
+  const router = useRouter();
+  const pathname = usePathname();
   const { createWallet } = useCreateWallet();
   const [isSyncing, setIsSyncing] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -28,12 +31,29 @@ export function usePrivyAuth() {
   const hasSyncedRef = useRef(false);
   const isProcessingRef = useRef(false);
   const walletCreationAttemptedRef = useRef<string | null>(null);
+  const hasRedirectedRef = useRef(false);
 
   // Update isAuthenticated based on Privy state and localStorage
   useEffect(() => {
     const token = localStorage.getItem('cto_auth_token');
     setIsAuthenticated(authenticated && !!token);
   }, [authenticated]);
+
+  // Redirect to /profile after successful login (only once per login session)
+  useEffect(() => {
+    if (isAuthenticated && ready && !hasRedirectedRef.current) {
+      // Only redirect if we're not already on the profile page
+      if (pathname !== '/profile') {
+        hasRedirectedRef.current = true;
+        router.push('/profile');
+      }
+    }
+    
+    // Reset redirect flag when user logs out
+    if (!isAuthenticated) {
+      hasRedirectedRef.current = false;
+    }
+  }, [isAuthenticated]);
 
   // Wait for Privy to fully load linkedAccounts (with retries)
   const waitForPrivyAccounts = async (maxRetries = 5, delayMs = 500): Promise<boolean> => {
@@ -301,12 +321,17 @@ export function usePrivyAuth() {
       // Reset authentication state
       setIsAuthenticated(false);
       
+      // Redirect to /listings page after logout
+      router.push('/listings');
+      
       console.log('✅ Logout successful');
     } catch (error) {
       console.error('Logout failed:', error);
       // Even if Privy logout fails, clear localStorage
       privyService.logout();
       setIsAuthenticated(false);
+      // Still redirect even if logout had errors
+      router.push('/listings');
       throw error;
     }
   }, [privyLogout]);

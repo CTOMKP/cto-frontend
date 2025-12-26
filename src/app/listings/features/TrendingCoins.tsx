@@ -300,8 +300,8 @@ export default function TrendingCoins({
 
   if (isLoading) {
     return (
-      <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[1px] w-full rounded-xl lg:flex-1">
-        <Card className="border-none p-3 bg-[#010101] w-full">
+      <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[1px] w-full rounded-xl lg:flex-1 h-full">
+        <Card className="border-none p-3 bg-[#010101] w-full h-full">
           <CardHeader className="flex justify-between items-center px-0">
             <CardTitle className="flex items-center gap-1 text-base">
               <span>What&apos;s Hot?</span>

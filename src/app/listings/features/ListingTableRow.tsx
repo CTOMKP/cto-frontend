@@ -412,43 +412,6 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
           )}
         </span>
       </TableCell>
-      {/* Tier */}
-      <TableCell className="text-center">
-        {(() => {
-          const rawTier = coin.tier;
-          
-          // Normalize tier - handle all invalid formats
-          if (!rawTier || rawTier === null || rawTier === undefined) {
-            return <span className="text-[#FFFFFF]/50">—</span>;
-          }
-          
-          const tierStr = String(rawTier).trim().toLowerCase();
-          
-          // Check for all invalid tier values (including dash variations)
-          if (tierStr === 'none' || tierStr === 'null' || tierStr === 'undefined' || 
-              tierStr === '' || tierStr === '—' || tierStr === '----' || tierStr === '------' ||
-              tierStr.startsWith('---') || tierStr === 'n/a' || tierStr === 'na' ||
-              /^[-—]+$/.test(tierStr)) { // Match any string that's only dashes/em-dashes
-            return <span className="text-[#FFFFFF]/50">—</span>;
-          }
-          
-          const tier = tierStr;
-          const tierColors: Record<string, { bg: string; text: string }> = {
-            stellar: { bg: 'bg-purple-900/30', text: 'text-purple-200' },
-            bloom: { bg: 'bg-blue-900/30', text: 'text-blue-200' },
-            sprout: { bg: 'bg-green-900/30', text: 'text-green-200' },
-            seed: { bg: 'bg-yellow-900/30', text: 'text-yellow-200' },
-          };
-          
-          const colors = tierColors[tier] || { bg: 'bg-gray-700/30', text: 'text-gray-300' };
-          
-          return (
-            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${colors.bg} ${colors.text}`}>
-              {tier.toUpperCase()}
-            </span>
-          );
-        })()}
-      </TableCell>
       <TableCell>
         <ListingEngagement />
       </TableCell>

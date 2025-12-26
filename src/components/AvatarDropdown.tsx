@@ -186,7 +186,7 @@ export default function AvatarDropdown() {
 
   const handleLogout = async () => {
     await logout();
-    router.push('/');
+    router.push('/listings');
   };
 
   const xpProgress = nextLevelXP > 0 ? (currentXP / nextLevelXP) * 100 : 0;
