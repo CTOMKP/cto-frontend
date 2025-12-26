@@ -293,12 +293,10 @@ export default function NavBar() {
 
         <div className="border-l-[0.2px] ml-4 border-[#FFFFFF20] h-full flex items-center justify-center gap-2">
           {!ready ? (
-            // Show nothing while Privy is initializing to prevent login button flash
-            <div className="w-20 h-9" /> // Placeholder to maintain layout
+            <div className="w-20 h-9" />
           ) : showAuthenticatedUI ? (
             <>
-              <HarvestGrape />
-              {hasAvatar && <AvatarDropdown />}
+              {hasAvatar ? <AvatarDropdown /> : <HarvestGrape />}
             </>
           ) : (
             <LoginButton />

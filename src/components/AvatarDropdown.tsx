@@ -117,23 +117,65 @@ export default function AvatarDropdown() {
     console.log('[AvatarDropdown] 🖼️ Render - avatarUrl state:', avatarUrl);
   });
 
-  // Get primary wallet address
-  const primaryWalletAddress = React.useMemo(() => {
-    if (typeof window !== 'undefined') {
-      const walletsJson = localStorage.getItem('cto_user_wallets');
-      if (walletsJson) {
-        try {
-          const wallets = JSON.parse(walletsJson) as BackendWallet[];
-          type WalletWithPrimary = BackendWallet & { isPrimary?: boolean };
-          const primaryWallet = wallets.find((w: WalletWithPrimary) => w.isPrimary) || wallets[0];
-          return primaryWallet?.address || '';
-        } catch (e) {
-          console.error('Failed to parse wallets:', e);
-        }
+  // Get Movement/Aptos wallet address (primary wallet) - matching profile page logic
+  const [movementWalletAddress, setMovementWalletAddress] = React.useState<string | null>(null);
+
+  // Check Movement wallet from Privy's linkedAccounts (like profile page)
+  const checkMovementWallet = React.useCallback(() => {
+    if (!user?.linkedAccounts) return;
+
+    const movementWalletAccount = user.linkedAccounts.find((account) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const acc = account as any;
+      return acc.type === 'wallet' && acc.chainType === 'aptos';
+    });
+
+    if (movementWalletAccount) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const acc = movementWalletAccount as any;
+      if (acc.address) {
+        setMovementWalletAddress(acc.address);
       }
     }
-    return '';
-  }, []);
+  }, [user?.linkedAccounts]);
+
+  // Load wallets and find Movement wallet - matching profile page logic
+  React.useEffect(() => {
+    if (!user) return;
+
+    // First, try to load from localStorage
+    const walletsJson = localStorage.getItem('cto_user_wallets');
+    if (walletsJson) {
+      try {
+        interface WalletWithMovement extends BackendWallet {
+          blockchain?: string;
+          walletClient?: string;
+        }
+        const wallets = JSON.parse(walletsJson) as WalletWithMovement[];
+        
+        // Find Movement wallet from localStorage wallets
+        const movementWallet = wallets.find((w: WalletWithMovement) => 
+          w.blockchain === 'MOVEMENT' ||
+          w.blockchain === 'APTOS' ||
+          w.chainType === 'aptos' ||
+          w.walletClient === 'APTOS_EMBEDDED'
+        );
+        
+        if (movementWallet?.address) {
+          setMovementWalletAddress(movementWallet.address);
+          return;
+        }
+      } catch (e) {
+        console.error('Failed to parse wallets:', e);
+      }
+    }
+
+    // Fallback: check Privy linkedAccounts
+    checkMovementWallet();
+  }, [user, checkMovementWallet]);
+
+  // Primary wallet address is Movement wallet address (matching profile page)
+  const primaryWalletAddress = movementWalletAddress || '';
 
   const copyAddress = (address: string) => {
     navigator.clipboard.writeText(address);
@@ -154,15 +196,17 @@ export default function AvatarDropdown() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className='mx-8.5'>
-        <div className="relative w-9 h-9 rounded-full overflow-hidden">
+        <div className="relative flex justify-center items-center rounded-lg size-13 border-[0.2px] border-[#FFFFFF20] overflow-hidden">
             {avatarUrl ? (
-            <FallbackImage
+            <div className='size-9'>
+              <FallbackImage
                 src={avatarUrl}
                 alt="Profile"
                 fill
               className="object-cover rounded-full"
               onLoad={() => console.log('[AvatarDropdown] ✅ FallbackImage onLoad fired for:', avatarUrl)}
               />
+            </div>
             ) : (
             <div className="w-full h-full bg-[#FFFFFF0D] flex items-center justify-center">
               <span className="text-white text-xs font-bold">
