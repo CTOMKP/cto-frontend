@@ -12,6 +12,7 @@ import { MockLikeCoin } from "./types/listing";
 import { getChainImage } from "./utils/listingUtils";
 import ListingEngagement from "./ListingEngagement";
 import FallbackImage from "@/components/FallbackImage";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ListingTableRowProps {
   coin: MockLikeCoin;
@@ -98,18 +99,47 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
                     seed: "/project-categories/seed.svg",
                   };
                   
+                  const tierBgColors: Record<string, string> = {
+                    seed: "bg-[#6D6D6D]/20",
+                    sprout: "bg-[#FF5900]/20",
+                    bloom: "bg-[#15FF00]/20",
+                    stellar: "bg-[#FFBB00]/20",
+                  };
+                  
+                  const tierDescriptions: Record<string, string> = {
+                    seed: "Entry-level tier, 14-21 days old with minimal liquidity and early activity",
+                    sprout: "Mid-level tier, >21 days old, with moderate liquidity and stability",
+                    bloom: "Premium tier, >1 month old, with significant liquidity and security",
+                    stellar: "Elite tier, >1 month old, with significant liquidity and security",
+                  };
+                  
                   const iconPath = tierIcons[tier] || "/project-categories/bloom.svg";
+                  const bgColor = tierBgColors[tier] || "bg-[#15FF00]/20";
+                  const description = tierDescriptions[tier] || "";
+                  const tierName = tier.charAt(0).toUpperCase() + tier.slice(1);
                   
                   return (
-                    <span className={`bg-[#15FF00]/20 rounded-[4px] p-[3px]`}>
-                      <Image
-                        loading="lazy"
-                        src={iconPath}
-                        width={8.36}
-                        height={8.36}
-                        alt={tier}
-                      />
-                    </span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className={`${bgColor} rounded-[4px] p-[3px] cursor-help`}>
+                          <Image
+                            loading="lazy"
+                            src={iconPath}
+                            width={8.36}
+                            height={8.36}
+                            alt={tier}
+                          />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <div className="flex flex-col gap-1">
+                          <span className="font-semibold">{tierName}</span>
+                          {description && (
+                            <span className="text-xs">{description}</span>
+                          )}
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
                   );
                 })()}
               </div>

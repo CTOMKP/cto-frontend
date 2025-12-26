@@ -3,13 +3,17 @@
 import React from "react";
 import { Button } from "./ui/button";
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
+import { useRouter } from "next/navigation";
 
 export default function LoginButton() {
   const { login } = usePrivyAuth();
+  const router = useRouter();
 
   const handleLogin = async () => {
     try {
       await login();
+      // Redirect to profile page after successful login
+      router.push('/profile');
     } catch (error) {
       console.error('Login failed:', error);
     }
