@@ -11,6 +11,7 @@ import PfpSelection from './PfpSelection';
 
 export default function HarvestGrape() {
   const [animationPhase, setAnimationPhase] = useState(0);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   // Animation phases for blinking/pulsing effect
   useEffect(() => {
@@ -22,7 +23,7 @@ export default function HarvestGrape() {
   }, []);
 
   return (
-    <Dialog>
+    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       <DialogTrigger className="mx-8.5 relative flex justify-center items-center rounded-lg size-13 border-[0.2px] border-[#FFFFFF20] overflow-visible">
         {/* Pulsing background glow */}
         {/* <div 

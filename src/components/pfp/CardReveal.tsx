@@ -13,6 +13,7 @@ import { getMascotImageUrl } from '@/lib/image-url-helper';
 interface CardRevealProps {
   selectedCardId: number | null;
   onClose?: () => void;
+  onImageSaved?: (imageUrl: string) => void;
 }
 
 // Trait mapping - maps card IDs to trait names
@@ -109,11 +110,12 @@ const compositeMascotImage = async (
   });
 };
 
-export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose }) => {
+export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose, onImageSaved }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [isAutoSaved, setIsAutoSaved] = useState(false);
   const [imagesLoaded, setImagesLoaded] = useState({ base: false, stage: false, trait: false });
   const [compositeFile, setCompositeFile] = useState<File | null>(null);
+  const [savedImageUrl, setSavedImageUrl] = useState<string | null>(null);
   const { user } = usePrivy();
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -195,8 +197,12 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
 
         if (result.success) {
           setIsAutoSaved(true);
+          setSavedImageUrl(result.imageUrl || null);
           console.log('✅ PFP auto-saved successfully:', result.imageUrl);
           toast.success('Profile picture set automatically!', { autoClose: 2000 });
+          if (onImageSaved && result.imageUrl) {
+            onImageSaved(result.imageUrl);
+          }
         }
       } catch (error: unknown) {
         console.error('Failed to auto-save PFP:', error);
@@ -242,10 +248,15 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose 
 
       if (result.success) {
         setIsAutoSaved(true);
+        setSavedImageUrl(result.imageUrl || null);
         toast.success('Profile picture updated successfully');
-        if (onClose) {
-          setTimeout(() => onClose(), 1000);
+        if (onImageSaved && result.imageUrl) {
+          onImageSaved(result.imageUrl);
         }
+        // Don't close dialog - user can still share on social media or copy link
+        // if (onClose) {
+        //   setTimeout(() => onClose(), 1000);
+        // }
       }
     } catch (error: unknown) {
       console.error('Failed to save PFP:', error);
