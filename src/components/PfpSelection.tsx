@@ -36,6 +36,7 @@ const PfpSelection = () => {
   const [isRevealed, setIsRevealed] = useState(false);
   const [cards, setCards] = useState<PFPCard[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [savedImageUrl, setSavedImageUrl] = useState<string | null>(null);
 
   // Fetch cards on mount
   useEffect(() => {
@@ -87,6 +88,67 @@ const PfpSelection = () => {
     setTimeout(() => {
       setPhase("selected");
     }, 900); // Wait for exit animation to finish
+  };
+
+  const handleShare = async (platform: string) => {
+    if (!savedImageUrl) {
+      toast.error('Please wait for the image to be saved first');
+      return;
+    }
+
+    const shareText = `Check out my new mascot PFP! 🎨`;
+
+    try {
+      switch (platform) {
+        case 'X':
+        case 'Twitter':
+          // Twitter/X share URL - note: Twitter doesn't support image sharing via URL
+          // Users will need to manually upload the image
+          const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(savedImageUrl)}`;
+          window.open(twitterUrl, '_blank', 'width=550,height=420');
+          break;
+
+        case 'Reddit':
+          // Reddit submit URL - users can paste the image URL
+          const redditUrl = `https://reddit.com/submit?title=${encodeURIComponent(shareText)}&url=${encodeURIComponent(savedImageUrl)}`;
+          window.open(redditUrl, '_blank', 'width=550,height=420');
+          break;
+
+        case 'Facebook':
+          // Facebook share URL
+          const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(savedImageUrl)}`;
+          window.open(facebookUrl, '_blank', 'width=550,height=420');
+          break;
+
+        case 'Export Link':
+          // Copy image URL to clipboard
+          await navigator.clipboard.writeText(savedImageUrl);
+          toast.success('Image URL copied to clipboard!');
+          break;
+
+        default:
+          // Use Web Share API if available (for native sharing)
+          if (navigator.share) {
+            try {
+              await navigator.share({
+                title: 'My Mascot PFP',
+                text: shareText,
+                url: savedImageUrl,
+              });
+            } catch (shareError) {
+              // User cancelled or share failed
+              console.log('Share cancelled or failed:', shareError);
+            }
+          } else {
+            // Fallback: copy URL to clipboard
+            await navigator.clipboard.writeText(savedImageUrl);
+            toast.success('Image URL copied to clipboard!');
+          }
+      }
+    } catch (error) {
+      console.error('Error sharing:', error);
+      toast.error('Failed to share. Please try again.');
+    }
   };
 
 
@@ -244,7 +306,10 @@ const PfpSelection = () => {
                 damping: 14,
               }}
             >
-              <CardReveal selectedCardId={selectedCardId} />
+              <CardReveal 
+                selectedCardId={selectedCardId} 
+                onImageSaved={(imageUrl) => setSavedImageUrl(imageUrl)}
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -257,6 +322,7 @@ const PfpSelection = () => {
         {sharelinks.map((link, index) => (
             <Button
               key={index}
+              onClick={() => handleShare(link.name)}
               className="border-[0.4px] border-[#FFFFFF20] social-link-bg  justify-between size-12 rounded-lg"
             >
               <Image loading="lazy" className="size-[25.3px]" height={25.3} width={25.3} src={link.icon} alt={link.name} />

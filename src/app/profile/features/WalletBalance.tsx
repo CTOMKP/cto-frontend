@@ -304,9 +304,24 @@ export default function WalletBalance() {
         })
       );
 
-      setWalletAssets(assetsWithBalances);
-      if (assetsWithBalances.length > 0) {
-        setSelectedAsset(assetsWithBalances[0]);
+      // Sort wallets to put Movement wallet first
+      const sortedAssets = [...assetsWithBalances].sort((a, b) => {
+        const isMovementA = a.name === 'Movement' || a.name === 'Aptos' || 
+                           a.chainType.toLowerCase() === 'movement' || 
+                           a.chainType.toLowerCase() === 'aptos';
+        const isMovementB = b.name === 'Movement' || b.name === 'Aptos' || 
+                           b.chainType.toLowerCase() === 'movement' || 
+                           b.chainType.toLowerCase() === 'aptos';
+        
+        // Movement wallets come first
+        if (isMovementA && !isMovementB) return -1;
+        if (!isMovementA && isMovementB) return 1;
+        return 0; // Keep original order for non-Movement wallets
+      });
+
+      setWalletAssets(sortedAssets);
+      if (sortedAssets.length > 0) {
+        setSelectedAsset(sortedAssets[0]);
       }
       setIsLoading(false);
     } catch (error) {

@@ -496,6 +496,24 @@ export default function ProfilePage() {
     index === self.findIndex((w) => w.address.toLowerCase() === wallet.address.toLowerCase())
   );
 
+  // Sort wallets to put Movement/Aptos wallet first
+  const sortedWallets = [...uniqueWallets].sort((a, b) => {
+    const isMovementWallet = (wallet: BackendWallet | PrivyWalletAccount) => {
+      const chainType = 'chainType' in wallet ? wallet.chainType : undefined;
+      const blockchain = 'blockchain' in wallet ? wallet.blockchain : undefined;
+      const chainUpper = ((chainType || blockchain || '').toUpperCase());
+      return chainUpper === 'MOVEMENT' || chainUpper === 'APTOS' || chainType === 'aptos';
+    };
+    
+    const isMovementA = isMovementWallet(a);
+    const isMovementB = isMovementWallet(b);
+    
+    // Movement/Aptos wallets come first
+    if (isMovementA && !isMovementB) return -1;
+    if (!isMovementA && isMovementB) return 1;
+    return 0; // Keep original order for non-Movement wallets
+  });
+
   // Primary wallet address for display (Movement wallet only)
   // Prioritize movementWalletAddress state (from backend or Privy check)
   const primaryWalletAddress = movementWalletAddress || '';
@@ -541,7 +559,7 @@ export default function ProfilePage() {
               onWalletsDialogOpenChange={setWalletsDialogOpen}
               walletsDialogContent={
                 <WalletsDialog
-                  uniqueWallets={uniqueWallets}
+                  uniqueWallets={sortedWallets}
                   user={user as PrivyUser}
                   primaryWalletAddress={movementWalletAddress}
                 />

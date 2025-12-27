@@ -296,7 +296,10 @@ export default function NavBar() {
             <div className="w-20 h-9" />
           ) : showAuthenticatedUI ? (
             <>
-              {hasAvatar ? <AvatarDropdown /> : <HarvestGrape />}
+              <div style={{ display: hasAvatar ? 'none' : 'block' }}>
+                <HarvestGrape />
+              </div>
+              {hasAvatar && <AvatarDropdown />}
             </>
           ) : (
             <LoginButton />

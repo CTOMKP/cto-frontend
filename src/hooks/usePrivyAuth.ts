@@ -30,12 +30,45 @@ export function usePrivyAuth() {
   const hasSyncedRef = useRef(false);
   const isProcessingRef = useRef(false);
   const walletCreationAttemptedRef = useRef<string | null>(null);
+  const hasRedirectedAfterLoginRef = useRef(false);
+  const previousAuthenticatedRef = useRef(false);
+  const initialMountRef = useRef(true);
 
   // Update isAuthenticated based on Privy state and localStorage
   useEffect(() => {
     const token = localStorage.getItem('cto_auth_token');
-    setIsAuthenticated(authenticated && !!token);
-  }, [authenticated]);
+    const newAuthState = authenticated && !!token;
+    const wasAuthenticated = previousAuthenticatedRef.current;
+    
+    // On initial mount, if user is already authenticated, mark as such to prevent redirect
+    if (initialMountRef.current) {
+      initialMountRef.current = false;
+      setIsAuthenticated(newAuthState);
+      if (newAuthState) {
+        previousAuthenticatedRef.current = true;
+      }
+      return; // Skip redirect check on initial mount
+    }
+    
+    setIsAuthenticated(newAuthState);
+    
+    // Redirect to /profile after successful login (when transitioning from unauthenticated to authenticated)
+    // Only redirect once per login session and only on actual login transitions (not on component remounts or state updates)
+    if (newAuthState && !wasAuthenticated && !hasRedirectedAfterLoginRef.current && typeof window !== 'undefined') {
+      const currentPath = window.location.pathname;
+      if (currentPath !== '/profile') {
+        hasRedirectedAfterLoginRef.current = true;
+        router.push('/profile');
+      }
+    }
+    
+    // Reset redirect flag when user becomes unauthenticated
+    if (!newAuthState && wasAuthenticated) {
+      hasRedirectedAfterLoginRef.current = false;
+    }
+    
+    previousAuthenticatedRef.current = newAuthState;
+  }, [authenticated, router]);
 
   // Wait for Privy to fully load linkedAccounts (with retries)
   const waitForPrivyAccounts = async (maxRetries = 5, delayMs = 500): Promise<boolean> => {
