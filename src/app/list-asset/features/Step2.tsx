@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react'
+import React, { useState } from 'react'
 import Image from 'next/image'
 import { Globe, Plus, Upload } from 'lucide-react'
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ interface Step2Props {
   handleProfilePictureChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleBannerChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   setCurrentStep: (step: number) => void;
+  onBioChange?: (bio: string) => void;
 }
 
 export default function Step2({ 
@@ -19,8 +20,10 @@ export default function Step2({
   bannerPreview, 
   handleProfilePictureChange, 
   handleBannerChange, 
-  setCurrentStep 
+  setCurrentStep,
+  onBioChange
 }: Step2Props) {
+  const [bio, setBio] = useState('');
   return (
     <div className="space-y-4">
       <div>
@@ -134,7 +137,18 @@ export default function Step2({
           <span className="text-[#FF3939]">*</span>
         </label>
 
-        <Input placeholder="Brief description..." className="bg-white/5 border-[0.2px] h-12 mt-4 rounded-lg border-white/20" />
+        <Input 
+          placeholder="Brief description..." 
+          className="bg-white/5 border-[0.2px] h-12 mt-4 rounded-lg border-white/20"
+          value={bio}
+          onChange={(e) => {
+            const value = e.target.value;
+            setBio(value);
+            if (onBioChange) {
+              onBioChange(value);
+            }
+          }}
+        />
       </div>
 
       <div>

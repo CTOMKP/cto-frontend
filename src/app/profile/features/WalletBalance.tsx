@@ -9,6 +9,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import axios from 'axios';
 import { BackendWallet, PrivyWalletAccount, PrivyUser } from '@/types/privy';
 import { getMovementWallet } from '@/lib/movement-wallet';
+import { movementWalletService } from '@/services/movementWalletService';
 
 interface WalletAsset {
   name: string;
@@ -292,7 +293,83 @@ export default function WalletBalance() {
           const { chainType, blockchain } = getWalletChainInfo(wallet);
           const chainName = getChainDisplayName(chainType, blockchain);
           const chainImage = getChainImage(chainType, blockchain);
-          const balance = await fetchWalletBalance(wallet);
+          
+          // Check if this is a Movement wallet
+          const isMovementWallet = 
+            chainType?.toLowerCase() === 'aptos' || 
+            blockchain?.toUpperCase() === 'MOVEMENT' ||
+            blockchain?.toUpperCase() === 'APTOS';
+          
+          let balance = 0;
+          
+          if (isMovementWallet) {
+            // Use Movement wallet endpoints for Movement wallets
+            try {
+              // Get wallet ID from backend wallet data
+              // The walletId should be the backend's internal ID, not the Privy wallet ID
+              let walletId: string | null = null;
+              
+              // Check if wallet has an id field (from backend)
+              if ('id' in wallet && wallet.id) {
+                walletId = wallet.id;
+              } else {
+                // Try to find wallet in backend wallets list by address
+                const backendWallet = wallets.find(w => 
+                  w.address.toLowerCase() === wallet.address.toLowerCase() &&
+                  (w.blockchain === 'MOVEMENT' || w.blockchain === 'APTOS' || 
+                   w.chainType?.toLowerCase() === 'aptos' || w.chainType?.toLowerCase() === 'movement')
+                );
+                if (backendWallet?.id) {
+                  walletId = backendWallet.id;
+                }
+              }
+              
+              if (!walletId) {
+                console.warn('Movement wallet ID not found, falling back to Privy API');
+                balance = await fetchWalletBalance(wallet);
+              } else {
+                // First, sync the balance to ensure it's up to date
+                try {
+                  await movementWalletService.syncBalance(walletId, true); // testnet = true
+                } catch (syncError) {
+                  console.warn('Failed to sync Movement wallet balance:', syncError);
+                  // Continue to getBalance even if sync fails
+                }
+                
+                // Get balance from backend
+                const balances = await movementWalletService.getBalance(walletId);
+                
+                // Calculate total USD value from all token balances
+                // Sum up MOVE and USDC balances (assuming 1:1 USD conversion for simplicity)
+                balance = balances.reduce((total, tokenBalance) => {
+                  const balanceValue = parseFloat(tokenBalance.balance) / Math.pow(10, tokenBalance.decimals);
+                  // Simple conversion: MOVE ~$1, USDC = $1 (in production, use actual prices)
+                  const usdValue = balanceValue; // Simplified - should use actual token prices
+                  return total + usdValue;
+                }, 0);
+                
+                // Fetch and log transactions for Movement wallet
+                try {
+                  const transactions = await movementWalletService.getTransactions(walletId, 10);
+                  console.log('📊 Movement Wallet Transactions:', {
+                    walletId,
+                    address: wallet.address,
+                    transactionCount: transactions.length,
+                    transactions: transactions
+                  });
+                } catch (txError) {
+                  console.error('Failed to fetch Movement wallet transactions:', txError);
+                }
+              }
+            } catch (error) {
+              console.error('Failed to fetch Movement wallet balance:', error);
+              // Fallback to Privy API if Movement endpoint fails
+              balance = await fetchWalletBalance(wallet);
+            }
+          } else {
+            // Use Privy API for non-Movement wallets
+            balance = await fetchWalletBalance(wallet);
+          }
           
           return {
             name: chainName,

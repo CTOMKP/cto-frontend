@@ -241,6 +241,32 @@ class PrivyService {
   }
 
   /**
+   * Get user wallets from backend
+   */
+  async getUserWallets() {
+    try {
+      const token = localStorage.getItem('cto_auth_token');
+      if (!token) {
+        throw new Error('No authentication token');
+      }
+
+      const response = await axios.get(
+        `${API_BASE}/api/v1/auth/privy/wallets`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error('❌ Get wallets error:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Logout user (clear all tokens and user data)
    */
   logout() {
