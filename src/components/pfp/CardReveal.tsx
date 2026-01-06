@@ -110,7 +110,7 @@ const compositeMascotImage = async (
   });
 };
 
-export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onClose, onImageSaved }) => {
+export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageSaved }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [isAutoSaved, setIsAutoSaved] = useState(false);
   const [imagesLoaded, setImagesLoaded] = useState({ base: false, stage: false, trait: false });

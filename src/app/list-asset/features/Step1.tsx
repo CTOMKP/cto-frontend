@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import Image from 'next/image'
-import { Check, Ellipsis, Search, Zap } from 'lucide-react'
+import { Check, Ellipsis, Search, X, Zap } from 'lucide-react'
 import { usePrivyAuth } from '@/hooks/usePrivyAuth'
 import {
     Select,
@@ -22,6 +22,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Progress } from "@/components/ui/progress"
+import { userListingsService, ScanResult } from '@/services/userListingsService';
+import PaymentDialog from './PaymentDialog';
 
 interface Step1Props {
   selectedNetwork: string;
@@ -32,6 +34,9 @@ interface Step1Props {
     name: string;
     src: string;
   }>;
+  setCurrentStep: (step: number) => void;
+  onScanResultChange?: (result: ScanResult | null) => void;
+  onContractAddressChange?: (address: string) => void;
 }
 
 const info = [
@@ -53,26 +58,159 @@ const info = [
   },
 ]
 
+// Helper function to get tier display info
+export const getTierInfo = (tier: string | undefined) => {
+  const tierStr = (tier || '').toLowerCase();
+  const tierIcons: Record<string, string> = {
+    stellar: "/project-categories/stellar.svg",
+    bloom: "/project-categories/bloom.svg",
+    sprout: "/project-categories/sprout.svg",
+    seed: "/project-categories/seed.svg",
+  };
+  const tierBgColors: Record<string, string> = {
+    seed: "bg-[#6D6D6D]/20",
+    sprout: "bg-[#FF5900]/20",
+    bloom: "bg-[#15FF00]/20",
+    stellar: "bg-[#FFBB00]/20",
+  };
+  const tierTextColors: Record<string, string> = {
+    seed: "text-[#6D6D6D]",
+    sprout: "text-[#FF5900]",
+    bloom: "text-[#15FF00]",
+    stellar: "text-[#FFBB00]",
+  };
+  const tierNames: Record<string, string> = {
+    seed: "Seed",
+    sprout: "Sprout",
+    bloom: "Bloom",
+    stellar: "Stellar",
+  };
+  return {
+    icon: tierIcons[tierStr] || "/project-categories/sprout.svg",
+    bgColor: tierBgColors[tierStr] || "bg-[#FF5900]/20",
+    textColor: tierTextColors[tierStr] || "text-[#FF5900]",
+    name: tierNames[tierStr] || "Sprout",
+  };
+};
+
+// Helper function to get risk score color
+export const getRiskScoreColor = (score: number) => {
+  if (score >= 80) return "text-[#0B8700]";
+  if (score >= 60) return "text-[#FFCB45]";
+  return "text-[#FF3939]";
+};
+
+// Helper function to get risk score icon
+export const getRiskScoreIcon = (score: number) => {
+  if (score >= 80) return "/risk-score/good.svg";
+  if (score >= 60) return "/risk-score/medium.svg";
+  return "/risk-score/bad.svg";
+};
+
+// Helper function to format currency
+export const formatCurrency = (value: number | undefined) => {
+  if (!value) return "N/A";
+  if (value >= 1000000) return `$${(value / 1000000).toFixed(2)}M`;
+  if (value >= 1000) return `$${(value / 1000).toFixed(2)}K`;
+  return `$${value.toFixed(2)}`;
+};
+
+// Helper function to format number
+export const formatNumber = (value: number | undefined) => {
+  if (!value && value !== 0) return "N/A";
+  if (value >= 1000000) return `${(value / 1000000).toFixed(2)}M`;
+  if (value >= 1000) return `${(value / 1000).toFixed(2)}K`;
+  return value.toLocaleString();
+};
+
 export default function Step1({ 
   selectedNetwork, 
   setSelectedNetwork, 
   networkDialogueOpen, 
   setNetworkDialogueOpen, 
-  networks 
+  networks,
+  setCurrentStep,
+  onScanResultChange,
+  onContractAddressChange
 }: Step1Props) {
   const [scanDialogOpen, setScanDialogOpen] = useState(false);
   const [scanComplete, setScanComplete] = useState(false);
   const [progress, setProgress] = useState(0);
   const [contractAddress, setContractAddress] = useState('');
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  const [addressValidation, setAddressValidation] = useState<{
+    isValid: boolean | null;
+    message: string;
+  }>({ isValid: null, message: '' });
   
-  const { isAuthenticated, getAccessToken } = usePrivyAuth();
-  const [token, setToken] = useState<string | null>(null);
+  const { isAuthenticated } = usePrivyAuth();
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      getAccessToken().then(t => setToken(t || null)).catch(() => setToken(null));
+  // Validation function for contract addresses based on chain
+  const validateContractAddress = (address: string, network: string): { isValid: boolean | null; message: string } => {
+    if (!address.trim()) {
+      return { isValid: null, message: '' };
     }
-  }, [isAuthenticated, getAccessToken]);
+
+    const trimmedAddress = address.trim();
+    const networkLower = network.toLowerCase();
+
+    // Solana: Base58 encoded, 32-44 characters
+    if (networkLower === 'solana') {
+      const solanaPattern = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+      if (solanaPattern.test(trimmedAddress)) {
+        return { isValid: true, message: 'This contract is valid. Proceed to scan' };
+      } else {
+        return { isValid: false, message: 'Invalid address format. Please enter a correct Solana contract address' };
+      }
+    }
+
+    // Aptos/Movement: Hex format starting with 0x, 66 characters (0x + 64 hex chars)
+    if (networkLower === 'aptos' || networkLower === 'movement') {
+      const aptosPattern = /^0x[a-fA-F0-9]{64}$/;
+      if (aptosPattern.test(trimmedAddress)) {
+        return { isValid: true, message: 'This contract is valid. Proceed to scan' };
+      } else {
+        return { isValid: false, message: 'Invalid address format. Please enter a correct Aptos/Movement contract address' };
+      }
+    }
+
+    // BNB (BSC), Base, Monad: EVM format, hex starting with 0x, 42 characters
+    if (networkLower === 'bnb' || networkLower === 'base' || networkLower === 'monad') {
+      const evmPattern = /^0x[a-fA-F0-9]{40}$/;
+      if (evmPattern.test(trimmedAddress)) {
+        return { isValid: true, message: 'This contract is valid. Proceed to scan' };
+      } else {
+        const networkName = networkLower === 'bnb' ? 'BNB' : networkLower.charAt(0).toUpperCase() + networkLower.slice(1);
+        return { isValid: false, message: `Invalid address format. Please enter a correct ${networkName} contract address` };
+      }
+    }
+
+    // Default: accept any non-empty string (for unknown networks)
+    if (trimmedAddress.length > 0) {
+      return { isValid: true, message: 'This contract is valid. Proceed to scan' };
+    }
+
+    return { isValid: false, message: 'Invalid address format' };
+  };
+
+  // Handle address input change with validation
+  const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setContractAddress(value);
+    
+    // Pass to parent component
+    if (onContractAddressChange) {
+      onContractAddressChange(value);
+    }
+    
+    if (value.trim()) {
+      const validation = validateContractAddress(value, selectedNetwork);
+      setAddressValidation(validation);
+    } else {
+      setAddressValidation({ isValid: null, message: '' });
+    }
+  };
 
   const startScan = async () => {
     if (!contractAddress.trim()) {
@@ -85,7 +223,6 @@ export default function Step1({
       return;
     }
 
-    // setIsScanning(true);
     setScanComplete(false);
     setProgress(0);
     
@@ -101,29 +238,48 @@ export default function Step1({
         });
       }, 100);
 
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-
-      // Make API call to scan token with authentication
-      const response = await fetch(`${backendUrl}/api/scan/scan`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          contractAddress: contractAddress.trim(),
-          network: selectedNetwork
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      // Use userListingsService to scan token
+      // Note: Uses contractAddr (not contractAddress) and chain (not network)
+      // Convert selectedNetwork to uppercase chain format (e.g., "aptos" -> "APTOS", "solana" -> "SOLANA")
+      const chain = selectedNetwork.toUpperCase();
       
-      // Log the data to console for you to see
-      console.log('Scan API Response:', data);
+      const scanResult = await userListingsService.scan(
+        contractAddress.trim(),
+        chain
+      );
+      
+      // Store scan result for use in payment dialog
+      setScanResult(scanResult);
+      // Also pass to parent component for Step4
+      if (onScanResultChange) {
+        onScanResultChange(scanResult);
+      }
+      
+      // Log the scan result data in a copyable format
+      console.log('📊 ========== SCAN RESULT DATA (COPY BELOW) ==========');
+      console.log(JSON.stringify(scanResult, null, 2));
+      console.log('📊 ========== END SCAN RESULT DATA ==========');
+      
+      // Also log in a more readable format
+      console.log('📊 Scan Result Summary:', {
+        success: scanResult.success,
+        risk_score: scanResult.risk_score,
+        tier: scanResult.tier,
+        eligible: scanResult.eligible,
+        summary: scanResult.summary,
+        hasMetadata: !!scanResult.metadata,
+        hasDetails: !!scanResult.details,
+        detailsTier: scanResult.details?.tier,
+        detailsRiskScore: scanResult.details?.risk_score,
+        detailsMetadata: scanResult.details?.metadata ? {
+          token_name: scanResult.details.metadata.token_name,
+          token_symbol: scanResult.details.metadata.token_symbol,
+          project_age_days: scanResult.details.metadata.project_age_days,
+          lp_amount_usd: scanResult.details.metadata.lp_amount_usd,
+          market_cap: scanResult.details.metadata.market_cap,
+          volume_24h: scanResult.details.metadata.volume_24h,
+        } : null,
+      });
       
       // Complete progress animation
       setProgress(100);
@@ -138,11 +294,6 @@ export default function Step1({
     }
   };
 
-  const resetScan = () => {
-    setScanDialogOpen(false);
-    setScanComplete(false);
-    setProgress(0);
-  };
   return (
     <>
       <h2 className="font-bold text-[18px] text-center mb-2">
@@ -156,7 +307,14 @@ export default function Step1({
         defaultOpen={networkDialogueOpen}
         onOpenChange={(open) => setNetworkDialogueOpen(open)}
         defaultValue={selectedNetwork}
-        onValueChange={(value) => setSelectedNetwork(value)}
+        onValueChange={(value) => {
+          setSelectedNetwork(value);
+          // Re-validate address when network changes
+          if (contractAddress.trim()) {
+            const validation = validateContractAddress(contractAddress, value);
+            setAddressValidation(validation);
+          }
+        }}
       >
         <SelectTrigger className="w-full mt-6 h-10 rounded-lg border-[0.2px] border-[#FFFFFF20]">
           <div className="w-full items-center pr-4 flex justify-between">
@@ -209,19 +367,53 @@ export default function Step1({
         </SelectContent>
       </Select>
 
-      <div className="mt-4 relative flex items-center">
-        <Input
-          placeholder="Enter Contract address (32-44 characters)"
-          className="border-[0.2px] border-white/20 h-12 py-3 px-2 bg-white/5 rounded-lg text-white placeholder:text-white/50"
-          value={contractAddress}
-          onChange={(e) => setContractAddress(e.target.value)}
-        />
-        <Button 
-          className="p-0 px-1 py-1.5 h-fit rounded-[4px] text-white/50 text-xs absolute right-2 bg-white/5"
-          onClick={() => navigator.clipboard.readText().then(text => setContractAddress(text))}
-        >
-          paste
-        </Button>
+      <div className="mt-4">
+        <div className="relative flex items-center">
+          <Input
+            placeholder="Enter Contract address (32-44 characters)"
+            className={`border-[0.2px] h-12 py-3 px-2 pr-12 bg-white/5 rounded-lg text-white placeholder:text-white/50 ${
+              addressValidation.isValid === true
+                ? 'border-[#16C784]'
+                : addressValidation.isValid === false
+                ? 'border-[#FF3939]'
+                : 'border-white/20'
+            }`}
+            value={contractAddress}
+            onChange={handleAddressChange}
+          />
+          <div className="absolute right-2 flex items-center gap-2">
+            {addressValidation.isValid !== null && (
+              <div className={`size-6 rounded flex items-center justify-center ${
+                addressValidation.isValid ? 'bg-[#16C784]/20' : 'bg-[#FF3939]/20'
+              }`}>
+                {addressValidation.isValid ? (
+                  <Check size={16} color="#16C784" />
+                ) : (
+                  <X size={16} color="#FF3939" />
+                )}
+              </div>
+            )}
+            <Button 
+              className="p-0 px-1 py-1.5 h-fit rounded-[4px] text-white/50 text-xs bg-white/5"
+              onClick={() => navigator.clipboard.readText().then(text => {
+                setContractAddress(text);
+                if (text.trim()) {
+                  const validation = validateContractAddress(text, selectedNetwork);
+                  setAddressValidation(validation);
+                }
+              })}
+            >
+              paste
+            </Button>
+          </div>
+        </div>
+        {addressValidation.message && (
+          <p className={`text-xs mt-2 ${
+            addressValidation.isValid ? 'text-[#16C784]' : 'text-[#FF3939]'
+          }`}>
+            {addressValidation.message}
+          </p>
+        )}
       </div>
 
       <Dialog open={scanDialogOpen} onOpenChange={setScanDialogOpen}>
@@ -287,90 +479,138 @@ export default function Step1({
                 </DialogDescription>
               </DialogHeader>
               <div>
-                <div className='grid grid-cols-2 gap-2'>
-                  <div className='flex justify-between p-2 rounded-xl border border-[#8686864D]'>
-                    <div className='space-y-2'>
-                      <h2 className='font-bold text-sm text-white/50'>Tier classification</h2>
-                      <p className='text-[19px] font-bold text-[#FF5900]'>Sprout </p>
-                    </div>
-                    <span className='size-7 rounded-lg bg-[#FF5900]/20 flex justify-center items-center'>
-                      <Image loading="lazy" src={'/project-categories/sprout.svg'} alt={'sprout'} width={16} height={16} />
-                    </span>
-                  </div>
+                {(() => {
+                  // Handle nested details.details structure
+                  const nestedDetails = scanResult?.details?.details;
+                  const tier = nestedDetails?.tier || scanResult?.details?.tier || scanResult?.tier;
+                  const riskScore = nestedDetails?.risk_score || scanResult?.details?.risk_score || scanResult?.risk_score || 0;
+                  // const riskLevel = nestedDetails?.risk_level || scanResult?.details?.risk_level || scanResult?.risk_level;
+                  const tierInfo = getTierInfo(tier);
+                  const metadata = nestedDetails?.metadata || scanResult?.details?.metadata || scanResult?.metadata;
+                  const summary = nestedDetails?.summary || scanResult?.details?.summary || scanResult?.summary;
                   
-                  <div className='flex justify-between p-2 rounded-xl border border-[#8686864D]'>
-                    <div className='space-y-2'>
-                      <h2 className='font-bold text-sm text-white/50'>Risk score</h2>
-                      <p className='text-[19px] font-bold'><span className='text-[#0B8700]'>85</span>/100</p>
-                    </div>
-                    <span className='size-7 rounded-lg bg-[#15FF00]/20 flex justify-center items-center'>
-                      <Image loading="lazy" src={'/risk-score/good.svg'} alt={'sprout'} width={12} height={12} />
-                    </span>
-                  </div>
-                </div>
+                  return (
+                    <>
+                      <div className='grid grid-cols-2 gap-2'>
+                        <div className='flex justify-between p-2 rounded-xl border border-[#8686864D]'>
+                          <div className='space-y-2'>
+                            <h2 className='font-bold text-sm text-white/50'>Tier classification</h2>
+                            <p className={`text-[19px] font-bold ${tierInfo.textColor}`}>{tierInfo.name}</p>
+                          </div>
+                          <span className={`size-7 rounded-lg ${tierInfo.bgColor} flex justify-center items-center`}>
+                            <Image loading="lazy" src={tierInfo.icon} alt={tierInfo.name.toLowerCase()} width={16} height={16} />
+                          </span>
+                        </div>
+                        
+                        <div className='flex justify-between p-2 rounded-xl border border-[#8686864D]'>
+                          <div className='space-y-2'>
+                            <h2 className='font-bold text-sm text-white/50'>Risk score</h2>
+                            <p className='text-[19px] font-bold'><span className={getRiskScoreColor(riskScore)}>{riskScore}</span>/100</p>
+                          </div>
+                          <span className='size-7 rounded-lg bg-[#15FF00]/20 flex justify-center items-center'>
+                            <Image 
+                              loading="lazy" 
+                              src={
+                                riskScore >= 70
+                                  ? "/risk-score/good.svg"
+                                  : riskScore >= 50
+                                  ? "/risk-score/average.svg"
+                                  : "/risk-score/bad.svg"
+                              }
+                              alt={'risk-score'} 
+                              width={12} 
+                              height={12} 
+                            />
+                          </span>
+                        </div>
+                      </div>
 
-                <div className='mt-5 mb-6'>
-                  <h3 className='font-bold text-[18px] mb-4'>Details</h3>
+                      <div className='mt-5 mb-6'>
+                        <h3 className='font-bold text-[18px] mb-4'>Details</h3>
 
-                  <div className='grid grid-cols-2 gap-6'>
-                    <div className='space-y-4.5'>
-                      <p><span className='text-white/70'>Name:</span> <span>Just a Chill guy</span></p>
-                      <p><span className='text-white/70'>Ticker:</span> <span className='uppercase'>$CHILLGUY</span></p>
-                      <p><span className='text-white/70'>Age:</span> <span>2mo 5d</span></p>
-                      <p><span className='text-white/70'>Created:</span> <span>07/06/2025</span></p>
-                    </div>
-                    <div className='space-y-4.5'>
-                      <p><span className='text-white/70'>Price:</span> <span>$1,000,000</span></p>
-                      <p><span className='text-white/70'>Market cap:</span> <span>2mo 5d</span></p>
-                      <p><span className='text-white/70'>24h volume:</span> <span>07/06/2025</span></p>
-                    </div>
-                  </div>
-                </div>
+                        <div className='grid grid-cols-2 gap-6'>
+                          <div className='space-y-4.5'>
+                            <p><span className='text-white/70'>Name:</span> <span>{metadata?.token_name || 'N/A'}</span></p>
+                            <p><span className='text-white/70'>Ticker:</span> <span className='uppercase'>${metadata?.token_symbol || 'N/A'}</span></p>
+                            <p><span className='text-white/70'>Age:</span> <span>{metadata?.age_display_short || metadata?.age_display || 'N/A'}</span></p>
+                            <p><span className='text-white/70'>Created:</span> <span>{metadata?.creation_date ? new Date(metadata.creation_date).toLocaleDateString() : 'N/A'}</span></p>
+                          </div>
+                          <div className='space-y-4.5'>
+                            <p><span className='text-white/70'>Price:</span> <span>${metadata?.token_price ? metadata.token_price.toFixed(6) : 'N/A'}</span></p>
+                            <p><span className='text-white/70'>Market cap:</span> <span>{formatCurrency(metadata?.market_cap)}</span></p>
+                            <p><span className='text-white/70'>24h volume:</span> <span>{formatCurrency(metadata?.volume_24h)}</span></p>
+                          </div>
+                        </div>
+                      </div>
 
-                <div className='py-4.5 px-2 space-y-4 border border-[#8686864D] rounded-lg'>
-                  <h3><Zap className='inline-block' size={16} color='#FFCB45' /> <span className='font-medium text-[18px]'>Summary</span></h3>
-                  <p className='text-sm text-white/70'>
-                  This project has been active for several weeks and shows growth potential. it features excellent liquidity wiith short ter,m LPP commitment. classified as Bloom teeir demonstrating maturity strong fundamentalls and
-                  </p>
-                </div>
+                      {summary && (
+                        <div className='py-4.5 px-2 space-y-4 border border-[#8686864D] rounded-lg'>
+                          <h3><Zap className='inline-block' size={16} color='#FFCB45' /> <span className='font-medium text-[18px]'>Summary</span></h3>
+                          <p className='text-sm text-white/70'>
+                            {summary}
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
 
-                <div className='grid grid-cols-3 gap-2 mt-4 mb-8'>
-                  <div className='h-[113px] rounded-xl border border-[#8686864D] flex items-center jusify-center'>
-                    <div className='text-center space-y-[2px] w-full'>
-                    <h3 className='text-white/50 font-bold text-xs'>Lp security</h3>
-                    <div className='flex items-center gap-1 justify-center'>
-                      <span className='font-bold text-[24px]'>$3.4M</span>
-                      <Image loading="lazy" src={'/lock.svg'} alt={'lock'} width={23} height={23} />
-                    </div>
-                    <p className='text-white/50 font-bold text-xs'>locked: 95%</p>
-                    </div>
-                  </div>
+                {(() => {
+                  // Handle nested details.details structure
+                  const nestedDetails = scanResult?.details?.details;
+                  const metadata = nestedDetails?.metadata || scanResult?.details?.metadata || scanResult?.metadata;
+                  const riskScore = nestedDetails?.risk_score || scanResult?.details?.risk_score || scanResult?.risk_score || 0;
+                  const riskLevel = nestedDetails?.risk_level || scanResult?.details?.risk_level || scanResult?.risk_level || 'UNKNOWN';
+                  
+                  return (
+                    <div className='grid grid-cols-3 gap-2 mt-4 mb-8'>
+                      <div className='h-[113px] rounded-xl border border-[#8686864D] flex items-center jusify-center'>
+                        <div className='text-center space-y-[2px] w-full'>
+                          <h3 className='text-white/50 font-bold text-xs'>LP Security</h3>
+                          <div className='flex items-center gap-1 justify-center'>
+                            <span className='font-bold text-[24px]'>{formatCurrency(metadata?.lp_amount_usd)}</span>
+                            {(metadata?.lp_locked || metadata?.lp_burned) && (
+                              <Image loading="lazy" src={'/lock.svg'} alt={'lock'} width={23} height={23} />
+                            )}
+                          </div>
+                          <p className='text-white/50 font-bold text-xs'>
+                            {metadata?.lp_locked ? 'Locked' : metadata?.lp_burned ? 'Burned' : 'Unlocked'}
+                            {metadata?.lp_lock_months ? `: ${metadata.lp_lock_months}mo` : ''}
+                          </p>
+                        </div>
+                      </div>
 
-                  <div className='h-[113px] rounded-xl border border-[#8686864D] flex items-center jusify-center'>
-                    <div className='text-center space-y-[2px] w-full'>
-                    <h3 className='text-white/50 font-bold text-xs'>Holders</h3>
-                    <div className='flex items-center gap-1 justify-center'>
-                      <span className='font-bold text-[24px]'>15,234</span>
-                    </div>
-                    <p className='text-white/50 font-bold text-xs'>Top 10 &lt; 10%</p>
-                    </div>
-                  </div>
+                      <div className='h-[113px] rounded-xl border border-[#8686864D] flex items-center jusify-center'>
+                        <div className='text-center space-y-[2px] w-full'>
+                          <h3 className='text-white/50 font-bold text-xs'>Holders</h3>
+                          <div className='flex items-center gap-1 justify-center'>
+                            <span className='font-bold text-[24px]'>{formatNumber(metadata?.holder_count)}</span>
+                          </div>
+                          <p className='text-white/50 font-bold text-xs'>
+                            {metadata?.holder_count ? 'Active holders' : 'N/A'}
+                          </p>
+                        </div>
+                      </div>
 
-                  <div className='h-[113px] rounded-xl border border-[#8686864D] flex items-center jusify-center'>
-                    <div className='text-center space-y-[2px] w-full'>
-                    <h3 className='text-white/50 font-bold text-xs'>Security</h3>
-                    <div className='flex items-center gap-1 justify-center'>
-                      <span className='font-bold text-[24px]'>Low risk</span>
-                      <Image loading="lazy" src={'/degen-audit/3.svg'} alt={'degen-audit'} width={22} height={22} />
+                      <div className='h-[113px] rounded-xl border border-[#8686864D] flex items-center jusify-center'>
+                        <div className='text-center space-y-[2px] w-full'>
+                          <h3 className='text-white/50 font-bold text-xs'>Security</h3>
+                          <div className='flex items-center gap-1 justify-center'>
+                            <span className='font-bold text-[24px]'>{riskLevel}</span>
+                            <Image loading="lazy" src={getRiskScoreIcon(riskScore)} alt={'security'} width={22} height={22} />
+                          </div>
+                          <p className='text-white/50 font-bold text-xs'>Score: {riskScore}/100</p>
+                        </div>
+                      </div>
                     </div>
-                    <p className='text-white/50 font-bold text-xs'>Score: 85/100</p>
-                    </div>
-                  </div>
-                </div>
+                  );
+                })()}
 
                 <div className='flex justify-center'>
                   <Button 
-                    onClick={resetScan}
+                    onClick={() => {
+                      setCurrentStep(2);
+                    }}
                     className="w-[155px] bg-gradient-to-r from-[#FF0075] via-[#FF4A15] to-[#FFCB45] rounded-lg h-9"
                   >
                     List
@@ -385,6 +625,15 @@ export default function Step1({
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Payment Dialog */}
+      <PaymentDialog
+        open={paymentDialogOpen}
+        onOpenChange={setPaymentDialogOpen}
+        projectTitle={(scanResult?.details?.details?.metadata?.token_name || scanResult?.details?.metadata?.token_name || scanResult?.metadata?.token_name) || 'Token Listing'}
+        listingId={scanResult?.details?.details?.id || scanResult?.details?.id || '#432738'}
+        listingFee={5}
+      />
 
       <div className="border border-white/20 rounded-lg px-2 py-4.5">
         <div className="flex items-center gap-2">

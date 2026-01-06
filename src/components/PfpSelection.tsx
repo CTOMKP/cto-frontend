@@ -331,13 +331,13 @@ const PfpSelection = () => {
       </div>
       </div>
       : 
-      <Button
+        <Button
         onClick={phase === "selected" ? handleReveal : handleHarvest}
-        disabled={!selectedCardId}
-        className={`cta-gradient w-full mt-6 transition-all duration-300 ${
-          !selectedCardId ? "opacity-50 cursor-not-allowed" : ""
-        }`}
-      >
+          disabled={!selectedCardId}
+          className={`cta-gradient w-full mt-6 transition-all duration-300 ${
+            !selectedCardId ? "opacity-50 cursor-not-allowed" : ""
+          }`}
+        >
         {phase === "selected" ? "Reveal" : "Harvest"}
       </Button>}
     </div>

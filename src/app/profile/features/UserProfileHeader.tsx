@@ -61,8 +61,8 @@ export default function UserProfileHeader({
               </h2> */}
           </div>
           <div className="flex items-center gap-2 mt-1">
-            <p className="text-white/70 font-semibold">
-              Smart wallet{" "}
+            <p className="text-white/70 text-sm font-semibold">
+              Movement wallet{" "}
               <span className="bg-white/20 rounded-[25px] p-1 font-normal">
                 {primaryWalletAddress.slice(0, 8)}...
                 {primaryWalletAddress.slice(-8)}

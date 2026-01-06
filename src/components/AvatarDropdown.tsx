@@ -226,7 +226,7 @@ export default function AvatarDropdown() {
                   src={avatarUrl}
                   alt="Profile"
                   fill
-                  className="object-cover rounded-full"
+                  className="object-cover w-16 h-16 rounded-full"
                 />
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-xl text-white font-bold">
