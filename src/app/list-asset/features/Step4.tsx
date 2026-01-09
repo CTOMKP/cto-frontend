@@ -2,6 +2,7 @@
 
 import React from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { ScanResult } from "@/services/userListingsService";
 import {
   getTierInfo,
@@ -18,6 +19,8 @@ interface Step4Props {
 }
 
 export default function Step4({ scanResult }: Step4Props) {
+  const router = useRouter();
+  
   // Handle nested details.details structure
   const nestedDetails = scanResult?.details?.details;
   const tier =
@@ -234,7 +237,12 @@ export default function Step4({ scanResult }: Step4Props) {
 
         <div className=" flex items-center gap-2.5 mt-6">
             <Button className="w-full h-[36px] cta-gradient py-2.5 rounded-lg">Refresh Status</Button>
-            <Button className="w-full h-[36px] cta-gradient py-2.5 rounded-lg">Explore Approved Projects</Button>
+            <Button 
+              onClick={() => router.push('/listings')}
+              className="w-full h-[36px] cta-gradient py-2.5 rounded-lg"
+            >
+              Explore Approved Projects
+            </Button>
         </div>
       </div>
     </>

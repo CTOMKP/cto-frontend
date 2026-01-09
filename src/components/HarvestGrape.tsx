@@ -46,8 +46,8 @@ export default function HarvestGrape() {
         >
           <Image 
             loading="lazy"
-            src="/kurator.png" 
-            alt="kurator" 
+            src="/pfp.gif" 
+            alt="pfp" 
             className='size-[36px] transition-transform duration-300 hover:scale-110' 
             width={36} 
             height={36} 

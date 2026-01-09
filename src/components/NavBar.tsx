@@ -42,24 +42,22 @@ const ExploreCategoryLinks = [
 
 export default function NavBar() {
   const { isAuthenticated } = usePrivyAuth();
-  const { authenticated: privyAuthenticated, ready } = usePrivy();
+  const { ready } = usePrivy();
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const [hasAvatar, setHasAvatar] = useState(false);
   const pathname = usePathname();
-
-  // Wait for Privy to be ready before determining authentication state
-  // This prevents the login button from flashing on page load
-  const showAuthenticatedUI = ready && (privyAuthenticated || isAuthenticated);
 
   // Check if user has avatar and listen for changes
   // This is only used to show AvatarDropdown alongside HarvestGrape
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const checkAvatar = () => {
-        if (showAuthenticatedUI) {
+        // Only check for avatar if authenticated (prioritize isAuthenticated over privyAuthenticated)
+        if (ready && isAuthenticated) {
           const avatarUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
           setHasAvatar(!!avatarUrl);
         } else {
+          // Immediately clear avatar when not authenticated
           setHasAvatar(false);
         }
       };
@@ -79,7 +77,7 @@ export default function NavBar() {
         window.removeEventListener('avatarUpdated', checkAvatar);
       };
     }
-  }, [showAuthenticatedUI]);
+  }, [ready, isAuthenticated]);
 
   if (pathname === "/" || pathname === "/faq") return null;
 
@@ -283,7 +281,7 @@ export default function NavBar() {
       </div>
 
       <div className="flex items-center">
-        {showAuthenticatedUI ? (
+        {ready && isAuthenticated ? (
           <div className="flex items-center gap-1">
             <NavBarChats />
             <WatchList />
@@ -294,9 +292,10 @@ export default function NavBar() {
         <div className="border-l-[0.2px] ml-4 border-[#FFFFFF20] h-full flex items-center justify-center gap-2">
           {!ready ? (
             <div className="w-20 h-9" />
-          ) : showAuthenticatedUI ? (
+          ) : isAuthenticated ? (
             <>
-              <div style={{ display: hasAvatar ? 'none' : 'block' }}>
+              <div style={
+                { display: hasAvatar ? 'none' : 'block' }}>
                 <HarvestGrape />
               </div>
               {hasAvatar && <AvatarDropdown />}

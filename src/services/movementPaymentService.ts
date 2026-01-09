@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
+const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
 
 /**
  * Movement Payment Service
@@ -15,23 +15,54 @@ export const movementPaymentService = {
   async createListingPayment(listingId: string) {
     const token = localStorage.getItem('cto_auth_token');
     if (!token) {
-      throw new Error('Authentication required');
+      console.error('❌ No auth token found in localStorage');
+      throw new Error('Authentication required. Please login first.');
     }
 
-    const response = await axios.post(
-      `${API_BASE}/api/v1/payment/movement/listing/${listingId}`,
-      {},
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      }
-    );
+    if (!API_BASE) {
+      console.error('❌ API_BASE is not defined');
+      throw new Error('Backend URL not configured');
+    }
 
-    // Handle wrapped response from TransformInterceptor
-    const responseData = response.data?.data || response.data;
-    return responseData;
+    console.log('💳 Creating Movement payment:', {
+      listingId,
+      apiBase: API_BASE,
+      hasToken: !!token,
+      tokenLength: token.length,
+    });
+
+    try {
+      const response = await axios.post(
+        `${API_BASE}/api/v1/payment/movement/listing/${listingId}`,
+        {},
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      // Handle wrapped response from TransformInterceptor
+      const responseData = response.data?.data || response.data;
+      console.log('✅ Payment created successfully:', responseData);
+      return responseData;
+    } catch (error) {
+      console.error('❌ Payment creation failed:', error);
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        const message = error.response?.data?.message || error.message;
+        
+        if (status === 401) {
+          throw new Error('Authentication failed. Please login again.');
+        } else if (status === 403) {
+          throw new Error('Access denied. Please check your permissions.');
+        } else {
+          throw new Error(message || 'Failed to create payment');
+        }
+      }
+      throw error;
+    }
   },
 
   /**
@@ -43,22 +74,53 @@ export const movementPaymentService = {
   async verifyPayment(paymentId: string, txHash: string) {
     const token = localStorage.getItem('cto_auth_token');
     if (!token) {
-      throw new Error('Authentication required');
+      console.error('❌ No auth token found in localStorage');
+      throw new Error('Authentication required. Please login first.');
     }
 
-    const response = await axios.post(
-      `${API_BASE}/api/v1/payment/movement/verify/${paymentId}`,
-      { txHash },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      }
-    );
+    if (!API_BASE) {
+      console.error('❌ API_BASE is not defined');
+      throw new Error('Backend URL not configured');
+    }
 
-    // Handle wrapped response from TransformInterceptor
-    const responseData = response.data?.data || response.data;
-    return responseData;
+    console.log('🔍 Verifying Movement payment:', {
+      paymentId,
+      txHash,
+      apiBase: API_BASE,
+      hasToken: !!token,
+    });
+
+    try {
+      const response = await axios.post(
+        `${API_BASE}/api/v1/payment/movement/verify/${paymentId}`,
+        { txHash },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      // Handle wrapped response from TransformInterceptor
+      const responseData = response.data?.data || response.data;
+      console.log('✅ Payment verified successfully:', responseData);
+      return responseData;
+    } catch (error) {
+      console.error('❌ Payment verification failed:', error);
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        const message = error.response?.data?.message || error.message;
+        
+        if (status === 401) {
+          throw new Error('Authentication failed. Please login again.');
+        } else if (status === 403) {
+          throw new Error('Access denied. Please check your permissions.');
+        } else {
+          throw new Error(message || 'Failed to verify payment');
+        }
+      }
+      throw error;
+    }
   },
 };

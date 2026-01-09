@@ -289,8 +289,22 @@ export default function Step1({
 
     } catch (error) {
       console.error('Scan failed:', error);
-      alert('Scan failed. Please try again.');
+      
+      // Check if it's an authentication error
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      if (errorMessage.includes('Authentication required') || errorMessage.includes('Unauthorized')) {
+        alert('Authentication required. Please login first to scan tokens.');
+        // Optionally redirect to login or refresh auth
+        const token = localStorage.getItem('cto_auth_token');
+        if (!token) {
+          console.warn('⚠️ Token missing from localStorage, user may need to login again');
+        }
+      } else {
+        alert(`Scan failed: ${errorMessage}. Please try again.`);
+      }
+      
       setProgress(0);
+      setScanComplete(false);
     }
   };
 

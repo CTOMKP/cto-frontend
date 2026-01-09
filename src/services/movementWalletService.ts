@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
+const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('cto_auth_token');
@@ -18,6 +18,9 @@ export interface WalletBalance {
   balance: string;
   decimals: number;
   lastUpdated: string;
+  networkStatus?: 'healthy' | 'degraded' | 'down';
+  isStale?: boolean;
+  lastSyncTime?: string;
 }
 
 export interface WalletTransaction {

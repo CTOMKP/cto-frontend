@@ -4,7 +4,16 @@ const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarket
 
 function authHeaders() {
   const token = localStorage.getItem('cto_auth_token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  if (!token) {
+    console.warn('⚠️ No auth token found in localStorage');
+    return {
+      'Content-Type': 'application/json',
+    };
+  }
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`,
+  };
 }
 
 export interface ScanMetadata {
@@ -91,11 +100,27 @@ export const userListingsService = {
    * @returns ScanResult with risk score, tier, and metadata
    */
   async scan(contractAddr: string, chain: string): Promise<ScanResult> {
+    // Get auth headers and verify token is present
+    const headers = authHeaders();
+    const token = localStorage.getItem('cto_auth_token');
+    
+    if (!token) {
+      console.error('❌ No authentication token found. User must be logged in to scan tokens.');
+      throw new Error('Authentication required. Please login first.');
+    }
+    
+    console.log('🔍 Scanning token with:', {
+      contractAddr,
+      chain,
+      hasToken: !!token,
+      tokenLength: token.length,
+    });
+    
     // Accept non-2xx statuses (e.g., 400 ineligible) and normalize response so UI can proceed
     const res = await axios.post(
       `${backendUrl}/api/v1/user-listings/scan`,
       { contractAddr, chain },
-      { headers: authHeaders(), validateStatus: () => true }
+      { headers, validateStatus: () => true }
     );
     
     // Handle wrapped response from TransformInterceptor
