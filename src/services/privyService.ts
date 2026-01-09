@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getCloudFrontUrl } from '@/lib/image-url-helper';
+import { BackendWallet } from '@/types/privy';
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
 
@@ -22,12 +23,7 @@ class PrivyService {
       walletAddress?: string;
       walletsCount: number;
     };
-    wallets: Array<{
-      address: string;
-      chainType: string;
-      walletClient: string;
-      isPrimary: boolean;
-    }>;
+    wallets: BackendWallet[];
   }> {
     // Match test frontend: retry logic with fresh tokens and 30 second timeout
     let response;

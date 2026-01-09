@@ -89,7 +89,6 @@ const FallbackImage: React.FC<Props> = ({
     img.src = current;
     
     img.onload = () => {
-      console.log('[FallbackImage] 🖼️ Preload onload - setting loading to false for:', current);
       setLoading(false);
       setError(false);
       if (onLoad) {
@@ -139,7 +138,6 @@ const FallbackImage: React.FC<Props> = ({
   }
   
   if (fill) {
-    console.log('[FallbackImage] 🎨 Rendering with fill - current:', current, 'loading:', loading, 'error:', error, 'isCrossOrigin:', isCrossOrigin);
     // Extract className parts - object-cover and rounded-full should only apply to img, not wrapper
     const wrapperClasses = className?.replace(/object-cover|rounded-full/g, '').trim() || '';
     const imgClasses = className?.match(/(object-cover|rounded-full)/g)?.join(' ') || '';

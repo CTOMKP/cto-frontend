@@ -112,11 +112,6 @@ export default function AvatarDropdown() {
     };
   }, [avatarUrl]);
 
-  // Log current avatarUrl on every render
-  useEffect(() => {
-    console.log('[AvatarDropdown] 🖼️ Render - avatarUrl state:', avatarUrl);
-  });
-
   // Get Movement/Aptos wallet address (primary wallet) - matching profile page logic
   const [movementWalletAddress, setMovementWalletAddress] = React.useState<string | null>(null);
 
@@ -191,8 +186,6 @@ export default function AvatarDropdown() {
 
   const xpProgress = nextLevelXP > 0 ? (currentXP / nextLevelXP) * 100 : 0;
 
-  console.log('[AvatarDropdown] 🎨 Rendering - avatarUrl:', avatarUrl, 'will render FallbackImage:', !!avatarUrl);
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className='mx-8.5'>
@@ -204,7 +197,6 @@ export default function AvatarDropdown() {
                 alt="Profile"
                 fill
               className="object-cover rounded-full"
-              onLoad={() => console.log('[AvatarDropdown] ✅ FallbackImage onLoad fired for:', avatarUrl)}
               />
             </div>
             ) : (

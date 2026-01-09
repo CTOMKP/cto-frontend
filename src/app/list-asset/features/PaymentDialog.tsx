@@ -217,10 +217,25 @@ export default function PaymentDialog({
     // Extract actual listing ID (remove # if present)
     const actualListingId = listingId.replace('#', '');
 
-    if (!authenticated || !user) {
+    // Check both Privy authentication and localStorage token
+    const token = localStorage.getItem('cto_auth_token');
+    if (!authenticated || !user || !token) {
+      console.error('❌ Payment blocked - Auth check failed:', {
+        authenticated,
+        hasUser: !!user,
+        hasToken: !!token,
+        tokenLength: token?.length || 0,
+      });
       toast.error('Please login first');
       return;
     }
+
+    console.log('✅ Payment auth check passed:', {
+      authenticated,
+      hasUser: !!user,
+      hasToken: !!token,
+      userId: user?.id,
+    });
 
     setIsProcessing(true);
 
