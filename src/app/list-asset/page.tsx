@@ -9,227 +9,227 @@ import Step4 from "./features/Step4";
 import { Hourglass } from "lucide-react";
 import { ScanResult } from "@/services/userListingsService";
 
-const networks = [
-  {
-    name: "Aptos",
-    src: "/listings-chains/aptos.png",
-  },
-  // {
-  //   name: "Ethereum",
-  //   src: "/listings-chains/ethereum.png",
-  // },
-  {
-    name: "Solana",
-    src: "/listings-chains/solana.png",
-  },
-  {
-    name: "BNB",
-    src: "/listings-chains/bnb.png",
-  },
-  {
-    name: "Movement",
-    src: "/listings-chains/movement.png",
-  },
-  {
-    name: "Base",
-    src: "/listings-chains/base.png",
-  },
-  {
-    name: "Monad",
-    src: "/listings-chains/monad.png",
-  },
-];
+  const networks = [
+    {
+      name: "Aptos",
+      src: "/listings-chains/aptos.png",
+    },
+    // {
+    //   name: "Ethereum",
+    //   src: "/listings-chains/ethereum.png",
+    // },
+    {
+      name: "Solana",
+      src: "/listings-chains/solana.png",
+    },
+    {
+      name: "BNB",
+      src: "/listings-chains/bnb.png",
+    },
+    {
+      name: "Movement",
+      src: "/listings-chains/movement.png",
+    },
+    {
+      name: "Base",
+      src: "/listings-chains/base.png",
+    },
+    {
+      name: "Monad",
+      src: "/listings-chains/monad.png",
+    },
+  ];
 
-const info = [
-  {
-    title: "Smart contract audit",
-    description: "Automated vulnerability detection and security analysis",
+  const info = [
+    {
+        title: "Smart contract audit",
+        description: "Automated vulnerability detection and security analysis",
     image: "/Overlay.svg",
-  },
-  {
-    title: "Wallet behaviour",
-    description: "Reputation engine and suspicious activity detection ",
+    },
+    {
+        title: "Wallet behaviour",
+        description: "Reputation engine and suspicious activity detection ",
     image: "/Overlay-1.svg",
-  },
-  {
-    title: "Accurate results",
-    description: "Real time blockchain with comprehensive risk scoring",
+    },
+    {
+        title: "Accurate results",
+        description: "Real time blockchain with comprehensive risk scoring",
     image: "/Overlay-2.svg",
-  },
-  {
-    title: "Tier classification",
-    description: "Four-tier system from seed to stellar ratings",
+    },
+    {
+        title: "Tier classification",
+        description: "Four-tier system from seed to stellar ratings",
     image: "/Overlay-3.svg",
-  },
+    },
 ];
 
-const getStarted = [
-  {
-    title: "Submit Your Contract",
+  const getStarted = [
+    {
+        title: "Submit Your Contract",
     description:
       "Paste your token contract (Aptos, Solana, ETH, etc.) to start the vetting process",
-  },
-  {
-    title: "Automated analysis",
+    },
+    {
+        title: "Automated analysis",
     description:
       "Our system checks security, liquidity, wallets, and sentiment.",
-  },
-  {
-    title: "Get Listed",
+    },
+    {
+        title: "Get Listed",
     description: "Get your badge tier, add project info, and go live",
-  },
+    },
 ];
 
 export default function ListingApplication() {
-  const [selectedNetwork, setSelectedNetwork] = useState<string>("aptos");
-  const [networkDialogueOpen, setNetworkDialogueOpen] = useState(false);
-  const [currentStep, setCurrentStep] = useState<number>(1);
+    const [selectedNetwork, setSelectedNetwork] = useState<string>("aptos");
+    const [networkDialogueOpen, setNetworkDialogueOpen] = useState(false);
+    const [currentStep, setCurrentStep] = useState<number>(1);
   const [showStep4, setShowStep4] = useState<boolean>(false);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [contractAddress, setContractAddress] = useState<string>('');
-  const [profilePreview, setProfilePreview] = useState<string | null>(null);
-  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+    const [profilePreview, setProfilePreview] = useState<string | null>(null);
+    const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [bio, setBio] = useState<string>('');
 
   const handleProfilePictureChange = (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfilePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+      const file = e.target.files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setProfilePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
+    };
 
-  const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setBannerPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
+    const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setBannerPreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+    
   return (
     <div>
       {!showStep4 ? (
-        <div className="border border-white/20  rounded-lg mt-[78px] mx-50">
-          <div className="flex justify-center items-center gap-3.5 mx-4 border-b border-white/20 pt-3 pb-4">
-            <span
-              onClick={() => setCurrentStep(1)}
-              className={`size-5 rounded-full font-bold text-[10.5px] flex justify-center items-center ${
-                currentStep === 1
-                  ? "text-white bg-white/10"
-                  : "text-white/30 bg-white/5"
-              }`}
-            >
-              1
-            </span>
-            <span className="bg-white/30 w-6 h-[1px]"></span>
-            <span
-              onClick={() => setCurrentStep(2)}
-              className={`size-5 rounded-full font-bold text-[10.5px] flex justify-center items-center ${
-                currentStep === 2
-                  ? "text-white bg-white/10"
-                  : "text-white/30 bg-white/5"
-              }`}
-            >
-              2
-            </span>
-            <span className="bg-white/30 w-6 h-[1px]"></span>
-            <span
-              onClick={() => setCurrentStep(3)}
-              className={`size-5 rounded-full font-bold text-[10.5px] flex justify-center items-center ${
-                currentStep === 3
-                  ? "text-white bg-white/10"
-                  : "text-white/30 bg-white/5"
-              }`}
-            >
-              3
-            </span>
-          </div>
-
-          <h1 className="font-medium text-[62px] text-center">
-            {currentStep === 1 && "Get Verified & Grow"}
-            {currentStep === 2 && "Listing Details"}
-            {currentStep === 3 && "Project roadmap"}
-          </h1>
-          <div
-            className={`flex justify-center items-center gap-3 ${
-              currentStep !== 1 ? "hidden" : ""
+      <div className="border border-white/20  rounded-lg mt-[78px] mx-50">
+        <div className="flex justify-center items-center gap-3.5 mx-4 border-b border-white/20 pt-3 pb-4">
+          <span
+            onClick={() => setCurrentStep(1)}
+            className={`size-5 rounded-full font-bold text-[10.5px] flex justify-center items-center ${
+              currentStep === 1
+                ? "text-white bg-white/10"
+                : "text-white/30 bg-white/5"
             }`}
           >
-            <span className="rounded-lg p-1.5 font-bold text-[#6D6D6D] bg-[#6D6D6D]/20 flex items-center gap-2.5">
-              <Image
-                src="/project-categories/seed.svg"
-                alt="seed"
-                width={16}
-                height={16}
-              />{" "}
-              Seed
-            </span>
-            <span className="rounded-lg p-1.5 font-bold text-[#FF5900] bg-[#FF5900]/20 flex items-center gap-2.5">
-              <Image
-                src="/project-categories/sprout.svg"
-                alt="sprout"
-                width={16}
-                height={16}
-              />{" "}
-              Seed
-            </span>
-            <span className="rounded-lg p-1.5 font-bold text-[#15FF00] bg-[#15FF00]/20 flex items-center gap-2.5">
-              <Image
-                src="/project-categories/bloom.svg"
-                alt="bloom"
-                width={16}
-                height={16}
-              />{" "}
-              Seed
-            </span>
-            <span className="rounded-lg p-1.5 font-bold text-[#FFBB00] bg-[#FFBB00]/20 flex items-center gap-2.5">
-              <Image
-                src="/project-categories/stellar.svg"
-                alt="stellar"
-                width={16}
-                height={16}
-              />{" "}
-              Seed
-            </span>
-          </div>
-
-          <div
-            className={`border border-white/20 rounded-lg p-6 my-8 max-w-[534px] mx-auto ${
-              currentStep !== 1 ? "mt-4" : ""
+            1
+          </span>
+          <span className="bg-white/30 w-6 h-[1px]"></span>
+          <span
+            onClick={() => setCurrentStep(2)}
+            className={`size-5 rounded-full font-bold text-[10.5px] flex justify-center items-center ${
+              currentStep === 2
+                ? "text-white bg-white/10"
+                : "text-white/30 bg-white/5"
             }`}
           >
-            {currentStep === 1 && (
-              <Step1
-                selectedNetwork={selectedNetwork}
-                setSelectedNetwork={setSelectedNetwork}
-                networkDialogueOpen={networkDialogueOpen}
-                setNetworkDialogueOpen={setNetworkDialogueOpen}
-                networks={networks}
+            2
+          </span>
+          <span className="bg-white/30 w-6 h-[1px]"></span>
+          <span
+            onClick={() => setCurrentStep(3)}
+            className={`size-5 rounded-full font-bold text-[10.5px] flex justify-center items-center ${
+              currentStep === 3
+                ? "text-white bg-white/10"
+                : "text-white/30 bg-white/5"
+            }`}
+          >
+            3
+          </span>
+        </div>
+
+        <h1 className="font-medium text-[62px] text-center">
+          {currentStep === 1 && "Get Verified & Grow"}
+          {currentStep === 2 && "Listing Details"}
+          {currentStep === 3 && "Project roadmap"}
+        </h1>
+        <div
+          className={`flex justify-center items-center gap-3 ${
+            currentStep !== 1 ? "hidden" : ""
+          }`}
+        >
+          <span className="rounded-lg p-1.5 font-bold text-[#6D6D6D] bg-[#6D6D6D]/20 flex items-center gap-2.5">
+            <Image
+              src="/project-categories/seed.svg"
+              alt="seed"
+              width={16}
+              height={16}
+            />{" "}
+            Seed
+          </span>
+          <span className="rounded-lg p-1.5 font-bold text-[#FF5900] bg-[#FF5900]/20 flex items-center gap-2.5">
+            <Image
+              src="/project-categories/sprout.svg"
+              alt="sprout"
+              width={16}
+              height={16}
+            />{" "}
+            Seed
+          </span>
+          <span className="rounded-lg p-1.5 font-bold text-[#15FF00] bg-[#15FF00]/20 flex items-center gap-2.5">
+            <Image
+              src="/project-categories/bloom.svg"
+              alt="bloom"
+              width={16}
+              height={16}
+            />{" "}
+            Seed
+          </span>
+          <span className="rounded-lg p-1.5 font-bold text-[#FFBB00] bg-[#FFBB00]/20 flex items-center gap-2.5">
+            <Image
+              src="/project-categories/stellar.svg"
+              alt="stellar"
+              width={16}
+              height={16}
+            />{" "}
+            Seed
+          </span>
+        </div>
+
+        <div
+          className={`border border-white/20 rounded-lg p-6 my-8 max-w-[534px] mx-auto ${
+            currentStep !== 1 ? "mt-4" : ""
+          }`}
+        >
+          {currentStep === 1 && (
+            <Step1
+              selectedNetwork={selectedNetwork}
+              setSelectedNetwork={setSelectedNetwork}
+              networkDialogueOpen={networkDialogueOpen}
+              setNetworkDialogueOpen={setNetworkDialogueOpen}
+              networks={networks}
                 setCurrentStep={setCurrentStep}
                 onScanResultChange={setScanResult}
                 onContractAddressChange={setContractAddress}
-              />
-            )}
+            />
+          )}
 
-            {currentStep === 2 && (
-              <Step2
-                profilePreview={profilePreview}
-                bannerPreview={bannerPreview}
-                handleProfilePictureChange={handleProfilePictureChange}
-                handleBannerChange={handleBannerChange}
-                setCurrentStep={setCurrentStep}
+          {currentStep === 2 && (
+            <Step2
+              profilePreview={profilePreview}
+              bannerPreview={bannerPreview}
+              handleProfilePictureChange={handleProfilePictureChange}
+              handleBannerChange={handleBannerChange}
+              setCurrentStep={setCurrentStep}
                 onBioChange={setBio}
-              />
-            )}
+            />
+          )}
 
             {currentStep === 3 && (
               <Step3 
@@ -249,7 +249,7 @@ export default function ListingApplication() {
           <div className="flex flex-col justify-center items-center max-w-[600px] mt-14 mx-auto">
             <div className="bg-[#FFE7A9]/20 size-25 rounded-full flex justify-center items-center">
               <Hourglass size={40} color="#FFCB45" />
-            </div>
+      </div>
 
             <h1 className="font-medium text-[40px] mt-7.5 mb-5 text-center">
               Your Listing Is Under Review

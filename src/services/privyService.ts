@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { getCloudFrontUrl } from '@/lib/image-url-helper';
 import { BackendWallet } from '@/types/privy';
+import { saveWalletsToStorage } from '@/utils/localStorage';
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
 
@@ -147,10 +148,17 @@ class PrivyService {
         console.log('⚠️ No avatarUrl in sync response');
       }
 
-      // Store ALL wallets (including Aptos) for profile display
+      // Store ALL wallets (including Aptos) for profile display - scoped by user ID
       if (responseData.wallets && responseData.wallets.length > 0) {
-        localStorage.setItem('cto_user_wallets', JSON.stringify(responseData.wallets));
-        console.log('💼 Saved wallets to localStorage:', responseData.wallets);
+        const userId = responseData.user?.id;
+        if (userId) {
+          try {
+            saveWalletsToStorage(responseData.wallets, userId.toString());
+            console.log(`💼 Saved wallets for user ${userId} to localStorage:`, responseData.wallets);
+          } catch (error) {
+            console.error('Failed to save wallets to localStorage:', error);
+          }
+        }
       }
 
       return responseData;
@@ -271,13 +279,19 @@ class PrivyService {
     localStorage.removeItem('cto_user_email');
     localStorage.removeItem('cto_user_id');
     localStorage.removeItem('cto_wallet_address');
-    localStorage.removeItem('cto_user_wallets');
+    // Remove all user-specific wallet caches
+    Object.keys(localStorage)
+      .filter(key => key.startsWith('cto_user_wallets_'))
+      .forEach(key => localStorage.removeItem(key));
     
     // Clear avatar/profile data
     localStorage.removeItem('cto_user_avatar_url');
     localStorage.removeItem('profile_avatar_url');
     localStorage.removeItem('profile_avatar_meta');
     localStorage.removeItem('profile_banner_url');
+    
+    // Clear any generic wallet data that might exist
+    localStorage.removeItem('cto_user_wallets');
     
     // Clear any other user-related data
     localStorage.removeItem('cto_token');
