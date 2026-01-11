@@ -16,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { movementPaymentService } from '@/services/movementPaymentService';
 import { movementWalletService } from '@/services/movementWalletService';
 import { getMovementWallet, sendMovementTransaction } from '@/lib/movement-wallet';
+import { getWalletsFromStorage } from '@/utils/localStorage';
 import { toast } from 'react-toastify';
 import axios, { AxiosError } from 'axios';
 import type { BackendWallet } from '@/types/privy';
@@ -110,14 +111,15 @@ export default function PaymentDialog({
       let walletId: string | null = null;
       
       // Try to get wallets from localStorage first
-      const walletsJson = localStorage.getItem('cto_user_wallets');
+      const userId = localStorage.getItem('cto_user_id');
       let backendWallets: BackendWallet[] = [];
-      if (walletsJson) {
-        try {
-          backendWallets = JSON.parse(walletsJson) as BackendWallet[];
-        } catch (parseError) {
-          console.error('Failed to parse wallets from localStorage:', parseError);
+      try {
+        const storedWallets = getWalletsFromStorage(userId);
+        if (storedWallets) {
+          backendWallets = storedWallets as BackendWallet[];
         }
+      } catch (error) {
+        console.warn('Failed to get wallets from storage:', error);
       }
 
       // If not in localStorage, fetch from backend

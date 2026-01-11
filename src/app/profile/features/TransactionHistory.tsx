@@ -6,84 +6,84 @@ import { SquareArrowOutUpRight } from 'lucide-react';
 import { movementWalletService, WalletTransaction } from '@/services/movementWalletService';
 import { usePrivy } from '@privy-io/react-auth';
 import { getMovementWallet } from '@/lib/movement-wallet';
-import { PrivyUser } from '@/types/privy';
-import axios from 'axios';
 import { BackendWallet } from '@/types/privy';
+import axios from 'axios';
+import { toast } from 'react-toastify';
 
 export default function TransactionHistory() {
   const { user } = usePrivy();
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeWalletId, setActiveWalletId] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
-  // Find and set wallet ID (EXACTLY like test frontend MovementWalletActivity.tsx)
+  // Find and set wallet ID using same pattern as useWalletBalance.ts
   useEffect(() => {
     const findAndSetWallet = async () => {
-      // STEP 1: Check localStorage first (like test frontend line 77)
-      let walletId: string | null = localStorage.getItem('cto_wallet_id');
+      const userId = localStorage.getItem("cto_user_id") || user?.id;
+      const token = localStorage.getItem("cto_auth_token");
 
-      if (!walletId) {
-        // STEP 2: If not in localStorage, fetch from API (like test frontend lines 49-76)
-        const movementWallet = user ? getMovementWallet(user as PrivyUser) : null;
-        if (!movementWallet) {
-          setLoading(false);
-          return;
-        }
-
-        const token = localStorage.getItem('cto_auth_token');
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
-        
-        try {
-          const response = await axios.get(
-            `${backendUrl}/api/v1/auth/privy/wallets`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json',
-              },
-            }
-          );
-
-          // Handle nested response from TransformInterceptor (like test frontend line 55)
-          const walletsData = response.data?.data?.wallets || response.data?.wallets || [];
-
-          // Prioritize the wallet that matches the current Privy account (like test frontend lines 58-65)
-          let moveWallet = walletsData.find(
-            (w: BackendWallet) =>
-              w.address?.toLowerCase() === movementWallet.address.toLowerCase() &&
-              (w.blockchain === 'MOVEMENT' ||
-                w.blockchain === 'APTOS' ||
-                w.chainType?.toLowerCase() === 'aptos' ||
-                w.chainType?.toLowerCase() === 'movement')
-          );
-
-          // Fallback to any Movement wallet if no match found (like test frontend lines 68-72)
-          if (!moveWallet) {
-            moveWallet = walletsData.find(
-              (w: BackendWallet) =>
-                w.blockchain === 'MOVEMENT' || w.blockchain === 'APTOS'
-            );
-          }
-
-          if (moveWallet?.id) {
-            walletId = moveWallet.id;
-            // Store wallet ID in localStorage (like test frontend line 77)
-            localStorage.setItem('cto_wallet_id', moveWallet.id);
-            console.log('✅ Found Movement wallet directly:', moveWallet.id);
-          }
-        } catch (error) {
-          console.error('❌ Direct wallet fetch failed', error);
-        }
+      // GUARD: Don't run if already recovering or if we already have an active wallet
+      if (!userId) {
+        return null; // Return null to indicate no wallet ID was found
       }
 
+      try {
+        const API_BASE =
+          process.env.NEXT_PUBLIC_BACKEND_URL ||
+          "https://api.ctomarketplace.com";
+
+        const response = await axios.get(
+          `${API_BASE}/api/v1/auth/privy/wallets`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        // Handle nested response from TransformInterceptor
+        const walletsData =
+          response.data?.data?.wallets || response.data?.wallets || [];
+
+        // STRATEGIC FIX: Prioritize wallet that matches current Privy account
+        const privyMoveWallet = getMovementWallet(user);
+        let moveWallet = null;
+
+        if (privyMoveWallet) {
+          moveWallet = walletsData.find(
+            (w: BackendWallet) =>
+              w.address?.toLowerCase() ===
+              privyMoveWallet.address.toLowerCase()
+          );
+        }
+
+        // Fallback to any Movement wallet if no match found
+        if (!moveWallet) {
+          moveWallet = walletsData.find(
+            (w: BackendWallet) =>
+              w.blockchain === "MOVEMENT" || w.blockchain === "APTOS"
+          );
+        }
+
+        if (moveWallet) {
+          localStorage.setItem("cto_wallet_id", moveWallet.id);
+          return moveWallet.id; 
+        }
+      } catch (err) {
+        toast.error("Failed to set wallet ID");
+        console.error(err);
+      }
+      
+      return null; // Return null if no wallet was found
+    };
+
+    // Call function and set activeWalletId with the returned value
+    findAndSetWallet().then(walletId => {
       if (walletId) {
         setActiveWalletId(walletId);
       } else {
         setLoading(false);
       }
-    };
-
-    findAndSetWallet();
+    });
   }, [user]);
 
   // Load transactions (EXACTLY like test frontend loadData function)
@@ -96,7 +96,7 @@ export default function TransactionHistory() {
       const txData = await movementWalletService.getTransactions(activeWalletId, 50); // Get more transactions for history
       setTransactions(txData);
     } catch (error) {
-      console.error('Failed to load transactions:', error);
+      // Error handling without console logs
     } finally {
       setLoading(false);
     }
@@ -108,6 +108,47 @@ export default function TransactionHistory() {
       loadTransactions();
     }
   }, [activeWalletId, loadTransactions]);
+
+  // Sync transactions with Movement blockchain
+  const handleSync = async (silent = false) => {
+    if (!activeWalletId) return;
+    
+    setSyncing(true);
+    try {
+      if (!silent) {
+        toast.loading('Syncing with Movement blockchain...');
+      }
+      
+      // 1. Poll for new transactions (Detect funding/payments)
+      await movementWalletService.pollTransactions(activeWalletId);
+      
+      // 2. Refresh local data
+      await loadTransactions();
+      
+      if (!silent) {
+        toast.success('Wallet synced successfully');
+      }
+    } catch (error) {
+      console.error('Sync failed:', error);
+      if (!silent) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        toast.error('Sync failed: ' + errorMessage);
+      }
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  // Set up periodic background sync
+  useEffect(() => {
+    if (!activeWalletId) return;
+
+    const intervalId = setInterval(() => {
+      handleSync(true);
+    }, 60000); // 60 seconds
+
+    return () => clearInterval(intervalId);
+  }, [activeWalletId]);
 
   // Format transaction amount (EXACTLY like test frontend lines 452-459)
   const formatTransactionAmount = (tx: WalletTransaction): string => {
@@ -165,6 +206,29 @@ export default function TransactionHistory() {
         <div className="border-t-[0.5px] border-white/20 mt-4"></div>
         
         <TabsContent value="tx-history">
+          <div className="flex justify-between items-center mb-4">
+            <div></div>
+            <button
+              onClick={() => handleSync(false)}
+              disabled={syncing}
+              className="text-xs px-3 py-1 rounded-lg bg-[#17171C] text-white hover:bg-[#2A2A2E] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {syncing ? (
+                <>
+                  <div className="animate-spin rounded-full h-3 w-3 border-b border-t border-white"></div>
+                  Syncing...
+                </>
+              ) : (
+                <>
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                  </svg>
+                  Sync
+                </>
+              )}
+            </button>
+          </div>
+          
           {loading ? (
             <div className="flex justify-center py-8">
               <div className="animate-pulse flex space-x-2">
@@ -239,4 +303,3 @@ export default function TransactionHistory() {
     </div>
   );
 }
-

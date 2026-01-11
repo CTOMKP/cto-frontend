@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { BackendWallet } from '@/types/privy';
 import FallbackImage from './FallbackImage';
 import { getCloudFrontUrl } from '@/lib/image-url-helper';
+import { getWalletsFromStorage } from '@/utils/localStorage';
 
 export default function AvatarDropdown() {
   // Initialize exactly like profile page - read raw URL from localStorage
@@ -138,18 +139,20 @@ export default function AvatarDropdown() {
   React.useEffect(() => {
     if (!user) return;
 
-    // First, try to load from localStorage
-    const walletsJson = localStorage.getItem('cto_user_wallets');
-    if (walletsJson) {
+    // First, try to load from localStorage - use user-specific key
+    const userId = localStorage.getItem('cto_user_id');
+    try {
+      const wallets = getWalletsFromStorage(userId);
+      if (wallets) {
       try {
         interface WalletWithMovement extends BackendWallet {
           blockchain?: string;
           walletClient?: string;
         }
-        const wallets = JSON.parse(walletsJson) as WalletWithMovement[];
+        const typedWallets = wallets as WalletWithMovement[];
         
         // Find Movement wallet from localStorage wallets
-        const movementWallet = wallets.find((w: WalletWithMovement) => 
+        const movementWallet = typedWallets.find((w: WalletWithMovement) => 
           w.blockchain === 'MOVEMENT' ||
           w.blockchain === 'APTOS' ||
           w.chainType === 'aptos' ||
@@ -163,6 +166,9 @@ export default function AvatarDropdown() {
       } catch (e) {
         console.error('Failed to parse wallets:', e);
       }
+      }
+    } catch (error) {
+      console.warn('Failed to get wallets from storage:', error);
     }
 
     // Fallback: check Privy linkedAccounts

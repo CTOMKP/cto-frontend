@@ -295,7 +295,7 @@ export default function NavBar() {
           ) : isAuthenticated ? (
             <>
               <div style={
-                { display: hasAvatar ? 'none' : 'block' }}>
+                { display: hasAvatar && isAuthenticated ? 'none' : 'block' }}>
                 <HarvestGrape />
               </div>
               {hasAvatar && <AvatarDropdown />}

@@ -620,15 +620,34 @@ export default function Step1({
                   );
                 })()}
 
-                <div className='flex justify-center'>
-                  <Button 
-                    onClick={() => {
-                      setCurrentStep(2);
-                    }}
-                    className="w-[155px] bg-gradient-to-r from-[#FF0075] via-[#FF4A15] to-[#FFCB45] rounded-lg h-9"
-                  >
-                    List
-                  </Button>
+                <div className='flex flex-col items-center gap-3'>
+                  {(() => {
+                    // Check risk score (user listings require risk_score >= 50)
+                    const nestedDetails = scanResult?.details?.details;
+                    const riskScore = nestedDetails?.risk_score || scanResult?.details?.risk_score || scanResult?.risk_score || 0;
+                    const canProceed = riskScore >= 50;
+                    
+                    return (
+                      <>
+                        {!canProceed && (
+                          <div className="w-full py-3 px-4 rounded-lg bg-red-500/20 border border-red-500/50">
+                            <p className="text-sm text-red-400 text-center font-medium">
+                              ⚠️ Risk score too low. Minimum required: 50
+                            </p>
+                          </div>
+                        )}
+                        <Button 
+                          onClick={() => {
+                            setCurrentStep(2);
+                          }}
+                          disabled={!canProceed}
+                          className="w-[155px] bg-gradient-to-r from-[#FF0075] via-[#FF4A15] to-[#FFCB45] rounded-lg h-9 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          List
+                        </Button>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 <p className='text-center mt-6 font-medium text-xs text-white/70'>
