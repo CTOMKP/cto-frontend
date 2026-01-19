@@ -15,19 +15,19 @@ import { usePrivy } from "@privy-io/react-auth";
 const slides = [
   {
     image: "/welcome-slideshow/default.png",
-    title: "Discover Community-Driven Crypto Projects",
-    description: "Real-time insights for community-taken-over tokens.",
+    title: "Create your account",
+    description: "Sign up in seconds with email or social login, a few clicks and you’re ready to go",
   },
   {
     image: "/welcome-slideshow/default2.png",
-    title: "Discover. Connect. Build. Trust.",
-    description: "Find and connect with talent, you need to rebuid",
+    title: "Reveal your identity",
+    description: "Tap your egg to hatch your profile and join the ecosystem",
   },
-  {
-    image: "/welcome-slideshow/default.png",
-    title: "Smart AI filtering",
-    description: "BawsAi a personalized, dynamic, and intelligent way to find gems",
-  },
+  // {
+  //   image: "/welcome-slideshow/default.png",
+  //   title: "Smart AI filtering",
+  //   description: "BawsAi a personalized, dynamic, and intelligent way to find gems",
+  // },
 ];
 
 export default function WelcomeSlideshow() {
@@ -133,7 +133,7 @@ export default function WelcomeSlideshow() {
                     }, 100);
                   }}
                 >
-                    Login
+                    Create an account
                 </Button>
               ) : (
                 <Button className="cta-gradient text-white" onClick={handleNext}>
