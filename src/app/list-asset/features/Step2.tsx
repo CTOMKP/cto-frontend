@@ -6,6 +6,13 @@ import { Globe, Plus, Upload } from 'lucide-react'
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
+export interface SocialLinks {
+  website: string;
+  twitter: string;
+  telegram: string;
+  discord: string;
+}
+
 interface Step2Props {
   profilePreview: string | null;
   bannerPreview: string | null;
@@ -13,6 +20,8 @@ interface Step2Props {
   handleBannerChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   setCurrentStep: (step: number) => void;
   onBioChange?: (bio: string) => void;
+  links?: SocialLinks;
+  setLinks?: (links: SocialLinks) => void;
 }
 
 export default function Step2({ 
@@ -21,7 +30,9 @@ export default function Step2({
   handleProfilePictureChange, 
   handleBannerChange, 
   setCurrentStep,
-  onBioChange
+  onBioChange,
+  links,
+  setLinks,
 }: Step2Props) {
   const [bio, setBio] = useState('');
   return (
@@ -152,6 +163,92 @@ export default function Step2({
       </div>
 
       <div>
+        <label htmlFor="twitter" className="font-medium">
+          Twitter Link
+        </label>
+        <div className="flex flex-col mt-4">
+          <span className="w-full h-[136px] border-[0.2px] border-white bg-[#141414] flex items-center justify-center rounded-[3px] cursor-pointer">
+            <Input
+              id="twitter"
+              placeholder="https://twitter.com/username"
+              className="hidden"
+              value={links?.twitter}
+              onChange={(e) => {
+                const value = e.target.value;
+                setLinks?.({ ...links, twitter: value } as SocialLinks);
+              }}
+            />
+          </span>
+          <p className="text-[8px] font-light text-white/70 text-center">
+            Add your X handle
+          </p>
+        </div>
+
+        <label htmlFor="telegram" className="font-medium">
+          Telegram Link
+        </label>
+        <div className="flex flex-col mt-4">
+          <span className="w-full h-[136px] border-[0.2px] border-white bg-[#141414] flex items-center justify-center rounded-[3px] cursor-pointer">
+            <Input
+              id="telegram"
+              placeholder="https://t.me/username"
+              className="hidden"
+              value={links?.telegram}
+              onChange={(e) => {
+                const value = e.target.value;
+                setLinks?.({ ...links, telegram: value } as SocialLinks);
+              }}
+            />
+          </span>
+          <p className="text-[8px] font-light text-white/70 text-center">
+            Add your Telegram username
+          </p>
+        </div>
+
+        <label htmlFor="discord" className="font-medium">
+          Discord Link
+        </label>
+        <div className="flex flex-col mt-4">
+          <span className="w-full h-[136px] border-[0.2px] border-white bg-[#141414] flex items-center justify-center rounded-[3px] cursor-pointer">
+            <Input
+              id="discord"
+              placeholder="https://discord.com/invite/..."
+              className="hidden"
+              value={links?.discord}
+              onChange={(e) => {
+                const value = e.target.value;
+                setLinks?.({ ...links, discord: value } as SocialLinks);
+              }}
+            />
+          </span>
+          <p className="text-[8px] font-light text-white/70 text-center">
+            Add your Discord server invite
+          </p>
+        </div>
+
+        <label htmlFor="website" className="font-medium">
+          Website Link
+        </label>
+        <div className="flex flex-col mt-4">
+          <span className="w-full h-[136px] border-[0.2px] border-white bg-[#141414] flex items-center justify-center rounded-[3px] cursor-pointer">
+            <Input
+              id="website"
+              placeholder="https://your-website.com"
+              className="hidden"
+              value={links?.website}
+              onChange={(e) => {
+                const value = e.target.value;
+                setLinks?.({ ...links, website: value } as SocialLinks);
+              }}
+            />
+          </span>
+          <p className="text-[8px] font-light text-white/70 text-center">
+            Add your website URL
+          </p>
+        </div>
+      </div>
+
+      <div>
         <label className="font-medium">
           Social media
         </label>
@@ -169,6 +266,7 @@ export default function Step2({
           <span className='flex items-center justify-center h-12 gap-2 rounded-lg border-[0.2px] border-white/20'>
             <Globe size={16} color="#FFFFFF" />
             <p className='text-white/50'>Link website</p>
+            
           </span>
           <span className='flex items-center justify-center h-12 gap-2 rounded-lg border-[0.2px] border-white/20'>
             <Image loading="lazy" src="/discord.svg" alt="twitter" width={16} height={16} />
