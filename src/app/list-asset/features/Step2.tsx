@@ -163,119 +163,64 @@ export default function Step2({
       </div>
 
       <div>
-        <label htmlFor="twitter" className="font-medium">
-          Twitter Link
-        </label>
-        <div className="flex flex-col mt-4">
-          <span className="w-full h-[136px] border-[0.2px] border-white bg-[#141414] flex items-center justify-center rounded-[3px] cursor-pointer">
-            <Input
-              id="twitter"
-              placeholder="https://twitter.com/username"
-              className="hidden"
-              value={links?.twitter}
-              onChange={(e) => {
-                const value = e.target.value;
-                setLinks?.({ ...links, twitter: value } as SocialLinks);
-              }}
-            />
-          </span>
-          <p className="text-[8px] font-light text-white/70 text-center">
-            Add your X handle
-          </p>
-        </div>
-
-        <label htmlFor="telegram" className="font-medium">
-          Telegram Link
-        </label>
-        <div className="flex flex-col mt-4">
-          <span className="w-full h-[136px] border-[0.2px] border-white bg-[#141414] flex items-center justify-center rounded-[3px] cursor-pointer">
-            <Input
-              id="telegram"
-              placeholder="https://t.me/username"
-              className="hidden"
-              value={links?.telegram}
-              onChange={(e) => {
-                const value = e.target.value;
-                setLinks?.({ ...links, telegram: value } as SocialLinks);
-              }}
-            />
-          </span>
-          <p className="text-[8px] font-light text-white/70 text-center">
-            Add your Telegram username
-          </p>
-        </div>
-
-        <label htmlFor="discord" className="font-medium">
-          Discord Link
-        </label>
-        <div className="flex flex-col mt-4">
-          <span className="w-full h-[136px] border-[0.2px] border-white bg-[#141414] flex items-center justify-center rounded-[3px] cursor-pointer">
-            <Input
-              id="discord"
-              placeholder="https://discord.com/invite/..."
-              className="hidden"
-              value={links?.discord}
-              onChange={(e) => {
-                const value = e.target.value;
-                setLinks?.({ ...links, discord: value } as SocialLinks);
-              }}
-            />
-          </span>
-          <p className="text-[8px] font-light text-white/70 text-center">
-            Add your Discord server invite
-          </p>
-        </div>
-
-        <label htmlFor="website" className="font-medium">
-          Website Link
-        </label>
-        <div className="flex flex-col mt-4">
-          <span className="w-full h-[136px] border-[0.2px] border-white bg-[#141414] flex items-center justify-center rounded-[3px] cursor-pointer">
-            <Input
-              id="website"
-              placeholder="https://your-website.com"
-              className="hidden"
-              value={links?.website}
-              onChange={(e) => {
-                const value = e.target.value;
-                setLinks?.({ ...links, website: value } as SocialLinks);
-              }}
-            />
-          </span>
-          <p className="text-[8px] font-light text-white/70 text-center">
-            Add your website URL
-          </p>
-        </div>
-      </div>
-
-      <div>
         <label className="font-medium">
           Social media
         </label>
         <p className='text-xs text-white/70 mt-1.5 mb-4'>Submit your token contract and move to next step</p>
         
         <div className='grid grid-cols-2 gap-2 w-full'>
-          <span className='flex items-center justify-center h-12 gap-2 rounded-lg border-[0.2px] border-white/20'>
-            <Image loading="lazy" src="/x-white.svg" alt="twitter" width={16} height={16} />
-            <p className='text-white/50'>Link X</p>
-          </span>
-          <span className='flex items-center justify-center h-12 gap-2 rounded-lg border-[0.2px] border-white/20'>
-            <Image loading="lazy" src="/telegram.svg" alt="twitter" width={16} height={16} />
-            <p className='text-white/50'>Link Telegram</p>
-          </span>
-          <span className='flex items-center justify-center h-12 gap-2 rounded-lg border-[0.2px] border-white/20'>
-            <Globe size={16} color="#FFFFFF" />
-            <p className='text-white/50'>Link website</p>
-            
-          </span>
-          <span className='flex items-center justify-center h-12 gap-2 rounded-lg border-[0.2px] border-white/20'>
-            <Image loading="lazy" src="/discord.svg" alt="twitter" width={16} height={16} />
-            <p className='text-white/50'>Link Discord</p>
-          </span>
+          <div className='relative flex justify-center items-center'>
+          <Input
+          value={links?.twitter}
+          onChange={(e) => {
+            const value = e.target.value;
+            setLinks?.({ ...links, twitter: value } as SocialLinks);
+          }} 
+          placeholder='https://x.com/username' 
+          className='flex items-center justify-center h-12 gap-2 rounded-lg border-[0.2px] border-white/20'
+          />
+          <Image loading="lazy" src="/x-white.svg" alt="twitter" width={16} height={16} className='absolute right-2' />
+          </div>
+          <div className='relative flex justify-center items-center'>
+          <Input
+          value={links?.telegram}
+          onChange={(e) => {
+            const value = e.target.value;
+            setLinks?.({ ...links, telegram: value } as SocialLinks);
+          }} 
+          placeholder='https://t.me/username' 
+          className='flex items-center justify-center h-12 gap-2 rounded-lg border-[0.2px] border-white/20'
+          />
+          <Image loading="lazy" src="/telegram.svg" alt="telegram" width={16} height={16} className='absolute right-2' />
+          </div>
+          <div className='relative flex justify-center items-center'>
+          <Input
+          value={links?.website}
+          onChange={(e) => {
+            const value = e.target.value;
+            setLinks?.({ ...links, website: value } as SocialLinks);
+          }} 
+          placeholder='https://your-website.com' 
+          className='flex items-center justify-center h-12 gap-2 rounded-lg border-[0.2px] border-white/20'
+          />
+          <Globe className='absolute right-2' size={16} color="#FFFFFF" />
+          </div>
+          <div className='relative flex justify-center items-center'>
+          <Input
+          value={links?.discord}
+          onChange={(e) => {
+            const value = e.target.value;
+            setLinks?.({ ...links, discord: value } as SocialLinks);
+          }} 
+          placeholder='https://discord.com/invite/...' 
+          className='flex items-center justify-center h-12 gap-2 rounded-lg border-[0.2px] border-white/20'
+          />
+          <Image className='absolute right-2' loading="lazy" src="/discord.svg" alt="twitter" width={16} height={16} />
+          </div>
         </div>
       </div>
 
-      <div>
+      {/* <div>
         <label className="font-medium">
         Additional links(<span className='text-white/50'>Optional</span>)
         </label>
@@ -284,7 +229,7 @@ export default function Step2({
             <Plus size={16} color='#FFFFFF' />
             <p className='text-white/50'>Add a link</p>
           </span>
-      </div>
+      </div> */}
 
       <Button
         onClick={() => setCurrentStep(3)}
