@@ -1,3 +1,5 @@
+import { SocialLinks } from "@/app/list-asset/features/Step2";
+
 export interface ApiCoinItem {
   id: string;
   contractAddress: string;
@@ -57,6 +59,68 @@ export interface ApiCoinItem {
   createdAt: string;
   updatedAt: string;
   logoUrl?: string;
+}
+
+export interface AllUserListings {
+  id: string;
+  userId: number;
+  contractAddr: string;
+  bannerUrl: string;
+  bio: string;
+  chain: string;
+  createdAt: string;
+  description: string;
+  links: SocialLinks;
+  logoUrl: string;
+  scanMetadata: {
+    age_display: string;
+    age_display_short: string;
+    creation_date: string;
+    holder_count: number;
+    lp_amount_usd: number;
+    market_cap: number;
+    project_age_days: number;
+    scan_timestamp: string;
+    token_name: string;
+    token_price: number;
+    token_symbol: string;
+    vetting_results: {
+      allFlags: string[];
+      calculatedAt: string;
+      componentScores: {
+        devAbandonment: {
+          flags: string[];
+          score: number;
+        };
+        distribution: {
+          flags: string[];
+          score: number;
+        };
+        liquidity: {
+          flags: string[];
+          score: number;
+        };
+        technical: {
+          flags: string[];
+          score: number;
+        };
+      };
+      dataSufficient: boolean;
+      eligibleTier: string;
+      missingData: unknown[];
+      overallScore: number;
+      riskLevel: string;
+    };
+    volume_24h: number;
+  };
+  scanRiskScore: number;
+  scanSummary: string;
+  scanTier: string;
+  status: string;
+  title: string;
+  updatedAt: string;
+  vettingScore: number;
+  vettingTier: string;
 }
 
 // API Response type for listings
