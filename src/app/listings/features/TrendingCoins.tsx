@@ -28,7 +28,7 @@ import TimeframeFilterBar, {
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { ApiCoinItem } from "@/types/api";
 import FallbackImage from "@/components/FallbackImage";
-import { formatRelativeAge, convertAgeToRelative } from "./utils/listingUtils";
+import { formatAgeYMD } from "./utils/listingUtils";
 
 // Helper function to create shorter address for TrendingCoins
 function shortenAddressForTrending(address: string): string {
@@ -219,11 +219,11 @@ export default function TrendingCoins({
         // Use backend-provided age (actual token age) or fallback to calculating from createdAt
         let ageStr: string | null = null;
         if (item.age && typeof item.age === 'string' && item.age.trim() !== '') {
-          // Convert "309 days" format to relative format like "309d" or "13hr"
-          ageStr = convertAgeToRelative(item.age) || item.age;
+          // Convert to "1y 2mo 4d" format
+          ageStr = formatAgeYMD(item.age);
         } else {
           const createdAt = item.createdAt ? new Date(item.createdAt) : null;
-          ageStr = createdAt ? formatRelativeAge(createdAt) : "1h";
+          ageStr = createdAt ? formatAgeYMD(createdAt) : null;
         }
         
         // Calculate trending score based on multiple factors

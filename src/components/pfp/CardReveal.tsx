@@ -9,6 +9,7 @@ import { pfpService } from '@/services/pfpService';
 import { toast } from 'react-toastify';
 import { usePrivy } from '@privy-io/react-auth';
 import { getMascotImageUrl } from '@/lib/image-url-helper';
+import { useRouter } from 'next/navigation';
 
 interface CardRevealProps {
   selectedCardId: number | null;
@@ -117,6 +118,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageS
   const [compositeFile, setCompositeFile] = useState<File | null>(null);
   const [savedImageUrl, setSavedImageUrl] = useState<string | null>(null);
   const { user } = usePrivy();
+  const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
 
   const traitName = selectedCardId ? (TRAIT_MAP[selectedCardId] || 'CTO') : 'CTO';
@@ -173,6 +175,8 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageS
   useEffect(() => {
     const autoSavePFP = async () => {
       if (!selectedCardId || !allImagesLoaded || isAutoSaved || isSaving) return;
+
+      toast.info('Your profile picture is automatically updating, Please wait', { autoClose: 3000 });
 
       try {
         // Check if authentication token exists before proceeding
@@ -279,7 +283,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageS
         className="relative"
       >
         {/* Composite Mascot Image */}
-        <div className="relative w-[221px] h-[326px] mb-6 flex items-center justify-center">
+        <div className="relative w-[221px] mx-auto h-[326px] mb-6 flex items-center justify-center">
           {/* Base Skin Layer (background) */}
           <div className="absolute inset-0 z-10 pointer-events-none">
             <Image
@@ -345,7 +349,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageS
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex flex-col gap-2 mb-2 w-full">
           {isAutoSaved ? (
             <div className="w-full text-center">
               <p className="text-sm text-green-400 mb-2">✓ Profile picture set!</p>
@@ -355,6 +359,14 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageS
                 className="rounded-lg w-full border-[0.2px] border-[#FFFFFF20] font-medium text-[14px] text-[#FFFFFF50] disabled:opacity-50"
               >
                 {isSaving ? 'Updating...' : 'Update Again'} <Save size={13} color="#FFFFFF50" />
+              </Button>
+              <Button 
+                onClick={() => {
+                  router.push('/profile');
+                }}
+                className="cta-gradient rounded-lg w-full font-medium text-[14px] text-white mt-2"
+              >
+                Go to Profile
               </Button>
             </div>
           ) : (

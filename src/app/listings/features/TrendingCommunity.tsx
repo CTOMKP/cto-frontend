@@ -17,19 +17,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { ApiCoinItem } from "@/types/api";
 import { useRouter } from "next/navigation";
 import FallbackImage from "@/components/FallbackImage";
-
-// Helper function to format relative age
-function formatRelativeAge(date: Date): string {
-  const diffMs = Date.now() - date.getTime();
-  const mins = Math.floor(diffMs / 60000);
-  if (mins < 60) return `${mins}min`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}hr`;
-  const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d`;
-  const months = Math.floor(days / 30);
-  return `${months}mo`;
-}
+import { formatAgeYMD } from "./utils/listingUtils";
 
 // Helper function to create shorter address for TrendingCommunity
 function shortenAddressForTrending(address: string): string {
@@ -167,8 +155,15 @@ export default function TrendingCommunity({
     console.log('TrendingCommunity - Processed coins:', sortedCoins.length);
     
     return sortedCoins.map(({ item, communityScore }) => {
-      const createdAt = item.createdAt ? new Date(item.createdAt) : null;
-      const ageStr = createdAt ? formatRelativeAge(createdAt) : item.age || "1h";
+      // Use backend-provided age (actual token age) or fallback to calculating from createdAt
+      let ageStr: string | null = null;
+      if (item.age && typeof item.age === 'string' && item.age.trim() !== '') {
+        // Convert to "1y 2mo 4d" format
+        ageStr = formatAgeYMD(item.age);
+      } else {
+        const createdAt = item.createdAt ? new Date(item.createdAt) : null;
+        ageStr = createdAt ? formatAgeYMD(createdAt) : null;
+      }
       
       return {
         name: item.name || item.symbol || "Unknown",

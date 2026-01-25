@@ -74,10 +74,10 @@ export default function TokenSwapCard() {
                       width={24}
                       height={24}
                       className="size-6 rounded-full"
-                      src={"/listings-chains/aptos.png"}
+                      src={"/listings-chains/movement.png"}
                       alt={"listings-chains"}
                     />
-                    <span>APT</span>
+                    <span>MOVE</span>
                     <ChevronDown
                       size={20}
                       color="#FFFFFF"
@@ -195,7 +195,7 @@ export default function TokenSwapCard() {
 
               <Button className="w-full mt-4 cta-gradient">Swap</Button>
 
-              <div className="flex bg-white/3 rounded-lg justify-center mt-4 py-4.5 items-center gap-1">
+              {/* <div className="flex bg-white/3 rounded-lg justify-center mt-4 py-4.5 items-center gap-1">
                 <Image
                   className="rounded-full"
                   src={"/panora-logo.jpg"}
@@ -207,7 +207,7 @@ export default function TokenSwapCard() {
                 <p className="text-xs text-white/70">
                   Powered by Panora Exchange
                 </p>
-              </div>
+              </div> */}
             </div>
         </div>
       </DialogContent>

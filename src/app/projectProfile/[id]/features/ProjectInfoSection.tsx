@@ -8,14 +8,14 @@ interface ProjectInfoSectionProps {
   info: Info;
   setInfo: (info: Info) => void;
   projectData: ApiCoinItem | null;
-  formatRelativeAge: (date: Date) => string;
+  formatAge: (ageString: string | null) => string;
 }
 
 export default function ProjectInfoSection({ 
   info, 
   setInfo, 
   projectData,
-  formatRelativeAge 
+  formatAge 
 }: ProjectInfoSectionProps) {
   return (
     <div className="px-[100px] mt-4">
@@ -51,9 +51,9 @@ export default function ProjectInfoSection({
                 title="Age"
                 showInfoIcon
                 value={
-                  projectData?.createdAt
-                    ? formatRelativeAge(new Date(projectData.createdAt))
-                    : "10m 8d"
+                  projectData?.age
+                    ? formatAge(projectData.age)
+                    : "0d"
                 }
               />
               <ProjectStatsCard
