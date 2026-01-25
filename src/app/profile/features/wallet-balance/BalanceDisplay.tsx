@@ -5,18 +5,20 @@ interface BalanceDisplayProps {
   balanceVisible: boolean;
   selectedAsset: WalletAsset | null;
   walletBalance: number;
+  balanceTextSize: string;
 }
 
 export default function BalanceDisplay({
   balanceVisible,
   selectedAsset,
   walletBalance,
+  balanceTextSize,
 }: BalanceDisplayProps) {
   return (
     <div className="mb-6">
       {balanceVisible ? (
         <div className="flex justify-center gap-2 flex-col items-center">
-          <span className="text-[58px] font-semibold text-white">
+          <span className={`text-[${balanceTextSize}] font-semibold text-white`}>
             {selectedAsset?.name === "MOVE" ||
             selectedAsset?.name === "USDC"
               ? `${walletBalance.toLocaleString(undefined, {

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import PaymentDialog from './PaymentDialog';
 import { userListingsService, ScanResult } from '@/services/userListingsService';
+import { SocialLinks } from './Step2';
 import { toast } from 'react-toastify';
 import axios, { AxiosError } from 'axios';
 
@@ -17,6 +18,7 @@ interface Step3Props {
   profilePreview: string | null;
   bannerPreview: string | null;
   bio?: string;
+  links?: SocialLinks;
 }
 
 export default function Step3({ 
@@ -26,7 +28,8 @@ export default function Step3({
   selectedNetwork,
   profilePreview,
   bannerPreview,
-  bio
+  bio,
+  links,
 }: Step3Props) {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [title, setTitle] = useState('');
@@ -64,6 +67,12 @@ export default function Step3({
         bannerUrl: bannerPreview || undefined,
         vettingTier: tier,
         vettingScore: riskScore,
+        links: {
+          website: links?.website || undefined,
+          twitter: links?.twitter || undefined,
+          telegram: links?.telegram || undefined,
+          discord: links?.discord || undefined,
+        },
       };
 
       console.log('📝 Creating listing with payload:', payload);

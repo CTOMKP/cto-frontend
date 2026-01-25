@@ -6,17 +6,21 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import QRCode from 'qrcode';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { usePrivyAuth } from '@/hooks/usePrivyAuth';
 import { usePrivy } from '@privy-io/react-auth';
-import { Check, SquareArrowOutUpRight } from 'lucide-react';
+import { Check, MoveDown, MoveUp, SquareArrowOutUpRight } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Link from 'next/link';
 import { BackendWallet } from '@/types/privy';
 import FallbackImage from './FallbackImage';
 import { getCloudFrontUrl } from '@/lib/image-url-helper';
 import { getWalletsFromStorage } from '@/utils/localStorage';
+import { useWalletBalance } from '@/app/profile/features/wallet-balance/useWalletBalance';
+import WalletBalanceContent from '@/app/profile/features/wallet-balance/WalletBalanceContent';
+import { Button } from './ui/button';
 
 export default function AvatarDropdown() {
   // Initialize exactly like profile page - read raw URL from localStorage
@@ -38,6 +42,24 @@ export default function AvatarDropdown() {
   const router = useRouter();
   const { logout } = usePrivyAuth();
   const { user } = usePrivy();
+  const [showQR, setShowQR] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+
+  const generateQRCode = async (address: string) => {
+    try {
+      return await QRCode.toDataURL(address, {
+        width: 200,
+        margin: 1,
+        color: {
+          dark: '#FFFFFF',
+          light: '#17171C', // Your background color
+        },
+      });
+    } catch (error) {
+      console.error('Failed to generate QR code:', error);
+      return null;
+    }
+  };
 
   // Set email and username on mount
   useEffect(() => {
@@ -49,25 +71,16 @@ export default function AvatarDropdown() {
     }
   }, [user]);
 
-  // Listen for avatar updates from PFP flow - EXACT COPY from profile page
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    console.log('[AvatarDropdown] 🔄 useEffect running, current avatarUrl state:', avatarUrl);
-
-    // Listen for custom event (dispatched by pfpService)
     const handleAvatarUpdate = () => {
-      console.log('[AvatarDropdown] 📢 avatarUpdated event received');
       const rawUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
-      console.log('[AvatarDropdown] 📢 Raw URL from localStorage:', rawUrl);
       if (rawUrl) {
         const newAvatarUrl = getCloudFrontUrl(rawUrl);
-        console.log('[AvatarDropdown] 📢 Transformed URL:', newAvatarUrl, 'Current state:', avatarUrl);
         if (newAvatarUrl !== avatarUrl) {
-          console.log('[AvatarDropdown] ✅ Updating avatarUrl state to:', newAvatarUrl);
           setAvatarUrl(newAvatarUrl);
         } else {
-          console.log('[AvatarDropdown] ⏭️ URLs match, skipping update');
         }
       } else {
         console.log('[AvatarDropdown] ⚠️ No raw URL found in localStorage');
@@ -76,10 +89,8 @@ export default function AvatarDropdown() {
 
     // Listen for localStorage changes (cross-tab updates)
     const handleStorageChange = (e: StorageEvent) => {
-      console.log('[AvatarDropdown] 💾 Storage event:', e.key, e.newValue);
       if ((e.key === 'cto_user_avatar_url' || e.key === 'profile_avatar_url') && e.newValue) {
         const cloudfrontUrl = getCloudFrontUrl(e.newValue);
-        console.log('[AvatarDropdown] ✅ Updating from storage event:', cloudfrontUrl);
         setAvatarUrl(cloudfrontUrl);
       }
     };
@@ -90,11 +101,9 @@ export default function AvatarDropdown() {
       if (rawUrl) {
         const cloudfrontUrl = getCloudFrontUrl(rawUrl);
         if (cloudfrontUrl !== avatarUrl) {
-          console.log('[AvatarDropdown] ⏰ Periodic check - updating from', avatarUrl, 'to', cloudfrontUrl);
           setAvatarUrl(cloudfrontUrl);
         }
       } else if (avatarUrl) {
-        console.log('[AvatarDropdown] ⏰ Periodic check - clearing avatar (no localStorage value)');
         setAvatarUrl(null);
       }
     };
@@ -115,6 +124,12 @@ export default function AvatarDropdown() {
 
   // Get Movement/Aptos wallet address (primary wallet) - matching profile page logic
   const [movementWalletAddress, setMovementWalletAddress] = React.useState<string | null>(null);
+  const [balanceVisible, setBalanceVisible] = useState(true);
+  const [isDeposit, setIsDeposit] = useState(false);
+  const { walletAssets, selectedAsset, setSelectedAsset, isLoading } = useWalletBalance();
+
+  // Calculate wallet balance from selected asset
+  const walletBalance = selectedAsset?.value || 0;
 
   // Check Movement wallet from Privy's linkedAccounts (like profile page)
   const checkMovementWallet = React.useCallback(() => {
@@ -144,28 +159,28 @@ export default function AvatarDropdown() {
     try {
       const wallets = getWalletsFromStorage(userId);
       if (wallets) {
-      try {
-        interface WalletWithMovement extends BackendWallet {
-          blockchain?: string;
-          walletClient?: string;
+        try {
+          interface WalletWithMovement extends BackendWallet {
+            blockchain?: string;
+            walletClient?: string;
+          }
+          const typedWallets = wallets as WalletWithMovement[];
+
+          // Find Movement wallet from localStorage wallets
+          const movementWallet = typedWallets.find((w: WalletWithMovement) =>
+            w.blockchain === 'MOVEMENT' ||
+            w.blockchain === 'APTOS' ||
+            w.chainType === 'aptos' ||
+            w.walletClient === 'APTOS_EMBEDDED'
+          );
+
+          if (movementWallet?.address) {
+            setMovementWalletAddress(movementWallet.address);
+            return;
+          }
+        } catch (e) {
+          console.error('Failed to parse wallets:', e);
         }
-        const typedWallets = wallets as WalletWithMovement[];
-        
-        // Find Movement wallet from localStorage wallets
-        const movementWallet = typedWallets.find((w: WalletWithMovement) => 
-          w.blockchain === 'MOVEMENT' ||
-          w.blockchain === 'APTOS' ||
-          w.chainType === 'aptos' ||
-          w.walletClient === 'APTOS_EMBEDDED'
-        );
-        
-        if (movementWallet?.address) {
-          setMovementWalletAddress(movementWallet.address);
-          return;
-        }
-      } catch (e) {
-        console.error('Failed to parse wallets:', e);
-      }
       }
     } catch (error) {
       console.warn('Failed to get wallets from storage:', error);
@@ -196,22 +211,22 @@ export default function AvatarDropdown() {
     <DropdownMenu>
       <DropdownMenuTrigger className='mx-8.5'>
         <div className="relative flex justify-center items-center rounded-lg size-13 border-[0.2px] border-[#FFFFFF20] overflow-hidden">
-            {avatarUrl ? (
+          {avatarUrl ? (
             <div className='size-9'>
               <FallbackImage
                 src={avatarUrl}
                 alt="Profile"
                 fill
-              className="object-cover rounded-full"
+                className="object-cover rounded-full"
               />
             </div>
-            ) : (
+          ) : (
             <div className="w-full h-full bg-[#FFFFFF0D] flex items-center justify-center">
               <span className="text-white text-xs font-bold">
                 {email.charAt(0).toUpperCase() || 'U'}
               </span>
             </div>
-            )}
+          )}
         </div>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="bg-[#010101] text-white p-6 w-[300px] border-2 border-[#86868630]">
@@ -264,39 +279,120 @@ export default function AvatarDropdown() {
 
         {/* Wallet Address */}
         <div className="mb-4 pb-4 border-b-[0.5px] border-[#FFFFFF20]">
-          <div className="flex items-center gap-2 p-2 bg-[#FFFFFF0D] rounded-lg">
-            <span className="text-xs text-white/70 flex-1 truncate font-mono">
-              {primaryWalletAddress ? (
-                `${primaryWalletAddress.slice(0, 10)}...${primaryWalletAddress.slice(-8)}`
-              ) : (
-                'No wallet connected'
+          {!isDeposit ? (
+            <div>
+              <WalletBalanceContent
+                balanceVisible={balanceVisible}
+                onToggleVisibility={() => setBalanceVisible(!balanceVisible)}
+                isLoading={isLoading}
+                walletAssets={walletAssets}
+                selectedAsset={selectedAsset}
+                onSelectAsset={setSelectedAsset}
+                walletBalance={walletBalance}
+                balanceTextSize="20px"
+              />
+
+              <div className="mt-5 flex items-center gap-2">
+                <Button
+                onClick={() => {
+                  generateQRCode(primaryWalletAddress as string).then(qrUrl => {
+                    if (qrUrl) {
+                      setIsDeposit(true);
+                      setQrCodeUrl(qrUrl);
+                      setShowQR(true);
+                    }
+                  });
+                }} 
+                className="bg-gradient-to-r from-[#FF0075] via-[#FF4A15] to-[#FFCB45] flex-1 h-12 py-3.5 px-6 rounded-full">
+                  {" "}
+                  <MoveDown /> Deposit
+                </Button>
+                <div className="bg-gradient-to-r from-[#FF0075]/50 via-[#FF4A15]/50 to-[#FFCB45]/50 p-[1px] rounded-full flex-1">
+                  <Button
+                    className="bg-[#010101] h-12 w-full py-3.5 px-6 rounded-full text-white border-none">
+                    {" "}
+                    <MoveUp /> Withdraw
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              {showQR && qrCodeUrl && (
+                <div>
+                  <div className='bg-white/6 rounded-lg py-3 px-2.5'>
+                  <div className="flex justify-center mb-6">
+                  <img src={qrCodeUrl as string} alt="Wallet QR Code" className="w-48 h-41" />
+                </div>
+
+                <span className='text-[#A1A1AA] text-sm'>Movement address</span>
+                  <div className="flex items-center gap-2">
+                      <span className="text-white/70 flex-1 truncate font-mono">
+                        {primaryWalletAddress ? (
+                          `${primaryWalletAddress.slice(0, 10)}...${primaryWalletAddress.slice(-8)}`
+                        ) : (
+                          'No wallet connected'
+                        )}
+                      </span>
+                      {primaryWalletAddress && (
+                        <button
+                          onClick={() => copyAddress(primaryWalletAddress)}
+                          className="text-white/70 hover:text-white transition-colors p-1"
+                        >
+                          {copiedAddress ? (
+                            <Check size={14} className="text-[#16C784]" />
+                          ) : (
+                            <Image
+                              src="/copy.svg"
+                              alt="copy"
+                              width={14}
+                              height={14}
+                              loading="lazy"
+                            />
+                          )}
+                        </button>
+                      )}
+                    </div>
+                </div>
+
+                <p className='text-xs leading-[100%] text-white my-5'>This address can only receive Coins from the Movement network. Sending tokens from another network will result in loss of funds.</p>
+                <Button onClick={() => setIsDeposit(false)} className='w-full cta-gradient rounded-full py-3.5 px-6'>Done</Button>
+                </div>
               )}
-            </span>
-            {primaryWalletAddress && (
-              <button
-                onClick={() => copyAddress(primaryWalletAddress)}
-                className="text-white/70 hover:text-white transition-colors p-1"
-              >
-                {copiedAddress ? (
-                  <Check size={14} className="text-[#16C784]" />
-                ) : (
-                  <Image
-                    src="/copy.svg"
-                    alt="copy"
-                    width={14}
-                    height={14}
-                    loading="lazy"
-                  />
-                )}
-              </button>
-            )}
-          </div>
+            </>
+          )}
         </div>
 
         {/* Navigation Links */}
         <div className="space-y-2 mb-4">
           <Link
             href="/profile"
+            className="block mb-3"
+          >
+            <div
+              className="rounded-lg p-[1px] transition-all duration-300"
+              style={{ background: "transparent" }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background =
+                  "linear-gradient(100.86deg, rgba(255, 0, 117, 0.3) 4.13%, rgba(255, 74, 21, 0.3) 55.91%, rgba(255, 203, 69, 0.3) 100%)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+              }}
+            >
+              <div
+                className="rounded-lg w-full px-2 py-2 text-left"
+                style={{
+                  background: "#010101",
+                  transition: "all 0.3s ease-in-out",
+                }}
+              >
+                <span className="text-white">Profile</span>
+              </div>
+            </div>
+          </Link>
+          <Link
+            href="/settings"
             className="block"
           >
             <div
@@ -321,7 +417,7 @@ export default function AvatarDropdown() {
               </div>
             </div>
           </Link>
-          <a
+          <Link
             href="#"
             target="_blank"
             rel="noopener noreferrer"
@@ -339,7 +435,7 @@ export default function AvatarDropdown() {
               }}
             >
               <div
-                className="rounded-lg w-full px-2 py-2 flex items-center gap-2"
+                className="rounded-lg w-full px-2 py-2 flex justify-between items-center gap-2"
                 style={{
                   background: "#010101",
                   transition: "all 0.3s ease-in-out",
@@ -349,41 +445,13 @@ export default function AvatarDropdown() {
                 <SquareArrowOutUpRight size={14} />
               </div>
             </div>
-          </a>
+          </Link>
         </div>
-
-        {/* Profile Link with Gradient Border */}
-        <Link
-          href="/profile"
-          className="block mb-3"
-        >
-          <div
-            className="rounded-lg p-[1px] transition-all duration-300"
-            style={{ background: "transparent" }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background =
-                "linear-gradient(100.86deg, rgba(255, 0, 117, 0.3) 4.13%, rgba(255, 74, 21, 0.3) 55.91%, rgba(255, 203, 69, 0.3) 100%)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
-            }}
-          >
-            <div
-              className="rounded-lg w-full px-4 py-3 text-center"
-              style={{
-                background: "#010101",
-                transition: "all 0.3s ease-in-out",
-              }}
-            >
-              <span className="text-white font-medium">Profile</span>
-            </div>
-          </div>
-        </Link>
 
         {/* Logout Button */}
         <button
           onClick={handleLogout}
-          className="w-full py-3 px-4 bg-[#FFFFFF0D] hover:bg-[#FFFFFF1A] rounded-lg text-white font-medium transition-colors"
+          className="w-full py-3 px-4 border-[0.2px] border-white/20 hover:bg-[#FFFFFF1A] rounded-lg text-white font-medium transition-colors"
         >
           Log out
         </button>

@@ -11,8 +11,9 @@ export default function SwapWidget() {
 
   return (
     <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] w-full p-[1px] rounded-xl inline-block">
-      <div className="bg-[#010101] rounded-xl p-2">
-        <div className="bg-white/3 p-4 rounded-lg">
+      <div className="bg-[#010101] rounded-xl p-2 relative">
+        <div className="blur-sm">
+          <div className="bg-white/3 p-4 rounded-lg">
           <div className="flex justify-between items-center mb-3">
             <span className="text-xs text-white/70 font-medium">
               You&apos;re Selling
@@ -46,10 +47,10 @@ export default function SwapWidget() {
                 width={24}
                 height={24}
                 className="size-6 rounded-full"
-                src={"/listings-chains/aptos.png"}
+                src={"/listings-chains/movement.png"}
                 alt={"listings-chains"}
               />
-              <span>APT</span>
+              <span>MOVE</span>
               <ChevronDown
                 size={20}
                 color="#FFFFFF"
@@ -179,6 +180,13 @@ export default function SwapWidget() {
           <p className="text-xs text-white/70">
             Powered by Panora Exchange
           </p>
+        </div>
+        </div>
+        {/* Coming soon overlay - covers entire component to edges */}
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm rounded-xl z-10">
+          <div className="bg-white/16 px-2 py-1 rounded-[4px]">
+            <span className="text-white">Coming soon</span>
+          </div>
         </div>
       </div>
     </div>

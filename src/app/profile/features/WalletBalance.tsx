@@ -23,6 +23,7 @@ export default function WalletBalance() {
         selectedAsset={selectedAsset}
         onSelectAsset={setSelectedAsset}
         walletBalance={walletBalance}
+        balanceTextSize="58px"
       />
 
       <ActionButtons />

@@ -14,7 +14,7 @@ import { MemeCategory } from "../../../components/MemeCategoryFilter";
 import { Network } from "../../../components/NetworkFilter";
 import { ApiCoinItem, ApiListingResponse } from "@/types/api";
 import { SortField, SortDirection, MockLikeCoin } from "./types/listing";
-import { formatRelativeAge, convertAgeToRelative } from "./utils/listingUtils";
+import { formatAgeYMD } from "./utils/listingUtils";
 import ListingTableSkeleton from "./ListingTableSkeleton";
 import ListingTableHeader from "./ListingTableHeader";
 import ListingTableRow from "./ListingTableRow";
@@ -102,11 +102,11 @@ export default function TopListings() {
           // Use backend-provided age (actual token age) or fallback to calculating from createdAt
           let ageStr: string | null = null;
           if (it.age && typeof it.age === 'string' && it.age.trim() !== '') {
-            // Convert "309 days" format to relative format like "309d" or "13hr"
-            ageStr = convertAgeToRelative(it.age) || it.age;
+            // Convert to "1y 2mo 4d" format
+            ageStr = formatAgeYMD(it.age);
           } else {
             const createdAt = it.createdAt ? new Date(it.createdAt) : null;
-            ageStr = createdAt ? formatRelativeAge(createdAt) : null;
+            ageStr = createdAt ? formatAgeYMD(createdAt) : null;
           }
           
           // Get holders from multiple possible sources - preserve null for "N/A" display
@@ -308,11 +308,11 @@ export default function TopListings() {
       // Use backend-provided age (actual token age) or fallback to calculating from createdAt
       let ageStr: string | null = null;
       if (it.age && typeof it.age === 'string' && it.age.trim() !== '') {
-        // Convert "309 days" format to relative format like "309d" or "13hr"
-        ageStr = convertAgeToRelative(it.age) || it.age;
+        // Convert to "1y 2mo 4d" format
+        ageStr = formatAgeYMD(it.age);
       } else {
         const createdAt = it.createdAt ? new Date(it.createdAt) : null;
-        ageStr = createdAt ? formatRelativeAge(createdAt) : null;
+        ageStr = createdAt ? formatAgeYMD(createdAt) : null;
       }
       
       // Get holders from multiple possible sources - preserve null for "N/A" display

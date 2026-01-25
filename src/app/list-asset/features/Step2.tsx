@@ -6,6 +6,13 @@ import { Globe, Plus, Upload } from 'lucide-react'
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
+export interface SocialLinks {
+  website: string;
+  twitter: string;
+  telegram: string;
+  discord: string;
+}
+
 interface Step2Props {
   profilePreview: string | null;
   bannerPreview: string | null;
@@ -13,6 +20,8 @@ interface Step2Props {
   handleBannerChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   setCurrentStep: (step: number) => void;
   onBioChange?: (bio: string) => void;
+  links?: SocialLinks;
+  setLinks?: (links: SocialLinks) => void;
 }
 
 export default function Step2({ 
@@ -21,7 +30,9 @@ export default function Step2({
   handleProfilePictureChange, 
   handleBannerChange, 
   setCurrentStep,
-  onBioChange
+  onBioChange,
+  links,
+  setLinks,
 }: Step2Props) {
   const [bio, setBio] = useState('');
   return (
@@ -158,26 +169,58 @@ export default function Step2({
         <p className='text-xs text-white/70 mt-1.5 mb-4'>Submit your token contract and move to next step</p>
         
         <div className='grid grid-cols-2 gap-2 w-full'>
-          <span className='flex items-center justify-center h-12 gap-2 rounded-lg border-[0.2px] border-white/20'>
-            <Image loading="lazy" src="/x-white.svg" alt="twitter" width={16} height={16} />
-            <p className='text-white/50'>Link X</p>
-          </span>
-          <span className='flex items-center justify-center h-12 gap-2 rounded-lg border-[0.2px] border-white/20'>
-            <Image loading="lazy" src="/telegram.svg" alt="twitter" width={16} height={16} />
-            <p className='text-white/50'>Link Telegram</p>
-          </span>
-          <span className='flex items-center justify-center h-12 gap-2 rounded-lg border-[0.2px] border-white/20'>
-            <Globe size={16} color="#FFFFFF" />
-            <p className='text-white/50'>Link website</p>
-          </span>
-          <span className='flex items-center justify-center h-12 gap-2 rounded-lg border-[0.2px] border-white/20'>
-            <Image loading="lazy" src="/discord.svg" alt="twitter" width={16} height={16} />
-            <p className='text-white/50'>Link Discord</p>
-          </span>
+          <div className='relative flex justify-center items-center'>
+          <Input
+          value={links?.twitter}
+          onChange={(e) => {
+            const value = e.target.value;
+            setLinks?.({ ...links, twitter: value } as SocialLinks);
+          }} 
+          placeholder='https://x.com/username' 
+          className='flex items-center justify-center h-12 gap-2 rounded-lg border-[0.2px] border-white/20'
+          />
+          <Image loading="lazy" src="/x-white.svg" alt="twitter" width={16} height={16} className='absolute right-2' />
+          </div>
+          <div className='relative flex justify-center items-center'>
+          <Input
+          value={links?.telegram}
+          onChange={(e) => {
+            const value = e.target.value;
+            setLinks?.({ ...links, telegram: value } as SocialLinks);
+          }} 
+          placeholder='https://t.me/username' 
+          className='flex items-center justify-center h-12 gap-2 rounded-lg border-[0.2px] border-white/20'
+          />
+          <Image loading="lazy" src="/telegram.svg" alt="telegram" width={16} height={16} className='absolute right-2' />
+          </div>
+          <div className='relative flex justify-center items-center'>
+          <Input
+          value={links?.website}
+          onChange={(e) => {
+            const value = e.target.value;
+            setLinks?.({ ...links, website: value } as SocialLinks);
+          }} 
+          placeholder='https://your-website.com' 
+          className='flex items-center justify-center h-12 gap-2 rounded-lg border-[0.2px] border-white/20'
+          />
+          <Globe className='absolute right-2' size={16} color="#FFFFFF" />
+          </div>
+          <div className='relative flex justify-center items-center'>
+          <Input
+          value={links?.discord}
+          onChange={(e) => {
+            const value = e.target.value;
+            setLinks?.({ ...links, discord: value } as SocialLinks);
+          }} 
+          placeholder='https://discord.com/invite/...' 
+          className='flex items-center justify-center h-12 gap-2 rounded-lg border-[0.2px] border-white/20'
+          />
+          <Image className='absolute right-2' loading="lazy" src="/discord.svg" alt="twitter" width={16} height={16} />
+          </div>
         </div>
       </div>
 
-      <div>
+      {/* <div>
         <label className="font-medium">
         Additional links(<span className='text-white/50'>Optional</span>)
         </label>
@@ -186,7 +229,7 @@ export default function Step2({
             <Plus size={16} color='#FFFFFF' />
             <p className='text-white/50'>Add a link</p>
           </span>
-      </div>
+      </div> */}
 
       <Button
         onClick={() => setCurrentStep(3)}

@@ -62,6 +62,25 @@ export interface ScanMetadata {
   };
 }
 
+export interface CreateUserListingPayload {
+  contractAddr: string;
+  chain: string;
+  title: string;
+  description: string;
+  bio?: string;
+  logoUrl?: string;
+  bannerUrl?: string;
+  links?: {
+    website?: string;
+    twitter?: string;
+    telegram?: string;
+    discord?: string;
+    [key: string]: string | undefined;
+  };
+  vettingTier: string;
+  vettingScore: number;
+}
+
 export interface ScanResultDetails {
   success?: boolean;
   risk_score?: number;
@@ -193,24 +212,7 @@ export const userListingsService = {
    * @param payload - Listing data including contract address, chain, title, description, etc.
    * @returns Created listing data with ID
    */
-  async create(payload: {
-    contractAddr: string;
-    chain: string;
-    title: string;
-    description: string;
-    bio?: string;
-    logoUrl?: string;
-    bannerUrl?: string;
-    links?: {
-      website?: string;
-      twitter?: string;
-      telegram?: string;
-      discord?: string;
-      [key: string]: string | undefined;
-    };
-    vettingTier: string;
-    vettingScore: number;
-  }) {
+  async create(payload: CreateUserListingPayload) {
     const res = await axios.post(
       `${backendUrl}/api/v1/user-listings`,
       payload,
@@ -220,4 +222,54 @@ export const userListingsService = {
     const responseData = res.data?.data || res.data;
     return responseData;
   },
+  async update(id: string, payload: Partial<CreateUserListingPayload>) {
+    const res = await axios.put(`${backendUrl}/api/v1/user-listings/${id}`, payload, { headers: authHeaders() });
+    // Handle wrapped response from TransformInterceptor
+    const responseData = res.data?.data || res.data;
+    return responseData;
+  },
+  async publish(id: string) {
+    const res = await axios.post(`${backendUrl}/api/v1/user-listings/${id}/publish`, {}, { headers: authHeaders() });
+    // Handle wrapped response from TransformInterceptor
+    const responseData = res.data?.data || res.data;
+    return responseData;
+  },
+  async mine() {
+    // Standard path for all user listings
+    const res = await axios.get(`${backendUrl}/api/v1/user-listings/mine/all`, { headers: authHeaders() });
+    // Handle wrapped response from TransformInterceptor
+    const responseData = res.data?.data || res.data;
+    return responseData;
+  },
+  async listPublic(page = 1, limit = 20) {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    const res = await axios.get(`${backendUrl}/api/v1/user-listings?${params.toString()}`);
+    // Handle wrapped response from TransformInterceptor
+    const responseData = res.data?.data || res.data;
+    return responseData;
+  },
+  async addAd(id: string, payload: { type: string; durationDays: number; startDate?: string }) {
+    const res = await axios.post(`${backendUrl}/api/v1/user-listings/${id}/ads`, payload, { headers: authHeaders() });
+    // Handle wrapped response from TransformInterceptor
+    const responseData = res.data?.data || res.data;
+    return responseData;
+  },
+  async delete(id: string) {
+    const res = await axios.delete(`${backendUrl}/api/v1/user-listings/${id}`, { headers: authHeaders() });
+    // Handle wrapped response from TransformInterceptor
+    const responseData = res.data?.data || res.data;
+    return responseData;
+  },
+  async getMyListing(id: string) {
+    const res = await axios.get(`${backendUrl}/api/v1/user-listings/mine/${id}`, { headers: authHeaders() });
+    // Handle wrapped response from TransformInterceptor
+    const responseData = res.data?.data || res.data;
+    return responseData;
+  },
+  async getPublicListing(id: string) {
+    const res = await axios.get(`${backendUrl}/api/v1/user-listings/${id}`);
+    // Handle wrapped response from TransformInterceptor
+    const responseData = res.data?.data || res.data;
+    return responseData;
+  }
 };

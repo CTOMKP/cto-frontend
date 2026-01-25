@@ -56,6 +56,47 @@ export function convertAgeToRelative(ageStr: string | null | undefined): string 
   return null;
 }
 
+/**
+ * Format age in years, months, and days format: "1y 2mo 4d"
+ * Only shows non-zero parts (e.g., "2mo 4d" if no years, "4d" if only days)
+ */
+export function formatAgeYMD(dateOrDays: Date | number | string): string | null {
+  let totalDays = 0;
+
+  if (dateOrDays instanceof Date) {
+    const diffMs = Date.now() - dateOrDays.getTime();
+    totalDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  } else if (typeof dateOrDays === 'number') {
+    totalDays = Math.floor(dateOrDays);
+  } else if (typeof dateOrDays === 'string') {
+    // Parse "309 days" or "1 day" format
+    const match = dateOrDays.match(/(\d+(?:\.\d+)?)\s*(?:day|days|d)/i);
+    if (match) {
+      totalDays = Math.floor(parseFloat(match[1]));
+    } else {
+      return null;
+    }
+  } else {
+    return null;
+  }
+
+  if (totalDays < 0) return null;
+  if (totalDays === 0) return '0d';
+
+  const years = Math.floor(totalDays / 365);
+  const remainingAfterYears = totalDays % 365;
+  const months = Math.floor(remainingAfterYears / 30);
+  const days = remainingAfterYears % 30;
+
+  const parts: string[] = [];
+  if (years > 0) parts.push(`${years}y`);
+  if (months > 0) parts.push(`${months}mo`);
+  if (days > 0) parts.push(`${days}d`);
+
+  // If all are zero (shouldn't happen due to check above), return "0d"
+  return parts.length > 0 ? parts.join(' ') : '0d';
+}
+
 export function getChainImage(chain: string): string {
   const chainMap: Record<string, string> = {
     'solana': '/listings-chains/solana.png',

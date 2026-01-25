@@ -13,6 +13,7 @@ interface WalletBalanceContentProps {
   selectedAsset: WalletAsset | null;
   onSelectAsset: (asset: WalletAsset) => void;
   walletBalance: number;
+  balanceTextSize: string;
 }
 
 export default function WalletBalanceContent({
@@ -23,6 +24,7 @@ export default function WalletBalanceContent({
   selectedAsset,
   onSelectAsset,
   walletBalance,
+  balanceTextSize
 }: WalletBalanceContentProps) {
   return (
     <div className="bg-white/6 rounded-lg py-3 px-2.5">
@@ -42,6 +44,7 @@ export default function WalletBalanceContent({
         balanceVisible={balanceVisible}
         selectedAsset={selectedAsset}
         walletBalance={walletBalance}
+        balanceTextSize={balanceTextSize}
       />
 
       <BalanceStats />

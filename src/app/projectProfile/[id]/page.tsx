@@ -11,6 +11,7 @@ import Chart from "./features/Chart";
 import CommunityVote from "./features/CommunityVote";
 import SwapWidget from "./features/SwapWidget";
 import ActivitiesSection from "./features/ActivitiesSection";
+import { formatAgeYMD } from "@/app/listings/features/utils/listingUtils";
 
 export default function ProjectProfilePage() {
   const [info, setInfo] = useState<Info>("about");
@@ -37,6 +38,13 @@ export default function ProjectProfilePage() {
     return date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' });
   }
 
+  // Helper function to format age from string (e.g., "633 days") to "1y 2mo 3d"
+  function formatAge(ageString: string | null): string {
+    if (!ageString) return "0d";
+    const formatted = formatAgeYMD(ageString);
+    return formatted || "0d";
+  }
+
   // Fetch project data from API
   useEffect(() => {
     const fetchProjectData = async () => {
@@ -44,7 +52,7 @@ export default function ProjectProfilePage() {
       
       setIsLoading(true);
       const base = process.env.NEXT_PUBLIC_BACKEND_URL;
-      const url = `${base}/api/listing/${id}`;
+      const url = `${base}/api/v1/listing/${id}`;
       
       try {
         const res = await fetch(url);
@@ -54,7 +62,14 @@ export default function ProjectProfilePage() {
           return;
         }
         
-        const data: ApiCoinItem = await res.json();
+        const response = await res.json();
+        // Handle wrapped response from TransformInterceptor
+        const data: ApiCoinItem = response?.data || response;
+        
+        // Log in a copyable JSON format
+        console.log("=== ApiCoinItem Full Structure (Copy this) ===");
+        console.log(JSON.stringify(data, null, 2));
+        console.log("=== End of ApiCoinItem ===");
         setProjectData(data);
         setIsLoading(false);
       } catch (error) {
@@ -81,7 +96,7 @@ export default function ProjectProfilePage() {
         info={info}
         setInfo={setInfo}
         projectData={projectData}
-        formatRelativeAge={formatRelativeAge}
+        formatAge={formatAge}
       />
 
       <div className="px-[100px] mt-4 flex gap-2 max-h-[812px]">

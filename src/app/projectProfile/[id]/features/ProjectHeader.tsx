@@ -2,6 +2,8 @@ import Image from "next/image";
 import { ChevronDown, Clock3, Link2 } from "lucide-react";
 import { ApiCoinItem } from "@/types/api";
 import { shortenAddress } from "@/utils/helper/shortenAddress";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { toast } from "react-toastify";
 
 interface ProjectHeaderProps {
   projectData: ApiCoinItem | null;
@@ -9,6 +11,21 @@ interface ProjectHeaderProps {
 }
 
 export default function ProjectHeader({ projectData, formatJoinedDate }: ProjectHeaderProps) {
+  const handleCopyAddress = async () => {
+    const address = projectData?.contractAddress;
+    if (!address) {
+      toast.error("No address to copy");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(address);
+      toast.success("Address copied to clipboard");
+    } catch (error) {
+      toast.error("Failed to copy address");
+    }
+  };
+
   return (
     <div className="px-[100px] border-b border-b-[#8686864D]">
       <div className='mt-6.5 bg-[url("/project-profile/default-project-bg-img.png")] bg-cover bg-center bg-no-repeat h-[167px] rounded-t-lg'></div>
@@ -41,27 +58,123 @@ export default function ProjectHeader({ projectData, formatJoinedDate }: Project
                     ).substring(0, 12)}...`
                   : projectData?.name || projectData?.symbol || "CHILLGUY"}
               </h1>{" "}
-              <span className="p-1 mt-1 rounded-[5px] bg-[#15FF00]/20">
-                <Image
-                  loading="lazy"
-                  src="/project-categories/bloom.svg"
-                  alt="green"
-                  width={14}
-                  height={14}
-                  className="size-[14px]"
-                />
-              </span>
+
+              <div className="flex items-center gap-1">
+                {(() => {
+                  const rawTier = projectData?.tier;
+                  
+                  // Normalize tier - handle all invalid formats
+                  if (!rawTier || rawTier === null || rawTier === undefined) {
+                    return null;
+                  }
+                  
+                  const tierStr = String(rawTier).trim().toLowerCase();
+                  
+                  // Check for all invalid tier values (including dash variations)
+                  if (tierStr === 'none' || tierStr === 'null' || tierStr === 'undefined' || 
+                      tierStr === '' || tierStr === '—' || tierStr === '----' || tierStr === '------' ||
+                      tierStr.startsWith('---') || tierStr === 'n/a' || tierStr === 'na' ||
+                      /^[-—]+$/.test(tierStr)) { // Match any string that's only dashes/em-dashes
+                    return null;
+                  }
+                  
+                  const tier = tierStr;
+                  const tierIcons: Record<string, string> = {
+                    stellar: "/project-categories/stellar.svg",
+                    bloom: "/project-categories/bloom.svg",
+                    sprout: "/project-categories/sprout.svg",
+                    seed: "/project-categories/seed.svg",
+                  };
+                  
+                  const tierBgColors: Record<string, string> = {
+                    seed: "bg-[#6D6D6D]/20",
+                    sprout: "bg-[#FF5900]/20",
+                    bloom: "bg-[#15FF00]/20",
+                    stellar: "bg-[#FFBB00]/20",
+                  };
+                  
+                  const tierDescriptions: Record<string, string> = {
+                    seed: "Entry-level tier, 14-21 days old with minimal liquidity and early activity",
+                    sprout: "Mid-level tier, >21 days old, with moderate liquidity and stability",
+                    bloom: "Premium tier, >1 month old, with significant liquidity and security",
+                    stellar: "Elite tier, >1 month old, with significant liquidity and security",
+                  };
+                  
+                  const tierLpRequirements: Record<string, { lp: string; lpLockBurn: string }> = {
+                    seed: { lp: ">$10,000", lpLockBurn: ">30% / 6mo" },
+                    sprout: { lp: ">$20,000", lpLockBurn: ">30% / 18mo" },
+                    bloom: { lp: ">$50,000", lpLockBurn: ">30% / 24mo" },
+                    stellar: { lp: ">$100,000", lpLockBurn: ">30% / 36mo" },
+                  };
+                  
+                  const iconPath = tierIcons[tier] || "/project-categories/bloom.svg";
+                  const bgColor = tierBgColors[tier] || "bg-[#15FF00]/20";
+                  const description = tierDescriptions[tier] || "";
+                  const lpRequirements = tierLpRequirements[tier] || { lp: "", lpLockBurn: "" };
+                  const tierName = tier.charAt(0).toUpperCase() + tier.slice(1);
+                  
+                  return (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className={`${bgColor} rounded-[4px] p-[3px] cursor-help`}>
+                          <Image
+                            loading="lazy"
+                            src={iconPath}
+                            width={14}
+                            height={14}
+                            alt={tier}
+                          />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent className="bg-[#010101] p-2 rounded-lg border-[0.5px] border-white max-w-[180px]">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex justify-between items-center">
+                          <span className="font-semibold text-white">{tierName}</span>
+                          <span className={`${bgColor} rounded-[4px] p-[3px] cursor-help`}>
+                          <Image
+                            loading="lazy"
+                            src={iconPath}
+                            width={8.36}
+                            height={8.36}
+                            alt={tier}
+                          />
+                        </span>
+                          </div>
+                          {description && (
+                            <p className="text-xs font-medium text-white/70 w-full text-wrap">{description}</p>
+                          )}
+                          {lpRequirements.lp && (
+                            <>
+                              <div className="flex flex-col gap-0.5 mt-1 ">
+                                <span className="text-xs font-medium flex justify-between items-center text-white/70">
+                                  <span className="text-white/70">Lp: </span> <span>{lpRequirements.lp}</span>
+                                </span>
+                                <span className="text-xs font-medium flex justify-between items-center text-white/70">
+                                  <span className="text-white/70">Lp lock/burn: </span> <span>{lpRequirements.lpLockBurn}</span>
+                                </span>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })()}
+              </div>
               <div className="flex items-center gap-1">
                 <span className="bg-[#FFFFFF]/5 rounded-[26px] flex items-center justify-center px-1.5 h-6">
                   {projectData?.contractAddress
                     ? shortenAddress(projectData.contractAddress)
                     : "C19J3fcX...nRpump"}
                 </span>
-                <span className="size-6 flex justify-center items-center rounded-full bg-[#FFFFFF0D]">
+                <span 
+                  className="size-6 flex justify-center items-center rounded-full bg-[#FFFFFF0D] cursor-pointer hover:bg-[#FFFFFF1A] transition-colors"
+                  onClick={handleCopyAddress}
+                >
                   <Image
                     loading="lazy"
                     src="/copy.svg"
-                    alt="green"
+                    alt="copy"
                     width={12}
                     height={12}
                     className="size-[14px]"
@@ -82,7 +195,7 @@ export default function ProjectHeader({ projectData, formatJoinedDate }: Project
 
             <div className="flex items-center gap-2">
               <span className="font-bold text-[32px]">
-                ${projectData?.priceUsd?.toFixed(4) || "0.3793"}
+                ${projectData?.priceUsd?.toFixed(6) || "0.3793"}
               </span>
               <span
                 className={`flex items-center border-[0.12px] p-1 rounded-[34px] font-medium ${

@@ -5,8 +5,15 @@ export type MockLikeCoin = {
   name: string;
   whale: boolean;
   age: string | null;
+  status?: string;
   address: string;
   x?: string;
+  links?: {
+    website: string;
+    twitter: string;
+    telegram: string;
+    discord: string;
+  };
   website?: string;
   image?: string;
   chain?: string;
