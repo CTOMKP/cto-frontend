@@ -15,10 +15,39 @@ export function useWalletBalance() {
   const [activeWalletId, setActiveWalletId] = useState<string | null>(null);
   const [isAutoRecovering, setIsAutoRecovering] = useState(false);
   const walletsLoadedRef = useRef<string | null>(null);
+  const retryCountRef = useRef(0);
+  const maxRetries = 3;
+
+  // Simple retry helper with exponential backoff
+  const retryWithBackoff = async <T,>(
+    fn: () => Promise<T>,
+    retries = maxRetries,
+    delay = 1000
+  ): Promise<T> => {
+    try {
+      retryCountRef.current = 0;
+      return await fn();
+    } catch (error) {
+      if (retries === 0) throw error;
+      
+      // Check if it's a network error
+      const isNetworkError = 
+        axios.isAxiosError(error) && 
+        (!error.response || error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK');
+      
+      if (isNetworkError) {
+        retryCountRef.current++;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return retryWithBackoff(fn, retries - 1, delay * 2);
+      }
+      throw error;
+    }
+  };
 
   const loadWallets = useCallback(async () => {
     try {
       setIsLoading(true);
+      retryCountRef.current = 0;
 
       const findAndSetWallet = async () => {
         const userId = localStorage.getItem("cto_user_id") || user?.id;
@@ -34,11 +63,14 @@ export function useWalletBalance() {
             process.env.NEXT_PUBLIC_BACKEND_URL ||
             "https://api.ctomarketplace.com";
 
-          const response = await axios.get(
-            `${API_BASE}/api/v1/auth/privy/wallets`,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
+          const response = await retryWithBackoff(() =>
+            axios.get(
+              `${API_BASE}/api/v1/auth/privy/wallets`,
+              {
+                headers: { Authorization: `Bearer ${token}` },
+                timeout: 10000,
+              }
+            )
           );
 
           // Handle nested response from TransformInterceptor
@@ -139,7 +171,9 @@ export function useWalletBalance() {
     // STEP 2: Use the wallet ID to fetch balances (like test frontend loadData function)
     if (walletId) {
       try {
-        const balances = await movementWalletService.getBalance(walletId);
+        const balances = await retryWithBackoff(() =>
+          movementWalletService.getBalance(walletId)
+        );
 
         // Find MOVE balance (EXACTLY like test frontend line 254)
         const moveBalance = balances.find(
@@ -217,6 +251,19 @@ export function useWalletBalance() {
   }
 }, [user, isAutoRecovering]);
 
+  // Listen for online/offline events and retry when network comes back
+  useEffect(() => {
+    const handleOnline = () => {
+      if (authenticated && user && ready && retryCountRef.current > 0) {
+        // Network came back, retry loading wallets
+        loadWallets();
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, [authenticated, user, ready, loadWallets]);
+
   // Load wallets
   useEffect(() => {
     if (authenticated && user && ready) {
@@ -250,7 +297,9 @@ export function useWalletBalance() {
 
       if (!movementWalletForBalances) return;
 
-      const balances = await movementWalletService.getBalance(activeWalletId);
+      const balances = await retryWithBackoff(() =>
+        movementWalletService.getBalance(activeWalletId)
+      );
       const assetsWithBalances: WalletAsset[] = [];
 
       // Find MOVE balance
