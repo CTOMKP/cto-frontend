@@ -114,7 +114,7 @@ export default function FilterButton({
 
     // Apply checkbox filters
     if (checkboxFilters["community-score"]) {
-      filteredItems = filteredItems.filter(item => item.communityScore >= 50);
+      filteredItems = filteredItems.filter(item => (item?.communityScore ?? 0) >= 50);
     }
     if (checkboxFilters["lp-burned->=-505"]) {
       filteredItems = filteredItems.filter(item => (item.lpBurnedPercentage ?? 0) >= 50);
@@ -137,13 +137,13 @@ export default function FilterButton({
     if (rangeFilters["Market cap"].min) {
       const min = parseFloat(rangeFilters["Market cap"].min);
       if (!isNaN(min)) {
-        filteredItems = filteredItems.filter(item => item.marketCap >= min);
+        filteredItems = filteredItems.filter(item => (item?.marketCap ?? 0) >= min);
       }
     }
     if (rangeFilters["Market cap"].max) {
       const max = parseFloat(rangeFilters["Market cap"].max);
       if (!isNaN(max)) {
-        filteredItems = filteredItems.filter(item => item.marketCap <= max);
+        filteredItems = filteredItems.filter(item => (item?.marketCap ?? 0) <= max);
       }
     }
 
@@ -163,13 +163,13 @@ export default function FilterButton({
     if (rangeFilters["24hr Volume %"].min) {
       const min = parseFloat(rangeFilters["24hr Volume %"].min);
       if (!isNaN(min)) {
-        filteredItems = filteredItems.filter(item => item.change24h >= min);
+        filteredItems = filteredItems.filter(item => (item?.change24h ?? 0) >= min);
       }
     }
     if (rangeFilters["24hr Volume %"].max) {
       const max = parseFloat(rangeFilters["24hr Volume %"].max);
       if (!isNaN(max)) {
-        filteredItems = filteredItems.filter(item => item.change24h <= max);
+        filteredItems = filteredItems.filter(item => (item?.change24h ?? 0) <= max);
       }
     }
 
