@@ -11,23 +11,29 @@ import { toast } from 'react-toastify';
 import axios, { AxiosError } from 'axios';
 
 interface Step3Props {
+  draftId: string | null;
   onPaymentSuccess?: () => void;
   scanResult: ScanResult | null;
   contractAddress: string;
   selectedNetwork: string;
   profilePreview: string | null;
   bannerPreview: string | null;
+  logoUrl?: string;
+  bannerUrl?: string;
   bio?: string;
   links?: SocialLinks;
 }
 
 export default function Step3({ 
+  draftId,
   onPaymentSuccess,
   scanResult,
   contractAddress,
   selectedNetwork,
   profilePreview,
   bannerPreview,
+  logoUrl = '',
+  bannerUrl = '',
   bio,
   links,
 }: Step3Props) {
@@ -51,48 +57,52 @@ export default function Step3({
     setIsCreatingListing(true);
 
     try {
-      // Get tier and score from scan result (handle nested details)
-      const nestedDetails = scanResult?.details?.details;
-      const tier = nestedDetails?.tier || scanResult?.details?.tier || scanResult?.tier || 'UNQUALIFIED';
-      const riskScore = nestedDetails?.risk_score || scanResult?.details?.risk_score || scanResult?.risk_score || 0;
+      if (draftId) {
+        await userListingsService.update(draftId, {
+          title: title.trim(),
+          description: description.trim(),
+        });
+        setListingId(draftId);
+        setPaymentDialogOpen(true);
+        toast.success('Draft updated. Proceed to payment.');
+      } else {
+        const nestedDetails = scanResult?.details?.details;
+        const tier = nestedDetails?.tier || scanResult?.details?.tier || scanResult?.tier || 'UNQUALIFIED';
+        const riskScore = nestedDetails?.risk_score || scanResult?.details?.risk_score || scanResult?.risk_score || 0;
 
-      // Create listing payload
-      const payload = {
-        contractAddr: contractAddress.trim(),
-        chain: selectedNetwork.toUpperCase(),
-        title: title.trim(),
-        description: description.trim(),
-        bio: bio || undefined,
-        logoUrl: profilePreview || undefined,
-        bannerUrl: bannerPreview || undefined,
-        vettingTier: tier,
-        vettingScore: riskScore,
-        links: {
-          website: links?.website || undefined,
-          twitter: links?.twitter || undefined,
-          telegram: links?.telegram || undefined,
-          discord: links?.discord || undefined,
-        },
-      };
+        const payload = {
+          contractAddr: contractAddress.trim(),
+          chain: selectedNetwork.toUpperCase(),
+          title: title.trim(),
+          description: description.trim(),
+          bio: bio || undefined,
+          logoUrl: logoUrl || undefined,
+          bannerUrl: bannerUrl || undefined,
+          vettingTier: tier,
+          vettingScore: riskScore,
+          links: {
+            website: links?.website || undefined,
+            twitter: links?.twitter || undefined,
+            telegram: links?.telegram || undefined,
+            discord: links?.discord || undefined,
+          },
+        };
 
-      console.log('📝 Creating listing with payload:', payload);
-      const result = await userListingsService.create(payload);
-      
-      // Handle wrapped response
-      const listingData = result?.data || result;
-      const createdListingId = listingData?.id || listingData?.listingId;
+        const result = await userListingsService.create(payload);
+        const listingData = result?.data || result;
+        const createdListingId = listingData?.id || listingData?.listingId;
 
-      if (!createdListingId) {
-        throw new Error('Listing created but no ID returned');
+        if (!createdListingId) {
+          throw new Error('Listing created but no ID returned');
+        }
+
+        setListingId(createdListingId);
+        setPaymentDialogOpen(true);
+        toast.success('Listing created! Proceed to payment.');
       }
-
-      console.log('✅ Listing created with ID:', createdListingId);
-      setListingId(createdListingId);
-      setPaymentDialogOpen(true);
-      toast.success('Listing created! Proceed to payment.');
     } catch (error) {
-      console.error('Failed to create listing:', error);
-      let errorMsg = 'Failed to create listing';
+      console.error('Failed to save listing:', error);
+      let errorMsg = 'Failed to save listing';
       if (error instanceof Error) {
         errorMsg = error.message || errorMsg;
       } else if (axios.isAxiosError(error)) {

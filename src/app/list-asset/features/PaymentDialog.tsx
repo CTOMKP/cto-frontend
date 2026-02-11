@@ -18,7 +18,7 @@ import { movementWalletService } from '@/services/movementWalletService';
 import { getMovementWallet, sendMovementTransaction } from '@/lib/movement-wallet';
 import { getWalletsFromStorage } from '@/utils/localStorage';
 import { toast } from 'react-toastify';
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import type { BackendWallet } from '@/types/privy';
 
 interface PaymentDialogProps {

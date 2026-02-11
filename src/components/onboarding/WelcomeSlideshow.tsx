@@ -124,7 +124,7 @@ export default function WelcomeSlideshow() {
               <Image loading="lazy" src="/nav-bar/logo.svg" alt="logo" width={131} height={31}/>
               {isLastSlide ? (
                 <Button 
-                  className='h-[37px] w-[66px] rounded-lg cta-gradient text-base text-white focus-visible:!border-none'
+                  className='h-[37px] w-fit rounded-lg cta-gradient text-base text-white focus-visible:!border-none'
                   onClick={async () => {
                     setShowOnboarding(false);
                     // Small delay to ensure dialog closes before opening Privy

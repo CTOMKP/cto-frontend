@@ -17,37 +17,37 @@ export default function Listings() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const base = process.env.NEXT_PUBLIC_BACKEND_URL;
+    if (!base) {
+      setIsLoading(false);
+      return;
+    }
+    const controller = new AbortController();
+    const signal = controller.signal;
+
     const fetchListings = async () => {
       setIsLoading(true);
-      const base = process.env.NEXT_PUBLIC_BACKEND_URL;
-      
-      // Fetch from all chains initially (remove chain filter to get all chains)
       const url = `${base}/api/v1/listing/listings?category=MEME&sort=updatedAt%3Adesc&limit=10000`;
-      
       try {
-        const res = await fetch(url);
+        const res = await fetch(url, { signal });
+        if (signal.aborted) return;
         if (!res.ok) {
           setIsLoading(false);
           return;
         }
         const response = await res.json();
-        console.log('Highlights - Raw API response:', response);
-        console.log('Highlights - Response.data:', response.data);
-        
-        // Backend wraps response in { data, statusCode, timestamp } via TransformInterceptor
+        if (signal.aborted) return;
         const data: ApiListingResponse = response.data || response;
-        console.log('Highlights - Parsed data:', data);
-        console.log('Highlights - Items count:', data.items?.length || 0);
-        console.log('Highlights - First item sample:', data.items?.[0]);
         setApiData(data.items || []);
-        setIsLoading(false);
       } catch (e) {
+        if (signal.aborted) return;
         console.log(e);
-        setIsLoading(false);
+      } finally {
+        if (!signal.aborted) setIsLoading(false);
       }
     };
-    
     fetchListings();
+    return () => controller.abort();
   }, []);
 
   return (

@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import Image from "next/image";
 import Step1 from "./features/Step1";
 import Step2, { SocialLinks } from "./features/Step2";
 import Step3 from "./features/Step3";
 import Step4 from "./features/Step4";
 import { Hourglass } from "lucide-react";
-import { ScanResult } from "@/services/userListingsService";
+import { userListingsService, ScanResult, CreateUserListingPayload } from "@/services/userListingsService";
+import { toast } from "react-toastify";
 
 const networks = [
   {
@@ -80,8 +81,17 @@ const getStarted = [
   },
 ];
 
+const DRAFT_KEY = 'cto_draft_listing_id';
+
 export default function ListingApplication() {
   const [selectedNetwork, setSelectedNetwork] = useState<string>("solana");
+
+  // Clear stale draft when starting a new listing flow (match cto-test-frontend)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(DRAFT_KEY);
+    }
+  }, []);
   const [networkDialogueOpen, setNetworkDialogueOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [showStep4, setShowStep4] = useState<boolean>(false);
@@ -89,6 +99,11 @@ export default function ListingApplication() {
   const [contractAddress, setContractAddress] = useState<string>('');
   const [profilePreview, setProfilePreview] = useState<string | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string>('');
+  const [bannerUrl, setBannerUrl] = useState<string>('');
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [bannerUploading, setBannerUploading] = useState(false);
+  const [draftId, setDraftId] = useState<string | null>(null);
   const [bio, setBio] = useState<string>('');
   const [links, setLinks] = useState<SocialLinks>({
     website: '',
@@ -96,29 +111,160 @@ export default function ListingApplication() {
     telegram: '',
     discord: '',
   });
-  const handleProfilePictureChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfilePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
-  const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setBannerPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+  const getDraftId = useCallback(() => draftId || (typeof window !== 'undefined' ? localStorage.getItem(DRAFT_KEY) : null), [draftId]);
+
+  /**
+   * Ensures we have a draft ID: returns existing or creates one (only when createIfMissing is true).
+   * Draft is only created when user clicks "Continue" from Step 2 — never during image upload,
+   * so we never send create() before the user has chosen to save progress.
+   */
+  const ensureDraftExists = useCallback(async (
+    payload: {
+      title?: string;
+      description?: string;
+      bio?: string;
+      logoUrl?: string;
+      bannerUrl?: string;
+      links?: SocialLinks;
+    },
+    options?: { createIfMissing?: boolean }
+  ) => {
+    const createIfMissing = options?.createIfMissing !== false;
+    const existing = getDraftId();
+    if (existing) {
+      const updates: Record<string, unknown> = {};
+      if (payload.bio !== undefined) updates.bio = payload.bio;
+      if (payload.logoUrl !== undefined) updates.logoUrl = payload.logoUrl;
+      if (payload.bannerUrl !== undefined) updates.bannerUrl = payload.bannerUrl;
+      if (payload.links !== undefined) updates.links = payload.links;
+      if (payload.title !== undefined) updates.title = payload.title;
+      if (payload.description !== undefined) updates.description = payload.description;
+      if (Object.keys(updates).length > 0) {
+        try {
+          await userListingsService.update(existing, updates as any);
+        } catch (_) {}
+      }
+      return existing;
     }
-  };
+    // Do not create draft from image upload path — only when user clicks Continue
+    if (!createIfMissing) return null;
+    if (!scanResult || !contractAddress) return null;
+    // Only create draft when token is eligible (match cto-test-frontend)
+    if (!scanResult.success || !scanResult.eligible) return null;
+    const tier = scanResult.details?.tier || scanResult.tier || scanResult.vettingTier || 'UNQUALIFIED';
+    const riskScore = Number(scanResult.details?.risk_score ?? scanResult.risk_score ?? scanResult.vettingScore ?? 0);
+    const title = (payload.title ?? (scanResult.metadata?.token_name as string) ?? 'Untitled').trim() || 'Untitled';
+    const description = (payload.description ?? '').trim() || ' ';
+    const rawBio = (payload.bio ?? bio)?.trim();
+    const rawLinks = payload.links ?? links;
+    const linkWebsite = rawLinks?.website?.trim() || undefined;
+    const linkTwitter = rawLinks?.twitter?.trim() || undefined;
+    const linkTelegram = rawLinks?.telegram?.trim() || undefined;
+    const linkDiscord = rawLinks?.discord?.trim() || undefined;
+    const hasAnyLink = [linkWebsite, linkTwitter, linkTelegram, linkDiscord].some((v) => v != null && v !== '');
+
+    const createPayload: CreateUserListingPayload = {
+      contractAddr: contractAddress.trim(),
+      chain: selectedNetwork.toUpperCase(),
+      title,
+      description,
+      vettingTier: tier,
+      vettingScore: riskScore,
+    };
+    if (rawBio) createPayload.bio = rawBio;
+    if ((payload.logoUrl ?? logoUrl)?.trim()) createPayload.logoUrl = (payload.logoUrl ?? logoUrl)?.trim() || undefined;
+    if ((payload.bannerUrl ?? bannerUrl)?.trim()) createPayload.bannerUrl = (payload.bannerUrl ?? bannerUrl)?.trim() || undefined;
+    if (hasAnyLink) {
+      createPayload.links = {
+        website: linkWebsite,
+        twitter: linkTwitter,
+        telegram: linkTelegram,
+        discord: linkDiscord,
+      };
+    }
+    const res = await userListingsService.create(createPayload);
+    const data = res?.data ?? res;
+    const id = data?.id ?? data?.listingId;
+    const backendMessage = (res as { message?: string })?.message ?? (data as { message?: string })?.message;
+    if (!id) throw new Error(backendMessage || 'Failed to create draft');
+    setDraftId(id);
+    if (typeof window !== 'undefined') localStorage.setItem(DRAFT_KEY, id);
+    return id;
+  }, [scanResult, contractAddress, selectedNetwork, bio, logoUrl, bannerUrl, links, getDraftId]);
+
+  const handleProfilePictureChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => setProfilePreview(reader.result as string);
+    reader.readAsDataURL(file);
+    try {
+      setLogoUploading(true);
+      // Do not create draft here — only use existing draft so we never send create() before Continue
+      const draft = await ensureDraftExists({}, { createIfMissing: false });
+      const { viewUrl } = await userListingsService.uploadImageViaPresign(
+        draft ? 'profile' : 'generic',
+        file,
+        draft ? { projectId: draft } : undefined
+      );
+      setLogoUrl(viewUrl);
+      if (draft) {
+        try { await userListingsService.update(draft, { logoUrl: viewUrl }); } catch (_) {}
+      }
+      toast.success('Profile picture uploaded');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? err?.message ?? 'Failed to upload profile picture';
+      toast.error(msg);
+      setProfilePreview(null);
+    } finally {
+      setLogoUploading(false);
+    }
+  }, [ensureDraftExists]);
+
+  const handleBannerChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => setBannerPreview(reader.result as string);
+    reader.readAsDataURL(file);
+    try {
+      setBannerUploading(true);
+      // Do not create draft here — only use existing draft
+      const draft = await ensureDraftExists({}, { createIfMissing: false });
+      const { viewUrl } = await userListingsService.uploadImageViaPresign(
+        draft ? 'banner' : 'generic',
+        file,
+        draft ? { projectId: draft } : undefined
+      );
+      setBannerUrl(viewUrl);
+      if (draft) {
+        try { await userListingsService.update(draft, { bannerUrl: viewUrl }); } catch (_) {}
+      }
+      toast.success('Banner uploaded');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? err?.message ?? 'Failed to upload banner';
+      toast.error(msg);
+      setBannerPreview(null);
+    } finally {
+      setBannerUploading(false);
+    }
+  }, [ensureDraftExists]);
+
+  const handleStep2Continue = useCallback(async () => {
+    try {
+      if (scanResult?.eligible) {
+        // Draft is created only here (on Continue), not when uploading images
+        await ensureDraftExists({ bio, logoUrl: logoUrl || undefined, bannerUrl: bannerUrl || undefined, links }, { createIfMissing: true });
+      } else {
+        toast.info('You can continue, but saving/publishing requires a higher vetting score.');
+      }
+      setCurrentStep(3);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? err?.message ?? 'Failed to save draft';
+      toast.error(msg);
+    }
+  }, [ensureDraftExists, scanResult?.eligible, bio, logoUrl, bannerUrl, links]);
 
   return (
     <div>
@@ -224,9 +370,14 @@ export default function ListingApplication() {
               <Step2
                 profilePreview={profilePreview}
                 bannerPreview={bannerPreview}
+                logoUrl={logoUrl}
+                bannerUrl={bannerUrl}
+                logoUploading={logoUploading}
+                bannerUploading={bannerUploading}
                 handleProfilePictureChange={handleProfilePictureChange}
                 handleBannerChange={handleBannerChange}
                 setCurrentStep={setCurrentStep}
+                onContinue={handleStep2Continue}
                 onBioChange={setBio}
                 links={links}
                 setLinks={setLinks}
@@ -235,12 +386,25 @@ export default function ListingApplication() {
 
             {currentStep === 3 && (
               <Step3
-                onPaymentSuccess={() => setShowStep4(true)}
+                draftId={getDraftId()}
+                onPaymentSuccess={async () => {
+                  const id = getDraftId();
+                  if (id) {
+                    try {
+                      await userListingsService.publish(id);
+                    } catch (_) {}
+                    localStorage.removeItem(DRAFT_KEY);
+                    setDraftId(null);
+                  }
+                  setShowStep4(true);
+                }}
                 scanResult={scanResult}
                 contractAddress={contractAddress}
                 selectedNetwork={selectedNetwork}
                 profilePreview={profilePreview}
                 bannerPreview={bannerPreview}
+                logoUrl={logoUrl}
+                bannerUrl={bannerUrl}
                 bio={bio}
                 links={links}
               />

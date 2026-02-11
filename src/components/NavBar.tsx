@@ -16,7 +16,6 @@ import LoginButton from "./LoginButton";
 import HarvestGrape from "./HarvestGrape";
 import AvatarDropdown from "./AvatarDropdown";
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
-import { usePrivy } from "@privy-io/react-auth";
 import { useEffect } from "react";
 import {
   DropdownMenu,
@@ -41,34 +40,29 @@ const ExploreCategoryLinks = [
 ];
 
 export default function NavBar() {
-  const { isAuthenticated } = usePrivyAuth();
-  const { ready } = usePrivy();
+  const { isAuthenticated, ready, isLoading: authLoading } = usePrivyAuth();
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const [hasAvatar, setHasAvatar] = useState(false);
   const pathname = usePathname();
 
-  // Check if user has avatar and listen for changes
-  // This is only used to show AvatarDropdown alongside HarvestGrape
+  // Single "auth resolved" signal: only show auth-dependent UI when we know the real state
+  const authResolved = !authLoading;
+
+  // Check if user has avatar and listen for changes (only when authenticated)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const checkAvatar = () => {
-        // Only check for avatar if authenticated (prioritize isAuthenticated over privyAuthenticated)
-        if (ready && isAuthenticated) {
+        if (authResolved && isAuthenticated) {
           const avatarUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
           setHasAvatar(!!avatarUrl);
         } else {
-          // Immediately clear avatar when not authenticated
           setHasAvatar(false);
         }
       };
 
-      // Check immediately
       checkAvatar();
-
       const interval = setInterval(checkAvatar, 500);
-
       window.addEventListener('storage', checkAvatar);
-
       window.addEventListener('avatarUpdated', checkAvatar);
 
       return () => {
@@ -77,7 +71,7 @@ export default function NavBar() {
         window.removeEventListener('avatarUpdated', checkAvatar);
       };
     }
-  }, [ready, isAuthenticated]);
+  }, [authResolved, isAuthenticated]);
 
   if (pathname === "/" || pathname === "/faq") return null;
 
@@ -281,7 +275,7 @@ export default function NavBar() {
       </div>
 
       <div className="flex items-center">
-        {ready && isAuthenticated ? (
+        {authResolved && isAuthenticated ? (
           <div className="flex items-center gap-1">
             <NavBarChats />
             <WatchList />
@@ -290,12 +284,11 @@ export default function NavBar() {
         ) : null}
 
         <div className="border-l-[0.2px] ml-4 border-[#FFFFFF20] h-full flex items-center justify-center gap-2">
-          {!ready ? (
-            <div className="w-20 h-9" />
+          {!authResolved ? (
+            <div className="w-20 h-9" aria-hidden />
           ) : isAuthenticated ? (
             <>
-              <div style={
-                { display: hasAvatar && isAuthenticated ? 'none' : 'block' }}>
+              <div style={{ display: hasAvatar ? 'none' : 'block' }}>
                 <HarvestGrape />
               </div>
               {hasAvatar && <AvatarDropdown />}

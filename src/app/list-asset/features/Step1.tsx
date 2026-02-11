@@ -2,8 +2,11 @@
 
 import React, { useState } from 'react'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { Check, Ellipsis, Search, X, Zap } from 'lucide-react'
 import { usePrivyAuth } from '@/hooks/usePrivyAuth'
+import { toast } from 'react-toastify'
+import axios from 'axios'
 import {
     Select,
     SelectContent,
@@ -144,6 +147,7 @@ export default function Step1({
     message: string;
   }>({ isValid: null, message: '' });
   
+  const router = useRouter();
   const { isAuthenticated } = usePrivyAuth();
 
   // Validation function for contract addresses based on chain
@@ -289,20 +293,27 @@ export default function Step1({
 
     } catch (error) {
       console.error('Scan failed:', error);
-      
-      // Check if it's an authentication error
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      if (errorMessage.includes('Authentication required') || errorMessage.includes('Unauthorized')) {
-        alert('Authentication required. Please login first to scan tokens.');
-        // Optionally redirect to login or refresh auth
-        const token = localStorage.getItem('cto_auth_token');
-        if (!token) {
-          console.warn('⚠️ Token missing from localStorage, user may need to login again');
+
+      // On 401, clear session and redirect (match cto-test-frontend)
+      const is401 = axios.isAxiosError(error) && error.response?.status === 401;
+      const isUnauthorized = error instanceof Error && error.message === 'Unauthorized';
+      if (is401 || isUnauthorized) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('cto_user_email');
+          localStorage.removeItem('cto_user_created');
+          localStorage.removeItem('cto_wallet_id');
+          localStorage.removeItem('cto_auth_token');
         }
-      } else {
-        alert(`Scan failed: ${errorMessage}. Please try again.`);
+        toast.error('Session expired. Please sign in again.');
+        router.push('/');
+        setProgress(0);
+        setScanComplete(false);
+        return;
       }
-      
+
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Scan failed: ${errorMessage}. Please try again.`);
+
       setProgress(0);
       setScanComplete(false);
     }

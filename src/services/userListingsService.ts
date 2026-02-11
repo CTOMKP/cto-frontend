@@ -119,22 +119,9 @@ export const userListingsService = {
    * @returns ScanResult with risk score, tier, and metadata
    */
   async scan(contractAddr: string, chain: string): Promise<ScanResult> {
-    // Get auth headers and verify token is present
+    // Send request with auth headers if present; let backend return 401 when not authenticated (match cto-test-frontend)
     const headers = authHeaders();
-    const token = localStorage.getItem('cto_auth_token');
-    
-    if (!token) {
-      console.error('❌ No authentication token found. User must be logged in to scan tokens.');
-      throw new Error('Authentication required. Please login first.');
-    }
-    
-    console.log('🔍 Scanning token with:', {
-      contractAddr,
-      chain,
-      hasToken: !!token,
-      tokenLength: token.length,
-    });
-    
+
     // Accept non-2xx statuses (e.g., 400 ineligible) and normalize response so UI can proceed
     const res = await axios.post(
       `${backendUrl}/api/v1/user-listings/scan`,
@@ -216,11 +203,21 @@ export const userListingsService = {
     const res = await axios.post(
       `${backendUrl}/api/v1/user-listings`,
       payload,
-      { headers: authHeaders() }
+      { headers: authHeaders(), validateStatus: () => true }
     );
-    // Handle wrapped response from TransformInterceptor
-    const responseData = res.data?.data || res.data;
-    return responseData;
+    if (res.status >= 200 && res.status < 300) {
+      const responseData = res.data?.data || res.data;
+      return responseData;
+    }
+    const errData = res.data?.data ?? res.data;
+    const message = errData?.message || res.data?.message || `Request failed with status ${res.status}`;
+    if (res.status === 400 && errData?.message) {
+      console.error('[userListingsService.create] 400 response:', errData);
+    }
+    const err = new Error(message) as Error & { response?: { data?: unknown }; status?: number };
+    err.response = { data: res.data };
+    err.status = res.status;
+    throw err;
   },
   async update(id: string, payload: Partial<CreateUserListingPayload>) {
     const res = await axios.put(`${backendUrl}/api/v1/user-listings/${id}`, payload, { headers: authHeaders() });
@@ -271,5 +268,48 @@ export const userListingsService = {
     // Handle wrapped response from TransformInterceptor
     const responseData = res.data?.data || res.data;
     return responseData;
-  }
+  },
+
+  /**
+   * Get presigned upload URL for profile/banner images, upload file, return stable view URL.
+   * Same flow as cto-test-frontend: presign → PUT to S3 → use backend view URL.
+   */
+  async uploadImageViaPresign(
+    kind: 'generic' | 'profile' | 'banner',
+    file: File,
+    opts?: { projectId?: string; userId?: string }
+  ): Promise<{ viewUrl: string; key: string }> {
+    if (!file.type.startsWith('image/')) throw new Error('Only image files are allowed');
+    if (file.size > 10 * 1024 * 1024) throw new Error('Image must be 10MB or less');
+
+    // Build body with only defined fields to avoid 400 (backend may reject undefined/null)
+    const body: Record<string, string | number> = {
+      type: kind,
+      filename: file.name,
+      mimeType: file.type,
+      size: file.size,
+    };
+    if (opts?.userId != null) body.userId = opts.userId;
+    if (opts?.projectId != null) body.projectId = opts.projectId;
+
+    const presignRes = await axios.post(
+      `${backendUrl}/api/v1/images/presign`,
+      body,
+      { headers: { ...authHeaders(), 'Content-Type': 'application/json' } }
+    );
+
+    const presignData = presignRes.data?.data ?? presignRes.data;
+    const { uploadUrl, key } = presignData || {};
+    if (!uploadUrl || !key) throw new Error('Failed to get presigned upload URL');
+
+    const putRes = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type },
+      body: file,
+    });
+    if (!putRes.ok) throw new Error(`Upload failed with status ${putRes.status}`);
+
+    const viewUrl = `${backendUrl}/api/v1/images/view/${key}`;
+    return { viewUrl, key };
+  },
 };
