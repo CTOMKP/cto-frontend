@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState } from 'react';
-import CategorySelectionStep from './components/CategorySelectionStep';
-import ProjectDetailsStep, { ProjectDetailsData } from './components/ProjectDetailsStep';
-import PreviewStep from './components/PreviewStep';
+import { useRouter } from 'next/navigation';
+import CategorySelectionStep from './features/CategorySelectionStep';
+import ProjectDetailsStep, { ProjectDetailsData } from './features/ProjectDetailsStep';
+import PreviewStep from './features/PreviewStep';
 
 type Step = 'category' | 'details' | 'preview';
 
@@ -13,6 +14,7 @@ interface FormData extends ProjectDetailsData {
 }
 
 export default function MarketplacePage() {
+  const router = useRouter();
   const [currentStep, setCurrentStep] = useState<Step>('category');
   const [formData, setFormData] = useState<FormData>({});
 
@@ -35,9 +37,13 @@ export default function MarketplacePage() {
   };
 
   const handlePublish = () => {
-    // Handle publish logic here
-    console.log('Publishing ad with data:', formData);
-    // You can add API call or navigation here
+    const slug =
+      formData.adTitle?.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") ||
+      "your-listing";
+    const title = formData.adTitle || "Your ad";
+    router.push(
+      `/marketplace/post-ad/successful?slug=${encodeURIComponent(slug)}&title=${encodeURIComponent(title)}`
+    );
   };
 
   return (

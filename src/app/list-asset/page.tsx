@@ -142,8 +142,8 @@ export default function ListingApplication() {
       if (payload.description !== undefined) updates.description = payload.description;
       if (Object.keys(updates).length > 0) {
         try {
-          await userListingsService.update(existing, updates as any);
-        } catch (_) {}
+          await userListingsService.update(existing, updates as Partial<CreateUserListingPayload>);
+        } catch {}
       }
       return existing;
     }
@@ -210,11 +210,11 @@ export default function ListingApplication() {
       );
       setLogoUrl(viewUrl);
       if (draft) {
-        try { await userListingsService.update(draft, { logoUrl: viewUrl }); } catch (_) {}
+        try { await userListingsService.update(draft, { logoUrl: viewUrl }); } catch {}
       }
       toast.success('Profile picture uploaded');
-    } catch (err: any) {
-      const msg = err?.response?.data?.message ?? err?.message ?? 'Failed to upload profile picture';
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message ?? 'Failed to upload profile picture';
       toast.error(msg);
       setProfilePreview(null);
     } finally {
@@ -239,11 +239,11 @@ export default function ListingApplication() {
       );
       setBannerUrl(viewUrl);
       if (draft) {
-        try { await userListingsService.update(draft, { bannerUrl: viewUrl }); } catch (_) {}
+        try { await userListingsService.update(draft, { bannerUrl: viewUrl }); } catch {}
       }
       toast.success('Banner uploaded');
-    } catch (err: any) {
-      const msg = err?.response?.data?.message ?? err?.message ?? 'Failed to upload banner';
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message ?? 'Failed to upload banner';
       toast.error(msg);
       setBannerPreview(null);
     } finally {
@@ -260,8 +260,8 @@ export default function ListingApplication() {
         toast.info('You can continue, but saving/publishing requires a higher vetting score.');
       }
       setCurrentStep(3);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message ?? err?.message ?? 'Failed to save draft';
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message ?? 'Failed to save draft';
       toast.error(msg);
     }
   }, [ensureDraftExists, scanResult?.eligible, bio, logoUrl, bannerUrl, links]);
@@ -392,7 +392,7 @@ export default function ListingApplication() {
                   if (id) {
                     try {
                       await userListingsService.publish(id);
-                    } catch (_) {}
+                    } catch {}
                     localStorage.removeItem(DRAFT_KEY);
                     setDraftId(null);
                   }
