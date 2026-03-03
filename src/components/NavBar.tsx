@@ -234,7 +234,7 @@ export default function NavBar() {
                     asChild
                     className={navigationMenuTriggerStyle()}
                   >
-                    <Link className="text-base" href="#">
+                    <Link className="text-base" href="/marketplace">
                       Marketplace
                     </Link>
                   </NavigationMenuLink>
