@@ -9,6 +9,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Calendar, Upload, Plus } from 'lucide-react';
 
 export interface ProjectDetailsData {
+  category?: string;
+  subcategory?: string;
   projectName?: string;
   adTitle?: string;
   projectDescription?: string;
@@ -27,6 +29,24 @@ interface ProjectDetailsStepProps {
   onNext: (data: ProjectDetailsData) => void;
   onBack: () => void;
   initialData?: ProjectDetailsData;
+}
+
+const categoryIdToName: Record<string, string> = {
+  'developers': 'Developers',
+  'design-branding': 'Design & Branding',
+  'shilling-marketing': 'Shilling & Marketing',
+  'tokenomics-strategy': 'Tokenomics & Strategy',
+  'advisory-leadership': 'Advisory & Leadership',
+  'community-operations': 'Community & Operations',
+  'project-listings': 'Project Listings (For Takeover)',
+  'nft-art': 'NFT & Art',
+  'tools-services': 'Tools & Services',
+  'writing-content': 'Writing & Content',
+};
+
+function getCategoryDisplayName(id: string | undefined): string {
+  if (!id) return '—';
+  return categoryIdToName[id] ?? id;
 }
 
 export default function ProjectDetailsStep({ onNext, onBack, initialData }: ProjectDetailsStepProps) {
@@ -52,6 +72,10 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
 
   const calculateSubtotal = () => {
     let total = 0;
+    // Category fee (chosen in step 1) - same as PreviewStep
+    if (initialData?.category && initialData?.subcategory) {
+      total += 5;
+    }
     if (visibility === 'plus') total += 5;
     if (visibility === 'premium') total += 15;
     if (boostOptions['auto-bump']) total += 7;
@@ -80,12 +104,12 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <div className="max-w-4xl mx-auto px-4 py-8 mt-25">
+      <div className="max-w-4xl mx-auto mt-15">
         <h2 className="text-3xl font-bold text-white text-center mb-8">
           Tell Us About The Project
         </h2>
 
-        <div className='border-[0.2px] border-white/20 rounded-[20px] mt-[90px] px-25 py-15'>
+        <div className='border-[0.2px] border-white/20 rounded-[20px] px-25 py-15'>
           {/* Project Name */}
         <div className="mb-6">
           <label className="font-semibold text-white mb-2 block">
@@ -267,14 +291,14 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
 
         <div className='border-t-[0.2px] border-0 border-white/20 mt-3 mb-10'></div>
 
-        {/* Category Display */}
+        {/* Category Display - shows category chosen in step 1 */}
         <div className="mb-6">
           <label className="text-[18px] text-white mb-2 block">Category</label>
           <div className='border-t-[0.2px] border-0 border-white/20 mt-5 mb-6'></div>
           <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[1px] rounded-[4px]">
             <div className="bg-[#141414] rounded-[4px] py-4 px-5 flex items-center justify-between">
-              <span className="text-white">Developer</span>
-              <span>FULL STACK</span>
+              <span className="text-white">{getCategoryDisplayName(initialData?.category)}</span>
+              <span className="text-[#A1A1AA]">{initialData?.subcategory || '—'}</span>
               <span className="text-[#FF9631] font-semibold">$5</span>
             </div>
           </div>

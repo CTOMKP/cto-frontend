@@ -45,59 +45,52 @@ export default function TopListings() {
 
   // Fetch data for Listing component (separate from highlights)
   useEffect(() => {
+    const base = process.env.NEXT_PUBLIC_BACKEND_URL;
+    if (!base) {
+      setIsLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const { signal } = controller;
+
     const fetchListings = async () => {
       setIsLoading(true);
-      const base = process.env.NEXT_PUBLIC_BACKEND_URL;
-      
-      // Build chain parameter from selected network
-      let url;
+
+      let url: string;
       if (selectedNetwork === null) {
-        // No network selected - fetch from all chains
         url = `${base}/api/v1/listing/listings?category=MEME&sort=updatedAt%3Adesc&page=${page}&limit=${limit}`;
       } else {
-        // Specific network selected - fetch from that chain only
         const chainParam = selectedNetwork.toUpperCase();
         url = `${base}/api/v1/listing/listings?chain=${chainParam}&category=MEME&sort=updatedAt%3Adesc&page=${page}&limit=${limit}`;
       }
-      
+
       try {
-        const res = await fetch(url);
+        const res = await fetch(url, { signal });
+        if (signal.aborted) return;
         if (!res.ok) {
           console.error('Failed to fetch listings:', res.status, res.statusText);
-          setIsLoading(false);
           return;
         }
         const response = await res.json();
-        console.log('Raw API response:', response);
-        console.log('Response type:', typeof response);
-        console.log('Response keys:', response ? Object.keys(response) : 'response is null/undefined');
-        console.log('Response.data:', response?.data);
-        console.log('Response.statusCode:', response?.statusCode);
-        
-        // Backend wraps response in { data, statusCode, timestamp } via TransformInterceptor
-        // Handle both wrapped and unwrapped responses
+        if (signal.aborted) return;
+
         let data: ApiListingResponse;
         if (response && typeof response === 'object') {
           if ('data' in response && response.data) {
             data = response.data;
           } else if ('items' in response || 'total' in response) {
-            // Response is already unwrapped (shouldn't happen but handle it)
             data = response as ApiListingResponse;
           } else {
-            console.error('Unexpected response structure:', response);
             data = { total: 0, items: [], page: 1, limit: 20 };
           }
         } else {
-          console.error('Invalid response:', response);
           data = { total: 0, items: [], page: 1, limit: 20 };
         }
-        
-        console.log('Parsed data:', data);
-        console.log('Listings API response:', { total: data.total, itemsCount: data.items?.length, items: data.items });
 
         setTotal(data.total || 0);
         setRawApiItems(data.items || []);
-        
+
         const mapped: MockLikeCoin[] = (data.items || []).map((it) => {
           // Use backend-provided age (actual token age) or fallback to calculating from createdAt
           let ageStr: string | null = null;
@@ -155,14 +148,17 @@ export default function TopListings() {
             holders: holderCount !== null && holderCount !== undefined ? Number(holderCount) : null,
           } as MockLikeCoin;
         });
+        if (signal.aborted) return;
         setLiveItems(mapped);
-        setIsLoading(false);
       } catch (e) {
+        if (signal.aborted) return;
         console.log(e);
-        setIsLoading(false);
+      } finally {
+        if (!signal.aborted) setIsLoading(false);
       }
     };
     fetchListings();
+    return () => controller.abort();
   }, [page, limit, selectedNetwork]);
 
   // Sorting function
@@ -413,7 +409,7 @@ export default function TopListings() {
                   {isLoading ? (
                     <ListingTableSkeleton />
                   ) : (
-                    filteredData.map((coin, index) => (
+                    (filteredData ?? []).map((coin, index) => (
                       <ListingTableRow
                         key={index}
                         coin={coin}

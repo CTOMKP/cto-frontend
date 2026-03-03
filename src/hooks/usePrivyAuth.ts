@@ -26,6 +26,16 @@ export function usePrivyAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  useEffect(() => {
+    if (ready && !authenticated) {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('cto_auth_token') : null;
+      if (!token) {
+        setIsAuthenticated(false);
+        setIsLoading(false);
+      }
+    }
+  }, [ready, authenticated]);
+
   // Check authentication status on mount (ONCE) - prioritize localStorage like test frontend
   useEffect(() => {
     checkAuthStatus();

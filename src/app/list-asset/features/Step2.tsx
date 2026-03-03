@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import Image from 'next/image'
-import { Globe, Plus, Upload } from 'lucide-react'
+import { Globe, Upload } from 'lucide-react'
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
@@ -16,9 +16,14 @@ export interface SocialLinks {
 interface Step2Props {
   profilePreview: string | null;
   bannerPreview: string | null;
+  logoUrl?: string;
+  bannerUrl?: string;
+  logoUploading?: boolean;
+  bannerUploading?: boolean;
   handleProfilePictureChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleBannerChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   setCurrentStep: (step: number) => void;
+  onContinue?: () => void | Promise<void>;
   onBioChange?: (bio: string) => void;
   links?: SocialLinks;
   setLinks?: (links: SocialLinks) => void;
@@ -27,14 +32,36 @@ interface Step2Props {
 export default function Step2({ 
   profilePreview, 
   bannerPreview, 
+  logoUrl = '',
+  bannerUrl = '',
+  logoUploading = false,
+  bannerUploading = false,
   handleProfilePictureChange, 
   handleBannerChange, 
   setCurrentStep,
+  onContinue,
   onBioChange,
   links,
   setLinks,
 }: Step2Props) {
   const [bio, setBio] = useState('');
+  const [continuing, setContinuing] = useState(false);
+  const profileSrc = profilePreview || logoUrl;
+  const bannerSrc = bannerPreview || bannerUrl;
+
+  const handleContinue = async () => {
+    if (onContinue) {
+      setContinuing(true);
+      try {
+        await onContinue();
+      } finally {
+        setContinuing(false);
+      }
+    } else {
+      setCurrentStep(3);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div>
@@ -44,25 +71,28 @@ export default function Step2({
         </label>
         <div className="flex flex-col mt-4">
           <span 
-            className="size-[114px] bg-[#141414] flex items-center justify-center rounded-[3px] cursor-pointer"
-            onClick={() => document.getElementById('profile-picture')?.click()}
+            className="size-[114px] bg-[#141414] flex items-center justify-center rounded-[3px] cursor-pointer border border-white/20 hover:border-white/40 transition-colors"
+            onClick={() => !logoUploading && document.getElementById('profile-picture')?.click()}
           >
-            {profilePreview ? (
-              <Image
-                src={profilePreview}
-                alt="preview"
-                width={200}
-                height={200}
-                className="w-full h-full object-cover rounded-[3px]"
-              />
+            {profileSrc ? (
+              profileSrc.startsWith('http') ? (
+                <img
+                  src={profileSrc}
+                  alt="preview"
+                  className="w-full   h-full object-cover rounded-[3px]"
+                />
+              ) : (
+                <Image
+                  src={profileSrc}
+                  alt="preview"
+                  width={200}
+                  height={200}
+                  className="w-full h-full object-cover rounded-[3px]"
+                />
+              )
             ) : (
               <div className="flex flex-col items-center gap-2 justify-center">
-                <Image
-                  src="/document-upload.svg"
-                  width={16}
-                  height={16}
-                  alt="document-upload"
-                />
+                <Upload size={16} color="#FFFFFF70" />
                 <p className="text-[8px] font-light text-white/70 text-center">
                   Upload Square image
                   <br />
@@ -78,7 +108,11 @@ export default function Step2({
             accept="image/*"
             className="hidden"
             onChange={handleProfilePictureChange}
+            disabled={logoUploading}
           />
+          {logoUploading && (
+            <span className="text-xs text-white/50 mt-2">Uploading...</span>
+          )}
         </div>
       </div>
 
@@ -108,16 +142,24 @@ export default function Step2({
               `,
               borderRadius: "3px",
             }}
-            onClick={() => document.getElementById('banner')?.click()}
+            onClick={() => !bannerUploading && document.getElementById('banner')?.click()}
           >
-            {bannerPreview ? (
-              <Image
-                src={bannerPreview}
-                alt="preview"
-                width={400}
-                height={200}
-                className="w-full h-full object-cover rounded-[3px]"
-              />
+            {bannerSrc ? (
+              bannerSrc.startsWith('http') ? (
+                <img
+                  src={bannerSrc}
+                  alt="preview"
+                  className="w-full h-full object-cover rounded-[3px]"
+                />
+              ) : (
+                <Image
+                  src={bannerSrc}
+                  alt="preview"
+                  width={400}
+                  height={200}
+                  className="w-full h-full object-cover rounded-[3px]"
+                />
+              )
             ) : (
               <div className="flex flex-col items-center gap-2 justify-center">
                 <Upload size={20} color='#FFFFFF70' />
@@ -138,7 +180,11 @@ export default function Step2({
             accept="image/*"
             className="hidden"
             onChange={handleBannerChange}
+            disabled={bannerUploading}
           />
+          {bannerUploading && (
+            <span className="text-xs text-white/50 mt-2">Uploading...</span>
+          )}
         </div>
       </div>
 
@@ -232,10 +278,11 @@ export default function Step2({
       </div> */}
 
       <Button
-        onClick={() => setCurrentStep(3)}
-        className="font-medium w-full gap-2 bg-gradient-to-r from-[#FF0075] via-[#FF4A15] to-[#FFCB45] rounded-lg h-9"
+        onClick={handleContinue}
+        disabled={continuing}
+        className="font-medium w-full gap-2 bg-gradient-to-r from-[#FF0075] via-[#FF4A15] to-[#FFCB45] rounded-lg h-9 disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        Continue
+        {continuing ? 'Saving...' : 'Continue'}
       </Button>
     </div>
   );

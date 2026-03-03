@@ -66,6 +66,57 @@ export const movementPaymentService = {
   },
 
   /**
+   * Create a Movement payment for an ad
+   * @param adId - The ad ID to pay for
+   * @returns Payment data including transaction data for Privy signing
+   */
+  async createAdPayment(adId: string) {
+    const token = localStorage.getItem('cto_auth_token');
+    if (!token) {
+      console.error('❌ No auth token found in localStorage');
+      throw new Error('Authentication required. Please login first.');
+    }
+
+    if (!API_BASE) {
+      console.error('❌ API_BASE is not defined');
+      throw new Error('Backend URL not configured');
+    }
+
+    console.log('💳 Creating Movement payment for ad:', { adId, apiBase: API_BASE, hasToken: !!token });
+
+    try {
+      const response = await axios.post(
+        `${API_BASE}/api/v1/payment/movement/ad/${adId}`,
+        {},
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      const responseData = response.data?.data || response.data;
+      console.log('✅ Ad payment created successfully:', responseData);
+      return responseData;
+    } catch (error) {
+      console.error('❌ Ad payment creation failed:', error);
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        const message = error.response?.data?.message || error.message;
+        if (status === 401) {
+          throw new Error('Authentication failed. Please login again.');
+        } else if (status === 403) {
+          throw new Error('Access denied. Please check your permissions.');
+        } else {
+          throw new Error(message || 'Failed to create ad payment');
+        }
+      }
+      throw error;
+    }
+  },
+
+  /**
    * Verify a Movement payment after transaction is submitted
    * @param paymentId - The payment ID to verify
    * @param txHash - The transaction hash from the blockchain
