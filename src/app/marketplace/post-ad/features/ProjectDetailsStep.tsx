@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Calendar, Upload, Plus } from 'lucide-react';
+import { Upload, Plus } from 'lucide-react';
 
 export interface ProjectDetailsData {
   category?: string;
@@ -23,6 +23,10 @@ export interface ProjectDetailsData {
   noFixedDeadline?: boolean;
   visibility?: string;
   boostOptions?: Record<string, boolean>;
+  /** Up to 3 image files for the ad (same as cto-test-frontend). */
+  images?: (File | null)[];
+  /** Preview object URLs for display (from URL.createObjectURL). */
+  imagePreviews?: string[];
 }
 
 interface ProjectDetailsStepProps {
@@ -49,6 +53,35 @@ function getCategoryDisplayName(id: string | undefined): string {
   return categoryIdToName[id] ?? id;
 }
 
+/** Today in YYYY-MM-DD for date input min (only allow future dates). */
+function getTodayLocal(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/** Normalize various date strings to YYYY-MM-DD for input[type="date"]. */
+function toDateValue(str: string | undefined): string {
+  if (!str || !str.trim()) return '';
+  const s = str.trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const mmddyyyy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (mmddyyyy) {
+    const [, mm, dd, yyyy] = mmddyyyy;
+    return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+  }
+  const parsed = new Date(s);
+  if (!Number.isNaN(parsed.getTime())) {
+    const y = parsed.getFullYear();
+    const m = String(parsed.getMonth() + 1).padStart(2, '0');
+    const d = String(parsed.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  return '';
+}
+
 export default function ProjectDetailsStep({ onNext, onBack, initialData }: ProjectDetailsStepProps) {
   const [projectName, setProjectName] = useState(initialData?.projectName || '');
   const [adTitle, setAdTitle] = useState(initialData?.adTitle || '');
@@ -58,16 +91,52 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
   const [toolsStack, setToolsStack] = useState(initialData?.toolsStack || 'Adobe Illustrator');
   const [paymentType, setPaymentType] = useState(initialData?.paymentType || 'USDT');
   const [amount, setAmount] = useState(initialData?.amount || '10,000');
-  const [deadline, setDeadline] = useState(initialData?.deadline || '');
+  const [deadline, setDeadline] = useState(() => toDateValue(initialData?.deadline || ''));
+  const minDate = getTodayLocal();
   const [noFixedDeadline, setNoFixedDeadline] = useState(initialData?.noFixedDeadline || false);
   const [visibility, setVisibility] = useState(initialData?.visibility || 'free');
   const [boostOptions, setBoostOptions] = useState<Record<string, boolean>>(initialData?.boostOptions || {});
+  const MAX_IMAGES = 3;
+  const [images, setImages] = useState<(File | null)[]>(() => {
+    const from = initialData?.images ?? [];
+    const padded = [...from];
+    while (padded.length < MAX_IMAGES) padded.push(null);
+    return padded.slice(0, MAX_IMAGES);
+  });
+  const [imagePreviews, setImagePreviews] = useState<string[]>(() => {
+    const from = initialData?.imagePreviews ?? [];
+    const padded = [...from];
+    while (padded.length < MAX_IMAGES) padded.push('');
+    return padded.slice(0, MAX_IMAGES);
+  });
+  const fileInputRefs = React.useRef<(HTMLInputElement | null)[]>([]);
 
   const handleBoostToggle = (option: string) => {
     setBoostOptions(prev => ({
       ...prev,
       [option]: !prev[option]
     }));
+  };
+
+  const handleImageChange = (index: number, file: File | null) => {
+    setImages(prev => {
+      const next = [...prev];
+      next[index] = file;
+      return next;
+    });
+    setImagePreviews(prev => {
+      const next = [...prev];
+      if (file) {
+        next[index] = URL.createObjectURL(file);
+      } else {
+        next[index] = '';
+      }
+      return next;
+    });
+  };
+
+  const triggerFileInput = (index: number) => {
+    fileInputRefs.current[index]?.click();
   };
 
   const calculateSubtotal = () => {
@@ -86,6 +155,17 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
   };
 
   const handlePreview = () => {
+    // Normalize deadline: only submit today or a future date; if past (e.g. restored draft), use today
+    const today = getTodayLocal();
+    const resolvedDeadline =
+      noFixedDeadline || !deadline
+        ? undefined
+        : deadline < today
+          ? today
+          : deadline;
+    if (deadline && deadline < today) {
+      setDeadline(today);
+    }
     onNext({
       projectName,
       adTitle,
@@ -95,10 +175,12 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
       toolsStack,
       paymentType,
       amount,
-      deadline,
+      deadline: resolvedDeadline ?? '',
       noFixedDeadline,
       visibility,
       boostOptions,
+      images,
+      imagePreviews,
     });
   };
 
@@ -143,19 +225,43 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
           <label className="font-semibold text-white mb-2 block">
             Upload Images<span className="text-red-500">*</span>
           </label>
-          <div className="flex gap-3">
-            {[1, 2, 3].map((index) => (
-              <div
-                key={index}
-                className="w-full h-32 lg:h-38 bg-[#141414] rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border hover:border-[#606060] transition-colors"
-              >
-                <Upload size={24} className="text-[#606060] mb-2" />
-                <p className="text-xs text-[#606060] text-center px-2">
-                  Upload Square image (1:1 min 400x400px)
-                </p>
-              </div>
+          <div className="flex gap-3 flex-wrap">
+            {[0, 1, 2].map((index) => (
+              <React.Fragment key={index}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  ref={el => { fileInputRefs.current[index] = el; }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] ?? null;
+                    handleImageChange(index, file);
+                    e.target.value = '';
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => triggerFileInput(index)}
+                  className="w-full min-w-[120px] max-w-[160px] h-32 lg:h-38 bg-[#141414] rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border hover:border-[#606060] transition-colors overflow-hidden border border-transparent"
+                >
+                  {imagePreviews[index] ? (
+                    <img
+                      src={imagePreviews[index]}
+                      alt={`Preview ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <>
+                      <Upload size={24} className="text-[#606060] mb-2 flex-shrink-0" />
+                      <p className="text-xs text-[#606060] text-center px-2">
+                        Upload (1:1 min 400×400)
+                      </p>
+                    </>
+                  )}
+                </button>
+              </React.Fragment>
             ))}
-            <div className="w-full h-32 lg:h-38 bg-[#141414] rounded-lg flex items-center justify-center cursor-pointer hover:border hover:border-[#606060] transition-colors">
+            <div className="w-full min-w-[120px] max-w-[160px] h-32 lg:h-38 bg-[#141414] rounded-lg flex items-center justify-center cursor-pointer hover:border hover:border-[#606060] transition-colors border border-dashed border-[#404040]">
               <Plus size={32} className="text-[#606060]" />
             </div>
           </div>
@@ -260,17 +366,15 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
           <div className="flex items-center justify-between">
             <label className="text-sm font-semibold text-white">Deadline</label>
             <div>
-              <div className="relative">
-                <Input
-                  type="text"
-                  placeholder="MM/DD/YYYY"
-                  value={deadline}
-                  onChange={(e) => setDeadline(e.target.value)}
-                  disabled={noFixedDeadline}
-                  className="w-[250px] bg-[#141414] border-none text-white placeholder:text-[#606060] pr-10"
-                />
-                <Calendar size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A1A1AA]" />
-              </div>
+              <Input
+                type="date"
+                min={minDate}
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
+                disabled={noFixedDeadline}
+                className="w-[250px] bg-[#141414] border-none text-white placeholder:text-[#606060] [color-scheme:dark]"
+              />
+              <p className="text-xs text-white/60 mt-1">Select a date from today onward</p>
               <div className="flex items-center gap-2 mt-2">
                 <Checkbox
                 className='border-[#FF9631]'

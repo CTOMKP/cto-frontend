@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import AdPaymentDialog from '@/components/AdPaymentDialog';
@@ -21,14 +21,27 @@ interface PreviewStepProps {
     noFixedDeadline?: boolean;
     visibility?: string;
     boostOptions?: Record<string, boolean>;
+    imagePreviews?: string[];
   };
   onBack: () => void;
   onPublish: () => void;
+  onRequestPublish: () => void;
+  paymentDialogOpen: boolean;
+  onPaymentDialogOpenChange: (open: boolean) => void;
+  draftAdId: string | null;
+  savingDraft?: boolean;
 }
 
-export default function PreviewStep({ formData, onBack, onPublish }: PreviewStepProps) {
-  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
-  const [paymentAdId] = useState(() => `ad-${Date.now()}`);
+export default function PreviewStep({
+  formData,
+  onBack,
+  onPublish,
+  onRequestPublish,
+  paymentDialogOpen,
+  onPaymentDialogOpenChange,
+  draftAdId,
+  savingDraft = false,
+}: PreviewStepProps) {
   const subtotal = (() => {
     let total = 0;
     
@@ -148,15 +161,22 @@ export default function PreviewStep({ formData, onBack, onPublish }: PreviewStep
           {/* Upload Images */}
           <div>
             <h3 className="text-white mb-2 block">Upload Images</h3>
-            <div className="flex gap-3">
-              {[1, 2, 3].map((index) => (
-                <div
-                  key={index}
-                  className="w-32 h-32 bg-[#141414] rounded-lg flex items-center justify-center"
-                >
-                  <span className="text-[#606060] text-xs">Image {index}</span>
-                </div>
-              ))}
+            <div className="flex gap-3 flex-wrap">
+              {[0, 1, 2].map((index) => {
+                const src = formData.imagePreviews?.[index];
+                return (
+                  <div
+                    key={index}
+                    className="w-32 h-32 bg-[#141414] rounded-lg flex items-center justify-center overflow-hidden"
+                  >
+                    {src ? (
+                      <img src={src} alt={`Ad ${index + 1}`} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-[#606060] text-xs">Image {index + 1}</span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -278,10 +298,11 @@ export default function PreviewStep({ formData, onBack, onPublish }: PreviewStep
         {/* Footer */}
         <div className="flex items-center justify-between mt-8">
           <Button
-            onClick={() => setPaymentDialogOpen(true)}
-            className="bg-gradient-to-r from-[#FF0075] via-[#FF4A15] to-[#FFCB45] text-white font-semibold py-3 px-8 rounded-lg hover:opacity-90 transition-opacity"
+            onClick={onRequestPublish}
+            disabled={savingDraft}
+            className="bg-gradient-to-r from-[#FF0075] via-[#FF4A15] to-[#FFCB45] text-white font-semibold py-3 px-8 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-70"
           >
-            Publish
+            {savingDraft ? 'Saving…' : 'Publish'}
           </Button>
           <div className="text-white">
             Sub-Total: <span className="font-semibold text-[#FF9631]">${calculateSubtotal()}</span>
@@ -292,13 +313,13 @@ export default function PreviewStep({ formData, onBack, onPublish }: PreviewStep
 
       <AdPaymentDialog
         open={paymentDialogOpen}
-        onOpenChange={setPaymentDialogOpen}
+        onOpenChange={onPaymentDialogOpenChange}
         projectTitle={formData.projectName || formData.adTitle || 'Ad'}
-        adsId={paymentAdId}
+        adsId={draftAdId ?? ''}
         adFee={subtotal}
         breakdown={paymentBreakdown}
         onPaymentSuccess={() => {
-          setPaymentDialogOpen(false);
+          onPaymentDialogOpenChange(false);
           onPublish();
         }}
       />

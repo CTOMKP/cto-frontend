@@ -10,6 +10,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import UserListings from './UserListings';
 import TxHistoryTab from './TxHistoryTab';
+import MyAdsTab from './MyAdsTab';
 
 export default function TransactionHistory() {
   const { user } = usePrivy();
@@ -189,7 +190,7 @@ export default function TransactionHistory() {
         </TabsContent>
         
         <TabsContent value="my-ads">
-          <div></div>
+          <MyAdsTab />
         </TabsContent>
 
         <TabsContent value="tx-history">

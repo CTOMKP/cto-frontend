@@ -1,20 +1,48 @@
 "use client";
 
-import React, { useMemo, Suspense } from "react";
+import React, { useMemo, useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { Copy, MoreHorizontal, Clock, BadgeCheck, PartyPopper, EllipsisVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import marketplaceService from "@/services/marketplaceService";
 
-function PostAdSuccessContent() {
-  const searchParams = useSearchParams();
-  const slug = searchParams.get("slug") || "your-listing";
-  const title = searchParams.get("title") || "Your ad";
+function PostAdSuccessWithAdContent() {
+  const params = useParams();
+  const adId = typeof params?.adId === "string" ? params.adId : "";
+  const [ad, setAd] = useState<Record<string, unknown> | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!adId) {
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    marketplaceService
+      .getPublicAd(adId)
+      .then((data) => {
+        if (!cancelled && data) setAd(typeof data === "object" ? data : { id: adId });
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load ad");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [adId]);
+
+  const title = (ad?.title as string) || (ad?.adTitle as string) || "Your ad";
+
   const listingUrl = useMemo(() => {
-    if (typeof window === "undefined") return `https://ctomarketplace.com/listing/${slug}`;
-    return `${window.location.origin}/listing/${slug}`;
-  }, [slug]);
+    if (typeof window === "undefined") return `https://ctomarketplace.com/marketplace/${adId}`;
+    return `${window.location.origin}/marketplace/${adId}`;
+  }, [adId]);
 
   const copyLink = () => {
     navigator.clipboard.writeText(listingUrl);
@@ -29,6 +57,48 @@ function PostAdSuccessContent() {
     const text = encodeURIComponent(`${title} ${listingUrl}`);
     window.open(`https://twitter.com/intent/tweet?text=${text}`, "_blank", "noopener,noreferrer");
   };
+
+  const imageUrl = Array.isArray(ad?.images) && (ad.images as string[]).length > 0
+    ? (ad.images as string[])[0]
+    : (ad?.image as string) || "/space-thumbnail.png";
+  const tags = Array.isArray(ad?.tags) ? (ad.tags as string[]) : ["Liquidity", "Partner", "RevenueShare", "Launch"];
+  const paymentLabel = (ad?.paymentType as string) || (ad?.priceCurrency as string) || "Revenue share";
+  const priceLabel = (ad?.amount as string) ?? (ad?.priceAmount as string) ?? "-";
+
+  if (!adId) {
+    return (
+      <div className="min-h-screen bg-[#0D0D0D] text-white flex items-center justify-center">
+        <p className="text-white/70">Missing ad ID.</p>
+        <Button asChild className="ml-4">
+          <Link href="/marketplace/post-ad">Post an ad</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0D0D0D] text-white flex items-center justify-center">
+        <p className="text-white/70">Loading your ad...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[#0D0D0D] text-white flex flex-col items-center justify-center gap-4">
+        <p className="text-white/70">{error}</p>
+        <div className="flex gap-3">
+          <Button asChild>
+            <Link href="/marketplace">Back to Marketplace</Link>
+          </Button>
+          <Button asChild variant="outline" className="border-white/30 text-white hover:bg-white/10">
+            <Link href="/marketplace/post-ad">Post another ad</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-white">
@@ -71,9 +141,9 @@ function PostAdSuccessContent() {
               type="button"
               onClick={shareX}
               className="h-10 w-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
-              aria-label="Share on X"
+              aria-label="Share on Facebook"
             >
-              <Image src="/social-icons/facebook-meta.svg" alt="Export Link" width={20} height={20} />
+              <Image src="/social-icons/facebook-meta.svg" alt="Facebook" width={20} height={20} />
             </button>
             <button
               type="button"
@@ -101,7 +171,14 @@ function PostAdSuccessContent() {
               <BadgeCheck color="#892BFF" className="h-4 w-4 text-white" />
             </div>
             <div className="absolute top-10 w-full h-full px-2.5 rounded-[6px]">
-            <Image className="w-full h-full object-cover rounded-[6px]" src="/space-thumbnail.png" alt="Ad Image" width={600} height={600} />
+              <Image
+                className="w-full h-full object-cover rounded-[6px]"
+                src={imageUrl}
+                alt={title}
+                width={600}
+                height={600}
+                unoptimized={imageUrl.startsWith("http")}
+              />
             </div>
           </div>
           <div className="p-2.5 space-y-2">
@@ -116,25 +193,31 @@ function PostAdSuccessContent() {
               </button>
             </div>
             <div className="flex items-center justify-between">
-            <p className="text-lg text-white">Liquidity Partner Needed <sup className="text-xs text-white/50">3d</sup></p>
-            <button type="button" className="text-white hover:text-white p-1">
-              <EllipsisVertical className="h-5 w-5" />
-            </button>
+              <p className="text-lg text-white">
+                {(ad?.category as string) || (ad?.subCategory as string) || "Ad"} <sup className="text-xs text-white/50">3d</sup>
+              </p>
+              <button type="button" className="text-white hover:text-white p-1">
+                <EllipsisVertical className="h-5 w-5" />
+              </button>
             </div>
-            <p className="text-sm text-white/60">by <span className="text-white hover:underline break-all text-sm">@YourHandle</span></p>
-            <p className="text-sm text-white/50"><span className="text-white">Skill needed:</span> None</p>
+            <p className="text-sm text-white/60">
+              by <span className="text-white hover:underline break-all text-sm">@YourHandle</span>
+            </p>
+            <p className="text-sm text-white/50">
+              <span className="text-white">Skill needed:</span> {(ad?.offerType as string) || "None"}
+            </p>
             <div className="pt-5 bg-[#060708] px-5 py-4 flex items-center justify-between">
               <div className="text-center w-1/2 border-r border-white/10">
-              <p className="text-xs text-white/60 mb-2">Payment</p>
-              <p className="text-xs text-white/80">Revenue share</p>
+                <p className="text-xs text-white/60 mb-2">Payment</p>
+                <p className="text-xs text-white/80">{paymentLabel}</p>
               </div>
               <div className="text-center w-1/2">
-              <p className="text-xs text-white/60 mb-2">Price</p>
-              <p className="text-xs text-white/80">-</p>
+                <p className="text-xs text-white/60 mb-2">Price</p>
+                <p className="text-xs text-white/80">{priceLabel}</p>
               </div>
             </div>
             <div className="flex flex-wrap gap-1.5 pt-4">
-              {["Liquidity", "Partner", "RevenueShare", "Launch"].map((tag) => (
+              {tags.map((tag) => (
                 <span
                   key={tag}
                   className="rounded-[4px] bg-white/10 p-2 text-[10px] text-white"
@@ -163,10 +246,6 @@ function PostAdSuccessContent() {
   );
 }
 
-export default function PostAdSuccessPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-[#0D0D0D] text-white flex items-center justify-center">Loading...</div>}>
-      <PostAdSuccessContent />
-    </Suspense>
-  );
+export default function PostAdSuccessByAdIdPage() {
+  return <PostAdSuccessWithAdContent />;
 }

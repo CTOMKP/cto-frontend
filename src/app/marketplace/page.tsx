@@ -1,14 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { BadgeCheck, Clock, EllipsisVertical, ListFilter, MoreHorizontal, Plus, Search } from "lucide-react";
 import Image from "next/image";
 import MarketplaceTrendingFilter, { type Category } from "./features/MarketplaceTrendingFilter";
 import { Input } from "@/components/ui/input";
+import marketplaceService from "@/services/marketplaceService";
+import { getCloudFrontUrl } from "@/utils/helper/image-url-helper";
 
-const tags = [
+const MARKETPLACE_ASSET_BASE = '/marketplace';
+
+/** Shape of a marketplace ad from listTrending / listForYou / listPublic */
+type MarketplaceAd = {
+  id?: string;
+  title?: string;
+  category?: string;
+  subCategory?: string;
+  offerType?: string;
+  messageCount?: number;
+  viewCount?: number;
+  featuredPlacement?: boolean;
+  featuredUntil?: string;
+  homepageSpotlight?: boolean;
+  createdAt?: string | number;
+  expiresAt?: string | null;
+  image?: string;
+  images?: string[];
+  by?: string;
+  priceCurrency?: string;
+  priceAmount?: number | string;
+  tags?: string[];
+};
+
+const roles = [
   "Designer",
   "Developer",
   "Raider",
@@ -29,8 +55,160 @@ const MOCK_ADS = [
   { id: "4", title: "Liquidity Partner Needed", duration: "10d: 28m: 34s", age: "3d", by: "@YourHandle", payment: "Revenue share", price: "-", tags: ["Liquidity", "Partner", "RevenueShare", "Launch"] },
 ];
 
+const isFeatured = (ad: { featuredPlacement?: boolean; featuredUntil?: string }) => {
+  if (ad?.featuredPlacement) return true;
+  if (!ad?.featuredUntil) return false;
+  const ts = new Date(ad.featuredUntil).getTime();
+  return Number.isFinite(ts) && ts > Date.now();
+};
+
+const formatCountdown = (dateStr?: string | null, nowTs?: number) => {
+  if (!dateStr) return null;
+  const target = new Date(dateStr).getTime();
+  if (!Number.isFinite(target)) return null;
+  const now = typeof nowTs === "number" ? nowTs : Date.now();
+  const diff = target - now;
+  if (diff <= 0) return null;
+  const totalSeconds = Math.floor(diff / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const mm = String(minutes).padStart(2, "0");
+  const ss = String(seconds).padStart(2, "0");
+  if (hours > 0) {
+    const hh = String(hours).padStart(2, "0");
+    return `${days}d : ${hh}h : ${mm}m : ${ss}s`;
+  }
+  return `${days}d : ${mm}m : ${ss}s`;
+};
+
+const getDaysAgo = (dateStr?: string | null) => {
+  if (!dateStr) return null;
+  const ts = new Date(dateStr).getTime();
+  if (!Number.isFinite(ts)) return null;
+  const diff = Date.now() - ts;
+  if (diff < 0) return 0;
+  return Math.floor(diff / 86400000);
+};
+
 export default function MarketplacePage() {
-  const [category, setCategory] = useState<Category>("for-you");
+  const [category, setCategory] = useState<Category>("trending");
+  const [publicAds, setPublicAds] = useState<MarketplaceAd[]>([]);
+  const [publicAdsLoading, setPublicAdsLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [marketTab, setMarketTab] = useState<'forYou' | 'new' | 'trending'>('trending');
+  const [roleFilter, setRoleFilter] = useState<string>('');
+
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const handleRoleFilter = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setRoleFilter(e.target.value);
+  };
+
+  const handleMarketTabChange = (next: Category) => {
+    setCategory(next);
+    setMarketTab(next === "for-you" ? "forYou" : next);
+  };
+
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    let mounted = true;
+    setPublicAdsLoading(true);
+    const load = async () => {
+      try {
+        if (marketTab === 'trending') {
+          try {
+            const items = await marketplaceService.listTrending({ page: 1, limit: 24 });
+            if (mounted) setPublicAds(Array.isArray(items) ? (items as MarketplaceAd[]) : []);
+          } catch (err) {
+            if (mounted) setPublicAds([]);
+          }
+          return;
+        }
+        if (marketTab === 'forYou') {
+          try {
+            const items = await marketplaceService.listForYou({ page: 1, limit: 24 });
+            if (mounted) setPublicAds(Array.isArray(items) ? (items as MarketplaceAd[]) : []);
+          } catch (err) {
+            try {
+              const items = await marketplaceService.listPublic({ page: 1, limit: 24 });
+              if (mounted) setPublicAds(Array.isArray(items) ? (items as MarketplaceAd[]) : []);
+            } catch (fallbackErr) {
+              if (mounted) setPublicAds([]);
+            }
+          }
+          return;
+        }
+        // new
+        try {
+          const items = await marketplaceService.listPublic({ page: 1, limit: 24 });
+          if (mounted) setPublicAds(Array.isArray(items) ? items : []);
+        } catch (err) {
+          if (mounted) setPublicAds([]);
+        }
+      } catch (err) {
+        if (mounted) setPublicAds([]);
+      } finally {
+        if (mounted) setPublicAdsLoading(false);
+      }
+    };
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, [marketTab]);
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const toCloudFrontUrl = (url?: string | null) => {
+    if (!url || typeof url !== 'string') return undefined;
+    if (url.includes('cloudfront.net')) return url;
+    if (url.includes('/api/v1/images/view/')) {
+      const match = url.match(/\/api\/v1\/images\/view\/(.+)$/);
+      if (match) {
+        const imagePath = match[1].split('?')[0];
+        return getCloudFrontUrl(imagePath);
+      }
+    }
+    if (url.includes('user-uploads/')) return getCloudFrontUrl(url);
+    return url;
+  };
+
+  const orderedAds = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    const list = publicAds.filter((ad) => {
+      const title = (ad.title || '').toLowerCase();
+      const category = (ad.category || '').toLowerCase();
+      const sub = (ad.subCategory || '').toLowerCase();
+      const role = (ad.offerType || '').toLowerCase();
+      const matchesQuery = !query || title.includes(query) || category.includes(query) || sub.includes(query);
+      const matchesRole = !roleFilter || role === roleFilter.toLowerCase();
+      return matchesQuery && matchesRole;
+    });
+    return list.sort((a, b) => {
+      if (marketTab === 'trending') {
+        const scoreA = (a.messageCount || 0) * 3 + (a.viewCount || 0);
+        const scoreB = (b.messageCount || 0) * 3 + (b.viewCount || 0);
+        if (scoreA !== scoreB) return scoreB - scoreA;
+      }
+      const aFeatured = isFeatured(a);
+      const bFeatured = isFeatured(b);
+      if (aFeatured !== bFeatured) return aFeatured ? -1 : 1;
+      const aSpot = !!a.homepageSpotlight;
+      const bSpot = !!b.homepageSpotlight;
+      if (aSpot !== bSpot) return aSpot ? -1 : 1;
+      const aTime = new Date(a.createdAt || 0).getTime();
+      const bTime = new Date(b.createdAt || 0).getTime();
+      return bTime - aTime;
+    });
+  }, [publicAds, searchTerm, roleFilter, marketTab]);
 
   return (
     <div>
@@ -65,11 +243,13 @@ export default function MarketplacePage() {
         <div className="flex items-center justify-between mt-4 mb-8">
           <MarketplaceTrendingFilter
             selected={category}
-            onChange={(c) => setCategory(c)}
+            onChange={handleMarketTabChange}
           />
           <div className="flex items-center gap-2">
             <div className="relative flex items-center">
               <Input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
                 className="border-[0.2px] bg-white/3 pl-7 max-w-50 placeholder:font-medium border-[#FFFFFF20] text-white placeholder:text-[#FFFFFF80] focus:!border-[0.2px] focus:!border-white focus-visible:ring-0"
                 placeholder="search for an Ad"
               />
@@ -83,30 +263,42 @@ export default function MarketplacePage() {
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto mb-8">
-          {tags.map((tag) => (
-            <span key={tag} className="rounded-[20px] border min-w-fit border-white/20 bg-white/8 p-2 text-white">
-              {tag}
-            </span>
+          {roles.map((role) => (
+            <button
+            onClick={() => setRoleFilter(roleFilter === role ? '' : role)} 
+            key={role} className={`rounded-[20px] p-2 border min-w-fit border-white/20 ${roleFilter === role ? 'bg-white text-black' : 'bg-white/8 text-white'}`}>
+              {role}
+            </button>
           ))}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 justify-items-center sm:justify-items-stretch">
-          {MOCK_ADS.map((ad) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 justify-items-center sm:justify-items-stretch mb-2">
+          {orderedAds.map((ad, index) => {
+            const imageUrl =
+            toCloudFrontUrl(ad.image ?? (Array.isArray(ad.images) ? ad.images[0] : undefined)) ||
+            `${MARKETPLACE_ASSET_BASE}/ads-thumbnail.png`;
+          const postedDays = getDaysAgo(ad.createdAt != null ? String(ad.createdAt) : undefined);
+          const expiryCountdown = formatCountdown(ad.expiresAt, now);
+          const featuredCountdown = formatCountdown(ad.featuredUntil, now);
+          // const spotlight = !!ad.homepageSpotlight;
+          // const featured = isFeatured(ad);
+
+          return (
             <Link
-              key={ad.id}
-              href={`/marketplace/${ad.id}`}
+              key={ad.id ?? String(index)}
+              href={`/marketplace/${ad.id ?? ''}`}
               className="w-full max-w-sm rounded-lg border border-white/10 overflow-hidden shrink-0 block focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
             >
           <div className="relative aspect-[4/3]">
             <div className="absolute top-0 left-0 flex border-[0.5px] border-white/20 rounded-br-lg rounded-tl-lg items-center gap-1 bg-[#FFCB450A] px-2 py-1 text-xs text-[#FFCB45B2]">
               <Clock className="h-3.5 w-3.5" />
-              <span>{ad.duration}</span>
+              <span>{expiryCountdown}</span>
             </div>
             <div className="absolute top-0 right-0 h-5.5 w-10 rounded-bl-lg bg-[#892BFF]/20 flex items-center justify-center">
               <BadgeCheck color="#892BFF" className="h-4 w-4 text-white" />
             </div>
             <div className="absolute top-10 w-full h-full px-2.5 rounded-[6px]">
-            <Image className="w-full h-full object-cover rounded-[6px]" src="/space-thumbnail.png" alt="Ad Image" width={600} height={600} />
+            <Image className="w-full h-full object-cover rounded-[6px]" src={imageUrl} alt={ad.title ?? 'Ad'} width={600} height={600} />
             </div>
           </div>
           <div className="p-2.5 space-y-2">
@@ -122,7 +314,7 @@ export default function MarketplacePage() {
               </button>
             </div>
             <div className="flex items-center justify-between">
-            <p className="text-lg text-white">{ad.title} <sup className="text-xs text-white/50">{ad.age}</sup></p>
+            <p className="text-lg text-white">{ad.title} <sup className="text-xs text-white/50">{postedDays}d ago</sup></p>
             <button
               type="button"
               className="text-white hover:text-white p-1"
@@ -131,20 +323,20 @@ export default function MarketplacePage() {
               <EllipsisVertical className="h-5 w-5" />
             </button>
             </div>
-            <p className="text-sm text-white/60">by <span className="text-white hover:underline break-all text-sm">{ad.by}</span></p>
-            <p className="text-sm text-white/50"><span className="text-white">Skill needed:</span> None</p>
+            <p className="text-sm text-white/60">by <span className="text-white hover:underline break-all text-sm">{String(ad.by ?? '')}</span></p>
+            <p className="text-sm text-white/50"><span className="text-white">Skill needed:</span> {String(ad.category ?? 'Marketplace')} | {String(ad.subCategory ?? ad.category ?? 'General')}</p>
             <div className="pt-5 bg-[#060708] px-5 py-4 flex items-center justify-between">
               <div className="text-center w-1/2 border-r border-white/10">
               <p className="text-xs text-white/60 mb-2">Payment</p>
-              <p className="text-xs text-white/80">{ad.payment}</p>
+              <p className="text-xs text-white/80">{String(ad.priceCurrency ?? '')}</p>
               </div>
               <div className="text-center w-1/2">
               <p className="text-xs text-white/60 mb-2">Price</p>
-              <p className="text-xs text-white/80">{ad.price}</p>
+              <p className="text-xs text-white/80">{ad.priceAmount != null ? String(ad.priceAmount) : ''}</p>
               </div>
             </div>
             <div className="flex flex-wrap gap-1.5 pt-4">
-              {ad.tags.map((tag) => (
+              {(ad.tags ?? []).map((tag: string) => (
                 <span
                   key={tag}
                   className="rounded-[4px] bg-white/10 p-2 text-[10px] text-white"
@@ -155,7 +347,8 @@ export default function MarketplacePage() {
             </div>
           </div>
             </Link>
-          ))}
+          )
+          })}
         </div>
       </section>
     </div>
