@@ -13,13 +13,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { movementPaymentService } from '@/services/movementPaymentService';
 import { movementWalletService } from '@/services/movementWalletService';
 import { getMovementWallet, sendMovementTransaction } from '@/lib/movement-wallet';
 import { getWalletsFromStorage } from '@/utils/localStorage';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import type { BackendWallet } from '@/types/privy';
+import marketplaceService from '@/services/marketplaceService';
 
 interface AdPaymentDialogProps {
   open: boolean;
@@ -89,7 +89,7 @@ export default function AdPaymentDialog({
             };
           }
         } catch (e) {
-          console.warn('Backend wallet check failed', e);
+          // backend wallet check failed, continue without
         }
       }
 
@@ -129,7 +129,7 @@ export default function AdPaymentDialog({
             }
           }
         } catch (error) {
-          console.error('Failed to fetch wallets from backend:', error);
+          // failed to fetch wallets from backend
         }
       }
 
@@ -165,7 +165,6 @@ export default function AdPaymentDialog({
         setWalletBalance(0);
       }
     } catch (error) {
-      console.error('Failed to fetch Movement wallet balance:', error);
       setWalletBalance(0);
     } finally {
       setIsLoadingBalance(false);
@@ -189,124 +188,82 @@ export default function AdPaymentDialog({
     }
 
     const actualAdId = String(adsId).replace('#', '');
-
-    const token = localStorage.getItem('cto_auth_token');
-    if (!authenticated || !user || !token) {
+    if (!authenticated || !user) {
       toast.error('Please login first');
       return;
     }
 
-    setIsProcessing(true);
-
-    try {
-      let movementWallet = getMovementWallet(user);
-
-      if (!movementWallet) {
-        try {
-          const { privyService } = await import('@/services/privyService');
-          const walletResult = await privyService.getUserWallets();
-          const wallets = (walletResult?.data?.wallets || walletResult?.wallets || []) as BackendWallet[];
-          const dbWallet = wallets.find((w: BackendWallet) =>
-            w.blockchain?.toUpperCase() === 'MOVEMENT' || w.blockchain?.toUpperCase() === 'APTOS'
-          );
-          if (dbWallet) {
-            movementWallet = {
-              address: dbWallet.address,
-              publicKey: dbWallet.publicKey || dbWallet.address,
-              chainType: 'aptos'
-            };
-          }
-        } catch (e) {
-          console.warn('Backend wallet check failed', e);
-        }
-      }
-
-      if (!movementWallet) {
-        toast.error('No Movement wallet found. Please go to Profile and click "Sync Wallets".');
-        setIsProcessing(false);
-        return;
-      }
-
-      let paymentResult;
+    let movementWallet = getMovementWallet(user);
+    if (!movementWallet) {
       try {
-        paymentResult = await movementPaymentService.createAdPayment(actualAdId);
-      } catch (createError) {
-        let errorMsg = 'Failed to create payment';
-        if (createError instanceof Error) {
-          errorMsg = createError.message || errorMsg;
-        } else if (axios.isAxiosError(createError)) {
-          errorMsg = (createError.response?.data as { message?: string })?.message || createError.message || errorMsg;
-        }
-        toast.error(errorMsg);
-        setIsProcessing(false);
-        return;
-      }
-
-      const paymentData = paymentResult?.data || paymentResult;
-
-      if (!paymentData?.success) {
-        toast.error(paymentData?.message || 'Failed to create payment');
-        setIsProcessing(false);
-        return;
-      }
-
-      toast.success('Payment created! Signing transaction...');
-
-      const publicKey = movementWallet.publicKey || movementWallet.public_key;
-      if (!publicKey) {
-        throw new Error('Public key not found in Movement wallet');
-      }
-
-      const transactionData = paymentData.transactionData;
-
-      try {
-        const txHash = await sendMovementTransaction(
-          transactionData,
-          movementWallet.address,
-          publicKey,
-          signRawHash
+        const { privyService } = await import('@/services/privyService');
+        const walletResult = await privyService.getUserWallets();
+        const wallets = (walletResult?.data?.wallets || walletResult?.wallets || []) as BackendWallet[];
+        const dbWallet = wallets.find((w: BackendWallet) =>
+          w.blockchain?.toUpperCase() === 'MOVEMENT' || w.blockchain?.toUpperCase() === 'APTOS'
         );
-
-        toast.success('Transaction submitted! Verifying payment...');
-        await new Promise(resolve => setTimeout(resolve, 3000));
-
-        try {
-          const verifyResult = await movementPaymentService.verifyPayment(
-            paymentData.paymentId,
-            txHash
-          );
-          const verifyData = verifyResult?.data || verifyResult;
-
-          if (verifyData?.success && verifyData?.payment?.status === 'COMPLETED') {
-            toast.success('Payment verified!');
-            setIsProcessing(false);
-            setCurrentStep(3);
-          } else {
-            throw new Error('Payment verification failed');
-          }
-        } catch (verifyError) {
-          let errorMsg = 'Payment verification failed. Please try again.';
-          if (verifyError instanceof Error) {
-            errorMsg = verifyError.message || errorMsg;
-          } else if (axios.isAxiosError(verifyError)) {
-            errorMsg = (verifyError.response?.data as { message?: string })?.message || verifyError.message || errorMsg;
-          }
-          toast.error(errorMsg);
-          setIsProcessing(false);
+        if (dbWallet) {
+          movementWallet = {
+            address: dbWallet.address,
+            publicKey: dbWallet.publicKey || dbWallet.address,
+            chainType: 'aptos'
+          };
         }
-      } catch (txError) {
-        const error = txError as Error;
-        toast.error(error.message || 'Transaction cancelled or failed');
-        setIsProcessing(false);
+      } catch (_) {}
+    }
+
+    if (!movementWallet?.address || !(movementWallet.publicKey || movementWallet.public_key)) {
+      toast.error('Movement wallet not found. Please sync wallets in Profile.');
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const paymentResponse = await marketplaceService.createPayment(actualAdId) as Record<string, unknown> | undefined;
+      const payment = paymentResponse?.payment as { paymentId?: string; id?: string; transactionData?: unknown; transaction_data?: unknown } | undefined;
+      const resolvedPaymentId =
+        (paymentResponse?.paymentId as string | undefined) ||
+        payment?.paymentId ||
+        payment?.id;
+
+      if (paymentResponse?.message && String(paymentResponse.message).includes('No payment required')) {
+        setCurrentStep(3);
+        return;
       }
-    } catch (error) {
-      let errorMsg = 'Payment failed';
-      if (error instanceof Error) {
-        errorMsg = error.message || errorMsg;
-      } else if (axios.isAxiosError(error)) {
-        errorMsg = (error.response?.data as { message?: string })?.message || error.message || errorMsg;
+
+      const transactionData =
+        payment?.transactionData ??
+        payment?.transaction_data ??
+        (paymentResponse?.transactionData as object | undefined) ??
+        (paymentResponse?.transaction_data as object | undefined);
+
+      if (!transactionData || typeof transactionData !== 'object') {
+        throw new Error((paymentResponse?.message as string) || 'Transaction data missing');
       }
-      toast.error(errorMsg);
+
+      const txHash = await sendMovementTransaction(
+        transactionData as { type: string; function: string; type_arguments: string[]; arguments: string[] },
+        movementWallet.address,
+        movementWallet.publicKey || movementWallet.public_key!,
+        signRawHash
+      );
+
+      if (resolvedPaymentId) {
+        await marketplaceService.verifyPayment(String(resolvedPaymentId), txHash);
+      }
+
+      toast.success('Payment verified!');
+      setCurrentStep(3);
+    } catch (error: unknown) {
+      const msg =
+        error instanceof Error ? error.message :
+        axios.isAxiosError(error) ? (error.response?.data as { message?: string })?.message || error.message :
+        'Payment failed';
+      const friendlyMsg = /already initiated|pending payment|complete the pending|pending transaction/i.test(String(msg))
+        ? 'This ad already has a pending payment. Complete the transaction in your wallet, or try again later.'
+        : msg;
+      toast.error(friendlyMsg);
+    } finally {
       setIsProcessing(false);
     }
   };

@@ -1,24 +1,168 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'react-toastify';
+import axios from 'axios';
 import CategorySelectionStep from './features/CategorySelectionStep';
 import ProjectDetailsStep, { ProjectDetailsData } from './features/ProjectDetailsStep';
 import PreviewStep from './features/PreviewStep';
+import marketplaceService from '@/services/marketplaceService';
+import { pfpService } from '@/services/pfpService';
 
 type Step = 'category' | 'details' | 'preview';
 
 interface FormData extends ProjectDetailsData {
   category?: string;
   subcategory?: string;
+  postType?: 'LOOKING_FOR' | 'OFFERING';
 }
 
-export default function MarketplacePage() {
+/** Upload ad images via presign (same as cto-test-frontend pfpService.uploadProfileImage). Returns view URLs in order. */
+async function uploadAdImages(files: (File | null)[]): Promise<string[]> {
+  const userId = typeof window !== 'undefined' ? localStorage.getItem('cto_user_id') : null;
+  if (!userId) return [];
+  const viewUrls: string[] = [];
+  for (const file of files) {
+    if (!file) continue;
+    try {
+      const { viewUrl } = await pfpService.uploadProfileImage(file, userId);
+      viewUrls.push(viewUrl);
+    } catch (err) {
+      throw err;
+    }
+  }
+  return viewUrls;
+}
+
+/** Allowed chain values from backend (uppercase). */
+const CHAIN_VALUES = ['SOLANA', 'ETHEREUM', 'BASE', 'POLYGON', 'APTOS', 'MOVEMENT'] as const;
+
+/** Build API draft payload from form data (matches backend validation). */
+function buildDraftPayload(formData: FormData, imageUrls: string[]): Record<string, unknown> {
+  const tier = (formData.visibility === 'plus' ? 'PLUS' : formData.visibility === 'premium' ? 'PREMIUM' : 'FREE') as string;
+  const chainRaw = (formData.blockchainFocus ?? '').toUpperCase().replace(/\s+/g, '_');
+  const chain = CHAIN_VALUES.includes(chainRaw as (typeof CHAIN_VALUES)[number]) ? chainRaw : undefined;
+
+  const amountStr = formData.amount != null && formData.amount !== '' ? String(formData.amount).replace(/,/g, '') : '';
+  const priceAmount = amountStr ? Number(amountStr) : undefined;
+  const isValidAmount = typeof priceAmount === 'number' && !Number.isNaN(priceAmount);
+
+  const raw: Record<string, unknown> = {
+    postType: formData.postType || 'LOOKING_FOR',
+    category: formData.category || undefined,
+    subCategory: formData.subcategory || undefined,
+    title: (formData.adTitle?.trim() || formData.projectName?.trim() || 'Untitled').trim() || 'Untitled',
+    description: (formData.projectDescription?.trim() ?? '') || undefined,
+    tags: [],
+    contactInfo: {},
+    chain: chain || undefined,
+    offerType: formData.roleType || undefined,
+    priceAmount: isValidAmount ? priceAmount : undefined,
+    priceCurrency: formData.paymentType || undefined,
+    images: imageUrls,
+    tier,
+    homepageSpotlight: !!formData.boostOptions?.['homepage-spotlight'],
+    urgentTag: !!formData.boostOptions?.['urgent-tag'],
+    multiChainTag: !!formData.boostOptions?.['multi-chain-tag'],
+    deadline: formData.noFixedDeadline ? undefined : formData.deadline || undefined,
+  };
+  if (formData.boostOptions?.['auto-bump']) {
+    raw.autoBumpDays = 3;
+  }
+  const payload: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(raw)) {
+    if (v === undefined) continue;
+    if (k === 'tags' && Array.isArray(v) && v.length === 0) continue;
+    if (k === 'contactInfo' && typeof v === 'object' && v !== null && Object.keys(v).length === 0) continue;
+    payload[k] = v;
+  }
+  return payload;
+}
+
+export default function PostAdPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState<Step>('category');
   const [formData, setFormData] = useState<FormData>({});
+  const [draftAdId, setDraftAdId] = useState<string | null>(null);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
 
-  const handleCategoryNext = (data: { category: string; subcategory: string }) => {
+  // Restore draft from "My ads" when user clicks a DRAFT card (saved to sessionStorage)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = sessionStorage.getItem('marketplace_edit_draft');
+      if (!raw) return;
+      const ad = JSON.parse(raw) as Record<string, unknown>;
+      sessionStorage.removeItem('marketplace_edit_draft');
+
+      const tier = (ad.tier as string) || 'FREE';
+      const visibility = tier === 'PLUS' ? 'plus' : tier === 'PREMIUM' ? 'premium' : 'free';
+      const chain = (ad.chain as string) || '';
+      const chainDisplay = chain ? chain.charAt(0).toUpperCase() + chain.slice(1).toLowerCase() : '';
+
+      setFormData({
+        category: (ad.category as string) || undefined,
+        subcategory: (ad.subCategory as string) || undefined,
+        postType: (ad.postType as 'LOOKING_FOR' | 'OFFERING') || 'LOOKING_FOR',
+        projectName: (ad.title as string) || undefined,
+        adTitle: (ad.title as string) || undefined,
+        projectDescription: (ad.description as string) || undefined,
+        blockchainFocus: chainDisplay || undefined,
+        roleType: (ad.offerType as string) || undefined,
+        toolsStack: undefined,
+        paymentType: (ad.priceCurrency as string) || undefined,
+        amount: ad.priceAmount != null ? String(ad.priceAmount) : undefined,
+        deadline: undefined,
+        noFixedDeadline: false,
+        visibility,
+        boostOptions: {
+          'homepage-spotlight': !!(ad.homepageSpotlight as boolean),
+          'auto-bump': !!((ad.autoBumpDays as number) > 0),
+          'urgent-tag': !!(ad.urgentTag as boolean),
+          'multi-chain-tag': !!(ad.multiChainTag as boolean),
+        },
+        imagePreviews: Array.isArray(ad.images) ? (ad.images as string[]) : [],
+      });
+      setDraftAdId((ad.id as string) || null);
+      setCurrentStep('details');
+    } catch (_) {}
+  }, []);
+
+  const ensureDraftSaved = useCallback(async (): Promise<string | null> => {
+    try {
+      let imageUrls = await uploadAdImages(formData.images ?? []);
+      if (draftAdId && imageUrls.length === 0 && formData.imagePreviews?.length) {
+        imageUrls = formData.imagePreviews.filter(
+          (u): u is string => typeof u === 'string' && (u.startsWith('http') || u.startsWith('/'))
+        );
+      }
+      const payload = buildDraftPayload(formData, imageUrls);
+      if (draftAdId) {
+        await marketplaceService.updateDraft(draftAdId, payload);
+        return draftAdId;
+      }
+      const res = await marketplaceService.createDraft(payload);
+      const data = res as { id?: string; data?: { id?: string } };
+      const id = data?.id ?? data?.data?.id ?? null;
+      if (id) setDraftAdId(id);
+      return id;
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response?.status === 400) {
+        const detail = err.response?.data as { message?: string | string[]; error?: string } | undefined;
+        const msg = detail?.message != null
+          ? (Array.isArray(detail.message) ? detail.message.join(', ') : detail.message)
+          : detail?.error ?? (err instanceof Error ? err.message : 'Failed to save draft');
+        toast.error(String(msg));
+      } else {
+        toast.error(err instanceof Error ? err.message : 'Failed to save draft');
+      }
+      return null;
+    }
+  }, [formData, draftAdId]);
+
+  const handleCategoryNext = (data: { category: string; subcategory: string; postType?: 'LOOKING_FOR' | 'OFFERING' }) => {
     setFormData((prev: FormData) => ({ ...prev, ...data }));
     setCurrentStep('details');
   };
@@ -36,15 +180,34 @@ export default function MarketplacePage() {
     setCurrentStep('details');
   };
 
-  const handlePublish = () => {
+  const handleRequestPublish = useCallback(async () => {
+    setSavingDraft(true);
+    try {
+      const id = await ensureDraftSaved();
+      if (id) {
+        setPaymentDialogOpen(true);
+      }
+    } finally {
+      setSavingDraft(false);
+    }
+  }, [ensureDraftSaved]);
+
+  const handlePublish = useCallback(() => {
+    // After successful payment, navigate to success page using the real ad id
+    if (draftAdId) {
+      router.push(`/marketplace/post-ad/successful/${encodeURIComponent(draftAdId)}`);
+      return;
+    }
+
+    // Fallback: if for some reason we don't have an id, keep the old slug-based behavior
     const slug =
-      formData.adTitle?.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") ||
-      "your-listing";
-    const title = formData.adTitle || "Your ad";
+      formData.adTitle?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') ||
+      'your-listing';
+    const title = formData.adTitle || 'Your ad';
     router.push(
       `/marketplace/post-ad/successful?slug=${encodeURIComponent(slug)}&title=${encodeURIComponent(title)}`
     );
-  };
+  }, [draftAdId, formData.adTitle, router]);
 
   return (
     <>
@@ -63,6 +226,11 @@ export default function MarketplacePage() {
           formData={formData}
           onBack={handlePreviewBack}
           onPublish={handlePublish}
+          onRequestPublish={handleRequestPublish}
+          paymentDialogOpen={paymentDialogOpen}
+          onPaymentDialogOpenChange={setPaymentDialogOpen}
+          draftAdId={draftAdId}
+          savingDraft={savingDraft}
         />
       )}
     </>

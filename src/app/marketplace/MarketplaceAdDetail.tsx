@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -11,7 +11,6 @@ import {
   Clock,
   ExternalLink,
   Heart,
-  MoreHorizontal,
   Share2,
   Send,
   Smile,
@@ -24,8 +23,52 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import marketplaceService from "@/services/marketplaceService";
+import { getCloudFrontUrl } from "@/utils/helper/image-url-helper";
 
-const CAROUSEL_IMAGES = ["/space-thumbnail.png", "/space-thumbnail.png", "/space-thumbnail.png"];
+const CHAIN_ICON: Record<string, string> = {
+  solana: "/listings-chains/solana.png",
+  ethereum: "/listings-chains/ethereum.png",
+  bsc: "/listings-chains/bnb.png",
+  sui: "/listings-chains/sui.jpg",
+  base: "/listings-chains/base.png",
+  aptos: "/listings-chains/aptos.png",
+  movement: "/listings-chains/movement.png",
+  near: "/listings-chains/near.png",
+  osmosis: "/listings-chains/osmosis.jpg",
+};
+
+function toImageUrl(url: string | null | undefined): string {
+  if (!url || typeof url !== "string") return "/space-thumbnail.png";
+  if (url.includes("cloudfront.net")) return url;
+  if (url.includes("/api/v1/images/view/")) {
+    const match = url.match(/\/api\/v1\/images\/view\/(.+)$/);
+    if (match) return getCloudFrontUrl(match[1].split("?")[0]);
+  }
+  if (url.includes("user-uploads/")) return getCloudFrontUrl(url);
+  return url;
+}
+
+const formatCountdown = (dateStr?: string | null, nowTs?: number): string | null => {
+  if (!dateStr) return null;
+  const target = new Date(dateStr).getTime();
+  if (!Number.isFinite(target)) return null;
+  const now = typeof nowTs === "number" ? nowTs : Date.now();
+  const diff = target - now;
+  if (diff <= 0) return null;
+  const totalSeconds = Math.floor(diff / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const mm = String(minutes).padStart(2, "0");
+  const ss = String(seconds).padStart(2, "0");
+  if (hours > 0) {
+    const hh = String(hours).padStart(2, "0");
+    return `${days}d : ${hh}h : ${mm}m : ${ss}s`;
+  }
+  return `${days}d : ${mm}m : ${ss}s`;
+};
 
 const RECENT_HISTORY = [
   { id: "1", title: "Meme Artist for Gui", status: "Completed" },
@@ -40,9 +83,57 @@ const MOCK_COMMENTS = [
 
 export default function MarketplaceAdDetail({ adId }: { adId: string }) {
   const router = useRouter();
+  const [ad, setAd] = useState<Record<string, unknown> | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [saved, setSaved] = useState(false);
   const [liked, setLiked] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    if (!adId) {
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    marketplaceService
+      .getPublicAd(adId)
+      .then((data) => {
+        if (!cancelled && data) setAd(typeof data === "object" ? data : { id: adId });
+      })
+      .catch(() => {
+        if (!cancelled) setError("Failed to load ad");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [adId]);
+
+  const images: string[] = Array.isArray(ad?.images)
+    ? (ad.images as string[]).map(toImageUrl).filter(Boolean)
+    : ad?.image
+      ? [toImageUrl(ad.image as string)]
+      : ["/space-thumbnail.png"];
+  const title = (ad?.title as string) || (ad?.adTitle as string) || "Ad";
+  const description = (ad?.description as string) || "";
+  const tags = Array.isArray(ad?.tags) ? (ad.tags as string[]) : [];
+  const chain = ((ad?.chain as string) || "").toLowerCase();
+  const chainIcon = CHAIN_ICON[chain] || "/listings-chains/solana.png";
+  const priceAmount = ad?.priceAmount != null ? Number(ad.priceAmount) : null;
+  const paymentType = (ad?.paymentType as string) || (ad?.priceCurrency as string) || "USDC";
+  const postType = (ad?.postType as string) || "Role";
+  const expiresAt = ad?.expiresAt as string | null | undefined;
+  const expiryCountdown = formatCountdown(expiresAt, now);
+  const contactLinks = (ad?.contactInfo as Record<string, string> | undefined)
+    ? Object.entries(ad?.contactInfo as Record<string, string>).filter(([, v]) => v && typeof v === "string")
+    : [];
 
   if (!adId) {
     return (
@@ -55,8 +146,27 @@ export default function MarketplaceAdDetail({ adId }: { adId: string }) {
     );
   }
 
-  const goPrev = () => setCarouselIndex((i) => (i === 0 ? CAROUSEL_IMAGES.length - 1 : i - 1));
-  const goNext = () => setCarouselIndex((i) => (i === CAROUSEL_IMAGES.length - 1 ? 0 : i + 1));
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <p className="text-white/70">Loading ad...</p>
+      </div>
+    );
+  }
+
+  if (error || !ad) {
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center gap-4">
+        <p className="text-white/70">{error || "Ad not found."}</p>
+        <Button asChild variant="link" className="text-white">
+          <Link href="/marketplace">Back to Marketplace</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  const goPrev = () => setCarouselIndex((i) => (i === 0 ? images.length - 1 : i - 1));
+  const goNext = () => setCarouselIndex((i) => (i === images.length - 1 ? 0 : i + 1));
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -69,7 +179,7 @@ export default function MarketplaceAdDetail({ adId }: { adId: string }) {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-10">
           <div className="lg:col-span-6 space-y-3">
             <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-white/5">
-              <Image src={CAROUSEL_IMAGES[carouselIndex]} alt="Ad" fill className="object-cover" sizes="(max-width: 1024px) 100vw, 50vw" />
+              <Image src={images[carouselIndex] || "/space-thumbnail.png"} alt="Ad" fill className="object-cover" sizes="(max-width: 1024px) 100vw, 50vw" />
               <button type="button" onClick={goPrev} className="absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center text-white" aria-label="Previous image">
                 <ChevronLeft className="h-6 w-6" />
               </button>
@@ -78,9 +188,9 @@ export default function MarketplaceAdDetail({ adId }: { adId: string }) {
               </button>
             </div>
             <div className="flex gap-2">
-              {CAROUSEL_IMAGES.map((_, i) => (
+              {images.map((_, i) => (
                 <button key={i} type="button" onClick={() => setCarouselIndex(i)} className={`relative aspect-square w-20 shrink-0 rounded-lg overflow-hidden border-2 transition-colors ${i === carouselIndex ? "border-white/60" : "border-transparent opacity-70"}`}>
-                  <Image src={CAROUSEL_IMAGES[i]} alt="" fill className="object-cover" sizes="80px" />
+                  <Image src={images[i] || "/space-thumbnail.png"} alt="" fill className="object-cover" sizes="80px" />
                 </button>
               ))}
             </div>
@@ -88,10 +198,12 @@ export default function MarketplaceAdDetail({ adId }: { adId: string }) {
 
           <div className="lg:col-span-6 space-y-4 border border-[#86868630] rounded-lg p-4">
             <div className="flex relative items-center justify-end gap-3 mb-6">
-              <div className="absolute -top-2 -left-2 flex border-[0.5px] border-white/20 rounded-br-lg rounded-tl-lg items-center gap-1 bg-[#FFCB450A] px-2 py-1 text-xs text-[#FFCB45B2]">
-                <Clock className="h-3.5 w-3.5" />
-                <span>10d: 28m: 34s</span>
-              </div>
+              {expiresAt && (
+                <div className="absolute -top-4 -left-4 flex border-[0.5px] border-white/20 rounded-br-lg rounded-tl-lg items-center gap-1 bg-[#FFCB450A] px-2 py-1 text-xs text-[#FFCB45B2]">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>{expiryCountdown ?? "Expired"}</span>
+                </div>
+              )}
               <button type="button" className="p-2 rounded-lg hover:bg-white/10 text-white/80 hover:text-white" aria-label="Share"><Share2 className="h-5 w-5" /></button>
               <button type="button" onClick={() => setLiked(!liked)} className="p-2 rounded-lg hover:bg-white/10 text-white/80 hover:text-white" aria-label="Save">
                 <Heart className={`h-5 w-5 ${liked ? "fill-red-500 text-red-500" : ""}`} />
@@ -99,48 +211,39 @@ export default function MarketplaceAdDetail({ adId }: { adId: string }) {
             </div>
             <div className="bg-[#FFFFFF]/3 p-6 border border-[#FFFFFF]/8 rounded-lg">
               <div className="flex items-center justify-between">
-                <h1 className="text-2xl lg:text-3xl font-bold text-white">CTO Wanted for Aptos Revival Project <sup className="text-[#FFFFFF80] text-xs">2d</sup></h1>
-                <Image src="/listings-chains/aptos.png" alt="aptos" width={24} height={24} className="rounded-full" />
+                <h1 className="text-2xl lg:text-3xl font-bold text-white">{title}</h1>
+                <Image src={chainIcon} alt={chain || "chain"} width={24} height={24} className="rounded-full" />
               </div>
-              <p className="text-white/70 mt-2">by @Doyecodes</p>
               <div className="flex flex-wrap gap-0.5 mt-2">
-                {["Solana", "Urgent", "CTO", "Revvenue share"].map((tag) => (
+                {tags.length > 0 ? tags.map((tag) => (
                   <span key={tag} className="bg-[#131313]/86 p-2 text-xs text-white rounded-[3px]">#{tag}</span>
-                ))}
+                )) : (
+                  <span className="bg-[#131313]/86 p-2 text-xs text-white rounded-[3px]">#{postType}</span>
+                )}
               </div>
             </div>
 
             <div className="p-6 space-y-6 border border-[#FFFFFF]/8 rounded-lg">
-              <p className="text-white/80 text-sm leading-relaxed">Bagzilla Inu launched 3 days ago on Aptos and quickly gained traction, but the developer disappeared after the first pump. No multisig, no roadmap, no follow-up. But the community stayed. Over 60 holders regrouped in Telegram, rebranded the Twitter, and began rallying for a second chance. We&apos;re not here to move on, we&apos;re here to rebuild.</p>
-              <div className="flex flex-col gap-2">
-                <a href="https://x.com/ikachukwu9" target="_blank" rel="noopener noreferrer" className="inline-flex justify-center text-center bg-[#0FFFBB0D] rounded-[4px] p-2.5 items-center w-full gap-1.5 text-sm text-white/80 hover:text-white hover:underline">
-                  <ExternalLink className="h-4 w-4 shrink-0" /> x.com/ikachukwu9
-                </a>
-                <a href="https://bazillainu.com" target="_blank" rel="noopener noreferrer" className="inline-flex text-center justify-center w-full bg-[#0FFFBB0D] rounded-[4px] p-2.5 items-center gap-1.5 text-sm text-white/80 hover:text-white hover:underline">
-                  <ExternalLink className="h-4 w-4 shrink-0" /> Bazillainu.com
-                </a>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="secondary" className="bg-white/10 text-white border border-white/20 hover:bg-white/20">CTO Wanted</Button>
-                <Button variant="ghost" className="bg-white/10 text-white border border-white/20 hover:bg-white/20">Designer</Button>
-              </div>
-            </div>
-
-            <div className="p-6 space-y-6 border border-[#FFFFFF]/8 rounded-lg">
-              <h2 className="text-lg font-semibold text-white mb-2">What we&apos;re looking for</h2>
-              <ul className="list-disc list-inside text-white/80 text-sm space-y-1">
-                <li>Smart contract dev (Solidity + Move preferred)</li>
-                <li>Basic UI/UX skills a bonus</li>
-                <li>Long-term alignment with community</li>
-              </ul>
+              {description ? (
+                <p className="text-white/80 text-sm leading-relaxed whitespace-pre-wrap">{description}</p>
+              ) : null}
+              {contactLinks.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  {contactLinks.map(([label, href]) => (
+                    <a key={label} href={href.startsWith("http") ? href : `https://${href}`} target="_blank" rel="noopener noreferrer" className="inline-flex justify-center text-center bg-[#0FFFBB0D] rounded-[4px] p-2.5 items-center w-full gap-1.5 text-sm text-white/80 hover:text-white hover:underline">
+                      <ExternalLink className="h-4 w-4 shrink-0" /> {href}
+                    </a>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="border border-white/10 p-4 rounded-lg">
               <div className="grid grid-cols-2 text-sm bg-[#060708] rounded-xl">
-                <div className="text-center space-y-2 border-[#191B1F] border-r border-b p-5"><p className="text-white/50 mb-0.5">Role type</p><p className="text-white">Designer</p></div>
-                <div className="text-center space-y-2 border-b border-[#191B1F] p-5"><p className="text-white/50 mb-0.5">Skill</p><p className="text-white">html/css/javascript</p></div>
-                <div className="text-center space-y-2 border-r border-[#191B1F] p-5"><p className="text-white/50 mb-0.5">Price</p><p className="text-white">10,000 USDC</p></div>
-                <div className="text-center space-y-2 p-5"><p className="text-white/50 mb-0.5">Payment Type</p><p className="text-white inline-flex items-center gap-1">USDC <ShieldCheck size={16} className="text-emerald-500" /></p></div>
+                <div className="text-center space-y-2 border-[#191B1F] border-r border-b p-5"><p className="text-white/50 mb-0.5">Role type</p><p className="text-white">{postType}</p></div>
+                <div className="text-center space-y-2 border-b border-[#191B1F] p-5"><p className="text-white/50 mb-0.5">Chain</p><p className="text-white">{chain || "—"}</p></div>
+                <div className="text-center space-y-2 border-r border-[#191B1F] p-5"><p className="text-white/50 mb-0.5">Price</p><p className="text-white">{priceAmount != null ? `${Number(priceAmount).toLocaleString()} ${paymentType}` : "—"}</p></div>
+                <div className="text-center space-y-2 p-5"><p className="text-white/50 mb-0.5">Payment Type</p><p className="text-white inline-flex items-center gap-1">{paymentType} <ShieldCheck size={16} className="text-emerald-500" /></p></div>
               </div>
             </div>
 

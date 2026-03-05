@@ -134,13 +134,14 @@ const categories: Category[] = [
 ];
 
 interface CategorySelectionStepProps {
-  onNext: (data: { category: string; subcategory: string }) => void;
+  onNext: (data: { category: string; subcategory: string; postType?: 'LOOKING_FOR' | 'OFFERING' }) => void;
 }
 
 export default function CategorySelectionStep({ onNext }: CategorySelectionStepProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
   const [subcategoryInputOpen, setSubcategoryInputOpen] = useState(false);
+  const [postType, setPostType] = useState<'LOOKING_FOR' | 'OFFERING'>('LOOKING_FOR');
 
   const selectedCategoryData = categories.find((cat) => cat.id === selectedCategory);
 
@@ -160,6 +161,7 @@ export default function CategorySelectionStep({ onNext }: CategorySelectionStepP
       onNext({
         category: selectedCategory,
         subcategory: selectedSubcategory,
+        postType,
       });
     }
   };
@@ -167,7 +169,7 @@ export default function CategorySelectionStep({ onNext }: CategorySelectionStepP
   return (
     <div className="">
       <div className="max-w-4xl mx-auto my-17 border-[0.2px] border-white/20 rounded-lg p-4">
-        <Tabs defaultValue="looking-for">
+        <Tabs defaultValue="looking-for" onValueChange={(v) => setPostType(v === 'offering' ? 'OFFERING' : 'LOOKING_FOR')}>
           <TabsList className="flex gap-2 mb-8 bg-transparent p-2 h-11 border-[0.2px] border-white/20 rounded-lg">
             <TabsTrigger
               value="looking-for"
