@@ -7,13 +7,62 @@ import { Copy, MoreHorizontal, Clock, BadgeCheck, PartyPopper, EllipsisVertical 
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import marketplaceService from "@/services/marketplaceService";
+import { MarketplaceAd } from "@/app/marketplace/page";
+import { getCloudFrontUrl } from "@/utils/helper/image-url-helper";
+
+const MARKETPLACE_ASSET_BASE = "/marketplace";
+
+const formatCountdown = (dateStr?: string | null, nowTs?: number) => {
+  if (!dateStr) return null;
+  const target = new Date(dateStr).getTime();
+  if (!Number.isFinite(target)) return null;
+  const now = typeof nowTs === "number" ? nowTs : Date.now();
+  const diff = target - now;
+  if (diff <= 0) return null;
+  const totalSeconds = Math.floor(diff / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const mm = String(minutes).padStart(2, "0");
+  const ss = String(seconds).padStart(2, "0");
+  if (hours > 0) {
+    const hh = String(hours).padStart(2, "0");
+    return `${days}d : ${hh}h : ${mm}m : ${ss}s`;
+  }
+  return `${days}d : ${mm}m : ${ss}s`;
+};
+
+const getDaysAgo = (dateStr?: string | null) => {
+  if (!dateStr) return null;
+  const ts = new Date(dateStr).getTime();
+  if (!Number.isFinite(ts)) return null;
+  const diff = Date.now() - ts;
+  if (diff < 0) return 0;
+  return Math.floor(diff / 86400000);
+};
+
+const toCloudFrontUrl = (url?: string | null) => {
+  if (!url || typeof url !== "string") return undefined;
+  if (url.includes("cloudfront.net")) return url;
+  if (url.includes("/api/v1/images/view/")) {
+    const match = url.match(/\/api\/v1\/images\/view\/(.+)$/);
+    if (match) {
+      const imagePath = match[1].split("?")[0];
+      return getCloudFrontUrl(imagePath);
+    }
+  }
+  if (url.includes("user-uploads/")) return getCloudFrontUrl(url);
+  return url;
+};
 
 function PostAdSuccessWithAdContent() {
   const params = useParams();
   const adId = typeof params?.adId === "string" ? params.adId : "";
-  const [ad, setAd] = useState<Record<string, unknown> | null>(null);
+  const [ad, setAd] = useState<MarketplaceAd | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     if (!adId) {
@@ -21,10 +70,20 @@ function PostAdSuccessWithAdContent() {
       return;
     }
     let cancelled = false;
+
     marketplaceService
-      .getPublicAd(adId)
-      .then((data) => {
-        if (!cancelled && data) setAd(typeof data === "object" ? data : { id: adId });
+      .listMine()
+      .then((items) => {
+        if (cancelled) return;
+        const list = Array.isArray(items) ? items : [];
+        const match = list.find(
+          (item) => item && typeof item === "object" && "id" in item && (item as any).id === adId,
+        );
+        if (match) {
+          setAd(match);
+        } else {
+          setError("Ad not found");
+        }
       })
       .catch((err) => {
         if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load ad");
@@ -32,12 +91,20 @@ function PostAdSuccessWithAdContent() {
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
+
     return () => {
       cancelled = true;
     };
   }, [adId]);
 
-  const title = (ad?.title as string) || (ad?.adTitle as string) || "Your ad";
+  console.log(ad)
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const title = (ad?.title as string) || "Your ad";
 
   const listingUrl = useMemo(() => {
     if (typeof window === "undefined") return `https://ctomarketplace.com/marketplace/${adId}`;
@@ -58,12 +125,12 @@ function PostAdSuccessWithAdContent() {
     window.open(`https://twitter.com/intent/tweet?text=${text}`, "_blank", "noopener,noreferrer");
   };
 
-  const imageUrl = Array.isArray(ad?.images) && (ad.images as string[]).length > 0
-    ? (ad.images as string[])[0]
-    : (ad?.image as string) || "/space-thumbnail.png";
+  const imageUrl =
+    toCloudFrontUrl(Array.isArray(ad?.images) && ad.images.length > 0 ? ad.images[0] : null) ||
+    `${MARKETPLACE_ASSET_BASE}/ads-thumbnail.png`;
+  const postedDays = getDaysAgo(ad?.createdAt ?? null);
+  const expiryCountdown = formatCountdown(ad?.expiresAt ?? null, now);
   const tags = Array.isArray(ad?.tags) ? (ad.tags as string[]) : ["Liquidity", "Partner", "RevenueShare", "Launch"];
-  const paymentLabel = (ad?.paymentType as string) || (ad?.priceCurrency as string) || "Revenue share";
-  const priceLabel = (ad?.amount as string) ?? (ad?.priceAmount as string) ?? "-";
 
   if (!adId) {
     return (
@@ -165,7 +232,7 @@ function PostAdSuccessWithAdContent() {
           <div className="relative aspect-[4/3]">
             <div className="absolute top-0 left-0 flex border-[0.5px] border-white/20 rounded-br-lg rounded-tl-lg items-center gap-1 bg-[#FFCB450A] px-2 py-1 text-xs text-[#FFCB45B2]">
               <Clock className="h-3.5 w-3.5" />
-              <span>10d: 28m: 34s</span>
+              <span>{expiryCountdown}</span>
             </div>
             <div className="absolute top-0 right-0 h-5.5 w-10 rounded-bl-lg bg-[#892BFF]/20 flex items-center justify-center">
               <BadgeCheck color="#892BFF" className="h-4 w-4 text-white" />
@@ -194,14 +261,15 @@ function PostAdSuccessWithAdContent() {
             </div>
             <div className="flex items-center justify-between">
               <p className="text-lg text-white">
-                {(ad?.category as string) || (ad?.subCategory as string) || "Ad"} <sup className="text-xs text-white/50">3d</sup>
+                {(ad?.category as string) || (ad?.subCategory as string) || "Ad"}{" "}
+                <sup className="text-xs text-white/50">{postedDays != null ? `${postedDays}d ago` : ""}</sup>
               </p>
               <button type="button" className="text-white hover:text-white p-1">
                 <EllipsisVertical className="h-5 w-5" />
               </button>
             </div>
             <p className="text-sm text-white/60">
-              by <span className="text-white hover:underline break-all text-sm">@YourHandle</span>
+              by <span className="text-white hover:underline break-all text-sm">You</span>
             </p>
             <p className="text-sm text-white/50">
               <span className="text-white">Skill needed:</span> {(ad?.offerType as string) || "None"}
@@ -209,15 +277,15 @@ function PostAdSuccessWithAdContent() {
             <div className="pt-5 bg-[#060708] px-5 py-4 flex items-center justify-between">
               <div className="text-center w-1/2 border-r border-white/10">
                 <p className="text-xs text-white/60 mb-2">Payment</p>
-                <p className="text-xs text-white/80">{paymentLabel}</p>
+                <p className="text-xs text-white/80">{ad?.priceCurrency}</p>
               </div>
               <div className="text-center w-1/2">
                 <p className="text-xs text-white/60 mb-2">Price</p>
-                <p className="text-xs text-white/80">{priceLabel}</p>
+                <p className="text-xs text-white/80">{ad?.priceAmount}</p>
               </div>
             </div>
             <div className="flex flex-wrap gap-1.5 pt-4">
-              {tags.map((tag) => (
+              {ad?.tags?.map((tag) => (
                 <span
                   key={tag}
                   className="rounded-[4px] bg-white/10 p-2 text-[10px] text-white"

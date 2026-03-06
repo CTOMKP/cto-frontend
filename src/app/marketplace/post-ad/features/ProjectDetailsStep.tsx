@@ -111,6 +111,18 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
   });
   const fileInputRefs = React.useRef<(HTMLInputElement | null)[]>([]);
 
+  const projectNameRef = React.useRef<HTMLDivElement | null>(null);
+  const adTitleRef = React.useRef<HTMLDivElement | null>(null);
+  const imagesRef = React.useRef<HTMLDivElement | null>(null);
+  const projectDescriptionRef = React.useRef<HTMLDivElement | null>(null);
+
+  const [errors, setErrors] = useState<{
+    projectName?: string;
+    adTitle?: string;
+    images?: string;
+    projectDescription?: string;
+  }>({});
+
   const handleBoostToggle = (option: string) => {
     setBoostOptions(prev => ({
       ...prev,
@@ -155,6 +167,60 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
   };
 
   const handlePreview = () => {
+    const nextErrors: typeof errors = {};
+
+    const trimmedProjectName = projectName.trim();
+    const trimmedAdTitle = adTitle.trim();
+    const trimmedDescription = projectDescription.trim();
+    const hasAtLeastOneImage = imagePreviews.some((src) => !!src);
+
+    if (!trimmedProjectName) {
+      nextErrors.projectName = 'Project name is required.';
+    }
+
+    const titleLength = trimmedAdTitle.length;
+    if (!trimmedAdTitle || titleLength < 6 || titleLength > 80) {
+      nextErrors.adTitle = 'Ad title must be between 6 and 80 characters.';
+    }
+
+    if (!hasAtLeastOneImage) {
+      nextErrors.images = 'At least one image is required.';
+    }
+
+    if (!trimmedDescription || trimmedDescription.length < 800) {
+      nextErrors.projectDescription = 'Project description must be at least 800 characters.';
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+
+      const order: (keyof typeof nextErrors)[] = [
+        'projectName',
+        'adTitle',
+        'images',
+        'projectDescription',
+      ];
+      for (const key of order) {
+        if (!nextErrors[key]) continue;
+        const ref =
+          key === 'projectName'
+            ? projectNameRef
+            : key === 'adTitle'
+              ? adTitleRef
+              : key === 'images'
+                ? imagesRef
+                : projectDescriptionRef;
+        if (ref.current) {
+          ref.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        break;
+      }
+
+      return;
+    }
+
+    setErrors({});
+
     // Normalize deadline: only submit today or a future date; if past (e.g. restored draft), use today
     const today = getTodayLocal();
     const resolvedDeadline =
@@ -167,9 +233,9 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
       setDeadline(today);
     }
     onNext({
-      projectName,
-      adTitle,
-      projectDescription,
+      projectName: trimmedProjectName,
+      adTitle: trimmedAdTitle,
+      projectDescription: trimmedDescription,
       blockchainFocus,
       roleType,
       toolsStack,
@@ -193,7 +259,7 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
 
         <div className='border-[0.2px] border-white/20 rounded-[20px] px-25 py-15'>
           {/* Project Name */}
-        <div className="mb-6">
+        <div className="mb-6" ref={projectNameRef}>
           <label className="font-semibold text-white mb-2 block">
             Project Name<span className="text-red-500">*</span>
           </label>
@@ -201,27 +267,43 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
             type="text"
             placeholder="Input your project name"
             value={projectName}
-            onChange={(e) => setProjectName(e.target.value)}
+            onChange={(e) => {
+              setProjectName(e.target.value);
+              if (errors.projectName) {
+                setErrors((prev) => ({ ...prev, projectName: undefined }));
+              }
+            }}
             className="w-full bg-[#141414] border-none text-white placeholder:text-[#606060] h-10"
           />
+          {errors.projectName && (
+            <p className="text-sm text-red-500 mt-1 text-right">{errors.projectName}</p>
+          )}
         </div>
 
         {/* Ad Title */}
-        <div className="mb-6">
+        <div className="mb-6" ref={adTitleRef}>
           <label className="font-semibold text-white mb-2 block">
             Ad Title (short headline)<span className="text-red-500">*</span>
           </label>
           <Textarea
             placeholder="Write a short headline"
             value={adTitle}
-            onChange={(e) => setAdTitle(e.target.value)}
+            onChange={(e) => {
+              setAdTitle(e.target.value);
+              if (errors.adTitle) {
+                setErrors((prev) => ({ ...prev, adTitle: undefined }));
+              }
+            }}
             className="w-full bg-[#141414] min-h-[160px] border-none text-white placeholder:text-[#606060]"
           />
-          <p className="text-sm text-[#FF9631] mt-1 text-right">8-60 characters, required</p>
+          <p className="text-sm text-[#FF9631] mt-1 text-right">6-80 characters, required</p>
+          {errors.adTitle && (
+            <p className="text-sm text-red-500 mt-1 text-right">{errors.adTitle}</p>
+          )}
         </div>
 
         {/* Upload Images */}
-        <div className="mb-6">
+        <div className="mb-6" ref={imagesRef}>
           <label className="font-semibold text-white mb-2 block">
             Upload Images<span className="text-red-500">*</span>
           </label>
@@ -236,6 +318,9 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
                   onChange={(e) => {
                     const file = e.target.files?.[0] ?? null;
                     handleImageChange(index, file);
+                    if (errors.images) {
+                      setErrors((prev) => ({ ...prev, images: undefined }));
+                    }
                     e.target.value = '';
                   }}
                 />
@@ -274,20 +359,31 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
             </Button>
             <span className="text-sm text-[#FF9631]">To add more than 3 images.</span>
           </div>
+          {errors.images && (
+            <p className="text-sm text-red-500 mt-3 text-right">{errors.images}</p>
+          )}
         </div>
 
         {/* Project Description */}
-        <div className="mb-6">
+        <div className="mb-6" ref={projectDescriptionRef}>
           <label className="font-semibold text-white mb-2 block">
             Project Description<span className="text-red-500">*</span>
           </label>
           <Textarea
             placeholder="Write a short headline"
             value={projectDescription}
-            onChange={(e) => setProjectDescription(e.target.value)}
+            onChange={(e) => {
+              setProjectDescription(e.target.value);
+              if (errors.projectDescription) {
+                setErrors((prev) => ({ ...prev, projectDescription: undefined }));
+              }
+            }}
             className="w-full bg-[#141414] border-none text-white placeholder:text-[#606060] min-h-[120px]"
           />
-          <p className="text-sm text-[#FF9631] mt-1 text-right">800 characters, required</p>
+          <p className="text-sm text-[#FF9631] mt-1 text-right">At least 800 characters, required</p>
+          {errors.projectDescription && (
+            <p className="text-sm text-red-500 mt-1 text-right">{errors.projectDescription}</p>
+          )}
         </div>
 
         {/* Project Specifications */}
