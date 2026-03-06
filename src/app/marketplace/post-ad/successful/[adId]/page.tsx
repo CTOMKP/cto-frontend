@@ -77,7 +77,7 @@ function PostAdSuccessWithAdContent() {
         if (cancelled) return;
         const list = Array.isArray(items) ? items : [];
         const match = list.find(
-          (item) => item && typeof item === "object" && "id" in item && (item as any).id === adId,
+          (item) => item && typeof item === "object" && "id" in item && (item as MarketplaceAd).id === adId,
         );
         if (match) {
           setAd(match);
