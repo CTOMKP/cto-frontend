@@ -13,25 +13,51 @@ import { getCloudFrontUrl } from "@/utils/helper/image-url-helper";
 const MARKETPLACE_ASSET_BASE = '/marketplace';
 
 /** Shape of a marketplace ad from listTrending / listForYou / listPublic */
-type MarketplaceAd = {
-  id?: string;
-  title?: string;
-  category?: string;
-  subCategory?: string;
-  offerType?: string;
-  messageCount?: number;
-  viewCount?: number;
-  featuredPlacement?: boolean;
-  featuredUntil?: string;
-  homepageSpotlight?: boolean;
-  createdAt?: string | number;
-  expiresAt?: string | null;
-  image?: string;
-  images?: string[];
-  by?: string;
-  priceCurrency?: string;
-  priceAmount?: number | string;
-  tags?: string[];
+type MarketplaceAdUser = {
+  id: number;
+  email: string;
+  avatarUrl: string | null;
+  name: string | null;
+};
+
+export type MarketplaceAd = {
+  id: string;
+  userId: number;
+  postType: string;
+  approvedBy: number | null;
+  autoBumpDays: number | null;
+  category: string;
+  subCategory: string | null;
+  chain: string;
+  contactInfo: string | null;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt: string | null;
+  expiresAt: string | null;
+  expiryNoticeSentAt: string | null;
+  extendedCount: number;
+  featuredPlacement: boolean;
+  featuredUntil: string | null;
+  homepageSpotlight: boolean;
+  imageCount: number;
+  images: string[];
+  lastExtendedAt: string | null;
+  lastInteractionAt: string | null;
+  messageCount: number;
+  multiChainTag: boolean;
+  offerType: string;
+  priceAmount: number;
+  priceCurrency: string;
+  rejectionReason: string | null;
+  status: string;
+  tier: string;
+  title: string;
+  topOfDayDays: number | null;
+  totalPrice: number;
+  urgentTag: boolean;
+  viewCount: number;
+  tags: string[];
+  user: MarketplaceAdUser;
 };
 
 const roles = [
@@ -55,7 +81,7 @@ const MOCK_ADS = [
   { id: "4", title: "Liquidity Partner Needed", duration: "10d: 28m: 34s", age: "3d", by: "@YourHandle", payment: "Revenue share", price: "-", tags: ["Liquidity", "Partner", "RevenueShare", "Launch"] },
 ];
 
-const isFeatured = (ad: { featuredPlacement?: boolean; featuredUntil?: string }) => {
+const isFeatured = (ad: { featuredPlacement?: boolean; featuredUntil?: string | null }) => {
   if (ad?.featuredPlacement) return true;
   if (!ad?.featuredUntil) return false;
   const ts = new Date(ad.featuredUntil).getTime();
@@ -275,7 +301,7 @@ export default function MarketplacePage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 justify-items-center sm:justify-items-stretch mb-2">
           {orderedAds.map((ad, index) => {
             const imageUrl =
-            toCloudFrontUrl(ad.image ?? (Array.isArray(ad.images) ? ad.images[0] : undefined)) ||
+            toCloudFrontUrl((Array.isArray(ad.images) ? ad.images[0] : undefined)) ||
             `${MARKETPLACE_ASSET_BASE}/ads-thumbnail.png`;
           const postedDays = getDaysAgo(ad.createdAt != null ? String(ad.createdAt) : undefined);
           const expiryCountdown = formatCountdown(ad.expiresAt, now);
@@ -323,7 +349,7 @@ export default function MarketplacePage() {
               <EllipsisVertical className="h-5 w-5" />
             </button>
             </div>
-            <p className="text-sm text-white/60">by <span className="text-white hover:underline break-all text-sm">{String(ad.by ?? '')}</span></p>
+            <p className="text-sm text-white/60">by <span className="text-white hover:underline break-all text-sm">{String(ad.user.name ?? '')}</span></p>
             <p className="text-sm text-white/50"><span className="text-white">Skill needed:</span> {String(ad.category ?? 'Marketplace')} | {String(ad.subCategory ?? ad.category ?? 'General')}</p>
             <div className="pt-5 bg-[#060708] px-5 py-4 flex items-center justify-between">
               <div className="text-center w-1/2 border-r border-white/10">
