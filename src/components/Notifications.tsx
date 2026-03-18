@@ -7,41 +7,180 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { X, Check } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "./ui/button";
 import Image from "next/image";
+import { io, type Socket } from "socket.io-client";
+import notificationsService from "@/services/notificationsService";
 
 export type Filter = "all" | "unread";
+
+export type NotificationItem = {
+  id: string;
+  title?: string;
+  body?: string;
+  readAt?: string | null;
+  type?: string;
+  data?: unknown;
+};
+
+const getBackendUrl = () =>
+  process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.ctomarketplace.com";
 
 export default function Notifications() {
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<Filter>("all");
+  const [items, setItems] = useState<NotificationItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [token, setToken] = useState<string | null>(() =>
+    typeof window !== "undefined" ? localStorage.getItem("cto_auth_token") : null,
+  );
+
   const filters: Filter[] = ["all", "unread"];
+
+  const loadNotifications = useCallback(async () => {
+    try {
+      const res = await notificationsService.list();
+      const nextItems = (res?.items ?? []) as NotificationItem[];
+      setItems(nextItems);
+      setUnreadCount(nextItems.filter((n) => !n.readAt).length);
+    } catch {
+      // best-effort
+    }
+  }, []);
+
+  useEffect(() => {
+    loadNotifications();
+    const interval = setInterval(loadNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [loadNotifications]);
+
+  useEffect(() => {
+    if (token) loadNotifications();
+  }, [token, loadNotifications]);
+
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "cto_auth_token") setToken(e.newValue);
+    };
+    window.addEventListener("storage", onStorage);
+    const interval = setInterval(() => {
+      const next = localStorage.getItem("cto_auth_token");
+      if (next !== token) setToken(next);
+    }, 1000);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      clearInterval(interval);
+    };
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    const backendUrl = getBackendUrl();
+    const socket: Socket = io(`${backendUrl}/ws`, {
+      transports: ["polling", "websocket"],
+    });
+    socket.on("connect", () => {
+      socket.emit("notifications.subscribe", { token });
+    });
+    socket.on("connect_error", () => {
+      // fallback to polling; list is already polled
+    });
+    socket.on("notifications.new", (payload: unknown) => {
+      const p = payload as { id?: string; title?: string; body?: string; type?: string; data?: { conversationId?: string } };
+      const activeConvoId = localStorage.getItem("cto_active_conversation_id");
+      const isMessagesPage = window.location.pathname.startsWith("/messages");
+      const isSameConvo =
+        p?.type === "MESSAGE" &&
+        p?.data?.conversationId &&
+        p.data.conversationId === activeConvoId;
+      if (isMessagesPage && isSameConvo) return;
+      const newItem: NotificationItem = {
+        id: p?.id ?? String(Date.now()),
+        title: p?.title,
+        body: p?.body,
+        readAt: null,
+        type: p?.type,
+        data: p?.data,
+      };
+      setItems((prev) => [newItem, ...prev]);
+      setUnreadCount((prev) => prev + 1);
+    });
+    return () => {
+      socket.disconnect();
+    };
+  }, [token]);
+
+  useEffect(() => {
+    const handler = () => {
+      if (token) loadNotifications();
+    };
+    window.addEventListener("cto-notifications-ping", handler as EventListener);
+    return () => window.removeEventListener("cto-notifications-ping", handler as EventListener);
+  }, [token, loadNotifications]);
+
+  const handleClickNotification = async (n: NotificationItem) => {
+    try {
+      if (!n.readAt) await notificationsService.markRead(n.id);
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === n.id ? { ...item, readAt: new Date().toISOString() } : item,
+        ),
+      );
+      setUnreadCount((prev) => (prev > 0 ? prev - 1 : 0));
+      const message = [n.title, n.body].filter(Boolean).join("\n\n");
+      if (message) alert(message);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    const unread = items.filter((n) => !n.readAt);
+    try {
+      await Promise.all(unread.map((n) => notificationsService.markRead(n.id)));
+      setItems((prev) =>
+        prev.map((item) => ({ ...item, readAt: item.readAt ?? new Date().toISOString() })),
+      );
+      setUnreadCount(0);
+    } catch {
+      // best-effort
+    }
+  };
+
+  const displayedItems =
+    selectedFilter === "unread" ? items.filter((n) => !n.readAt) : items;
 
   const labels: Record<Filter, string> = {
     all: "All",
-    unread: "Unread (6)",
+    unread: `Unread (${unreadCount})`,
   };
 
   return (
-    <DropdownMenu
-      open={isDropdownOpen}
-      onOpenChange={(open) => setDropdownOpen(open)}
-    >
-      <DropdownMenuTrigger>
-        <span className="relative flex justify-center items-center rounded-lg size-13 border-[0.2px] border-[#FFFFFF20]">
+    <DropdownMenu open={isDropdownOpen} onOpenChange={setDropdownOpen}>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          onClick={() => {
+            if (!isDropdownOpen) loadNotifications();
+          }}
+          className="relative flex justify-center items-center rounded-lg size-13 border-[0.2px] border-[#FFFFFF20]"
+          aria-label="Notifications"
+        >
           <span className="bg-[#FFFFFF0D] rounded-sm size-7 flex items-center justify-center">
             <Image
               src="/notification.svg"
-              alt="watchlist"
+              alt="notifications"
               width={15}
               height={15}
             />
           </span>
-          <Badge className="h-4 absolute top-1 right-1 text-[10px] font-bold text-white cta-gradient min-w-4 rounded-full px-1 font-mono tabular-nums">
-            <span>8</span>
-          </Badge>
-        </span>
+          {unreadCount > 0 && (
+            <Badge className="h-4 absolute top-1 right-1 text-[10px] font-bold text-white cta-gradient min-w-4 rounded-full px-1 font-mono tabular-nums">
+              <span>{unreadCount}</span>
+            </Badge>
+          )}
+        </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="bg-[#010101] text-white p-6 w-[534px] border-2 border-[#86868630]">
         <div>
@@ -69,14 +208,41 @@ export default function Notifications() {
               ))}
             </div>
 
-            <button className="border-[0.2px] gap-1 w-[119px] text-[#A1A1AA] !px-0 border-[#FFFFFF20] rounded-lg h-9 font-medium text-sm flex items-center justify-center">
+            <button
+              type="button"
+              onClick={handleMarkAllRead}
+              disabled={unreadCount === 0}
+              className="border-[0.2px] gap-1 w-[119px] text-[#A1A1AA] disabled:opacity-50 !px-0 border-[#FFFFFF20] rounded-lg h-9 font-medium text-sm flex items-center justify-center hover:bg-white/5"
+            >
               Mark as read <Check size={12} />
             </button>
           </div>
         </div>
 
         <div>
-          <span className="text-xs font-normal text-[#FFFFFFB2]">You have no price alerts yet</span>
+          {displayedItems.length === 0 ? (
+            <span className="text-xs font-normal text-[#FFFFFFB2]">
+              You have no price alerts yet
+            </span>
+          ) : (
+            <div className="space-y-1">
+              {displayedItems.map((n) => (
+                <button
+                  key={n.id}
+                  type="button"
+                  onClick={() => handleClickNotification(n)}
+                  className={`w-full text-left rounded-lg px-3 py-2 border-[0.2px] border-transparent hover:border-[#FFFFFF20] hover:bg-white/5 transition-colors ${
+                    n.readAt ? "text-[#A1A1AA]" : "text-white"
+                  }`}
+                >
+                  <div className="text-sm font-medium">{n.title ?? "Notification"}</div>
+                  {n.body && (
+                    <div className="text-xs text-[#FFFFFFB2] mt-0.5">{n.body}</div>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
