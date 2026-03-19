@@ -2,7 +2,11 @@
 
 import React from 'react';
 
-export default function MissionStats() {
+export default function MissionStats({
+  currentXP,
+}: {
+  currentXP: number;
+}) {
   return (
     <div className="mb-4">
       <h3 className="text-[14px] text-[#E4E4E7] mb-4">
@@ -26,7 +30,7 @@ export default function MissionStats() {
           </h4>
           <div className="text-[#71717B] text-[12px] leading-[12px]">
             <span className="text-white text-[14px] leading-5">
-              35
+              {currentXP}
             </span>{" "}
             / 135
           </div>
@@ -37,7 +41,7 @@ export default function MissionStats() {
           </h4>
           <div className="text-[#71717B] text-[12px] leading-[12px]">
             <span className="text-white text-[14px] leading-5">
-              35
+              {currentXP}
             </span>{" "}
             / 135
           </div>

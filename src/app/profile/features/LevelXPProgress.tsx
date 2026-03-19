@@ -14,6 +14,7 @@ interface LevelXPProgressProps {
 
 export default function LevelXPProgress({
   level,
+  currentXP,
   xpProgress,
 }: LevelXPProgressProps) {
   return (
@@ -40,7 +41,7 @@ export default function LevelXPProgress({
         </span> */}
       </div>
 
-      <MissionStats />
+      <MissionStats currentXP={currentXP} />
 
       {/* progress */}
       <div className="w-full h-1 bg-[#27272A] rounded-full overflow-hidden">
