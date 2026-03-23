@@ -81,7 +81,7 @@ export default function TxHistoryTab({
       {loading ? (
         <TxHistoryTableSkeleton />
       ) : transactions.length > 0 ? (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto hover-scrollbar">
           <table className="min-w-full border-separate border-spacing-y-1">
             <thead>
               <tr className="text-left">

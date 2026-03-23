@@ -96,7 +96,7 @@ export default function UserProfileHeader({
               View wallets
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-[#010101] text-white border-2 border-[#86868630] max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="bg-[#010101] text-white border-2 border-[#86868630] max-w-2xl max-h-[80vh] overflow-y-auto hover-scrollbar">
             <DialogHeader className="flex !flex-row justify-between items-center pb-4 border-b-[0.5px] border-[#FFFFFF20]">
               <DialogTitle className="font-bold text-xl">💼 Your Wallets</DialogTitle>
               <button

@@ -288,7 +288,7 @@ export default function MarketplacePage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto mb-8">
+        <div className="flex items-center gap-2 overflow-x-auto hover-scrollbar mb-8">
           {roles.map((role) => (
             <button
             onClick={() => setRoleFilter(roleFilter === role ? '' : role)} 

@@ -139,7 +139,7 @@ export default function MessagesSidebar({
           <div className="p-2 text-[11px] text-white/40 text-center">Loading…</div>
         ) : null}
         {polling ? (
-          <div className="p-2 text-[11px] text-white/40 text-center">Refreshing…</div>
+          <div className="p-2 text-[11px] text-white/40 text-center hidden">Refreshing…</div>
         ) : null}
       </div>
     </aside>

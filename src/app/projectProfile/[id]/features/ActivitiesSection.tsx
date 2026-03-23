@@ -85,7 +85,7 @@ export default function ActivitiesSection({ projectData }: ActivitiesSectionProp
           <div className="border-t-[0.5px] border-white/20"></div>
           <ActivitiesFilter />
           <TabsContent value="activities" className="mt-6">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto hover-scrollbar">
               <table className="min-w-full border-separate border-spacing-y-1">
                 <thead>
                   <tr className="text-left">

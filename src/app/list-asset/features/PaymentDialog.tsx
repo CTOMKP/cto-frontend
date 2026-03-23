@@ -411,7 +411,7 @@ export default function PaymentDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="bg-[#010101] border-white/20 text-white p-6 max-h-full overflow-auto">
+      <DialogContent className="bg-[#010101] border-white/20 text-white p-6 max-h-full overflow-auto hover-scrollbar">
         {currentStep === 1 && (
           // Step 1: Payment & Publish
           <>

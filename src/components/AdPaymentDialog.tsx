@@ -285,7 +285,7 @@ export default function AdPaymentDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="bg-[#010101] border-white/20 text-white p-6 max-h-full overflow-auto">
+      <DialogContent className="bg-[#010101] border-white/20 text-white p-6 max-h-full overflow-auto hover-scrollbar">
         {currentStep === 1 && (
           <>
             <DialogHeader className="flex flex-row items-center justify-between pb-4 border-b-[0.3px] border-white/20">

@@ -249,7 +249,7 @@ export default function CategorySelectionStep({ onNext }: CategorySelectionStepP
                     </div>
                     {/* Subcategory Dropdown */}
                     {selectedCategoryData && (
-                      <div className="mt-2 border border-[#404040] rounded-lg bg-[#1A1A1A] max-h-60 overflow-y-auto">
+                      <div className="mt-2 border border-[#404040] rounded-lg bg-[#1A1A1A] max-h-60 overflow-y-auto hover-scrollbar">
                         {selectedCategoryData.subcategories.map((subcategory) => (
                           <button
                             key={subcategory}

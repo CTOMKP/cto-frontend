@@ -58,7 +58,7 @@ export default function HarvestGrape() {
           <div className="absolute -bottom-1 -left-1 text-pink-400 animate-pulse text-xs">⭐</div> */}
         </div>
       </DialogTrigger>
-      <DialogContent className="bg-black border-[2px] p-6 border-[#86868630] text-white min-w-[413px] overflow-auto max-h-full rounded-xl">
+      <DialogContent className="bg-black border-[2px] p-6 border-[#86868630] text-white min-w-[413px] overflow-auto max-h-full rounded-xl hover-scrollbar">
         <PfpSelection />
       </DialogContent>
     </Dialog>

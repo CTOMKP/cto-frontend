@@ -385,8 +385,8 @@ export default function TrendingCoins({
           </CardAction>
         </CardHeader>
         <CardContent className="px-0 -mt-4">
-           <div className="overflow-x-auto xl:overflow-visible">
-             <Table className="w-full min-w-[550px] xl:w-full">
+           <div className="overflow-x-auto xl:overflow-visible hover-scrollbar">
+             <Table className="w-full min-w-[550px] xl:w-full hover-scrollbar">
             <TableHeader className="!text-[#FFFFFF]/50">
               <TableRow className="border-none">
                 <TableHead className="!font-bold">

@@ -42,7 +42,7 @@ function getChainImage(chain: string): string {
 }
 
 const TrendingCommunityTableSkeleton = () => (
-  <div className="overflow-x-auto xl:overflow-visible">
+  <div className="overflow-x-auto xl:overflow-visible hover-scrollbar">
     <Table className="w-full min-w-[322px] lg:w-full">
       <TableHeader className="!text-[#FFFFFF]/50">
         <TableRow className="border-none">
@@ -244,7 +244,7 @@ export default function TrendingCommunity({
           </CardTitle>
         </CardHeader>
         <CardContent className="px-0 -mt-4">
-          <div className="overflow-x-auto xl:overflow-visible">
+          <div className="overflow-x-auto xl:overflow-visible hover-scrollbar">
             <Table className="w-full min-w-[322px] lg:w-full">
             <TableHeader className="!text-[#FFFFFF]/50">
               <TableRow className="border-none">

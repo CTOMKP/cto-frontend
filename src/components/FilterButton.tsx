@@ -219,7 +219,7 @@ export default function FilterButton({
       <DialogTrigger className="p-2 text-sm text-[#FFFFFF80] border-[0.5px] border-[#FFFFFF20] flex items-center gap-1 rounded-lg">
         <ListFilter size={15} color="#FFFFFF80" /> <span>Filter</span>
       </DialogTrigger>
-      <DialogContent className="bg-black text-sm border-[2px] p-4 border-[#86868630] text-[#FFFFFF9E] max-w-5xl h-full overflow-auto rounded-xl">
+      <DialogContent className="bg-black text-sm border-[2px] p-4 border-[#86868630] text-[#FFFFFF9E] max-w-5xl h-full overflow-auto rounded-xl hover-scrollbar">
         <DialogHeader className="flex !flex-row justify-between items-center pb-2 border-b-[0.5px] border-[#FFFFFF20]">
           <div>
             <DialogTitle className="font-bold text-white text-base">
