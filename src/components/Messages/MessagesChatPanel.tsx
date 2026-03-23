@@ -152,7 +152,7 @@ export default function MessagesChatPanel({
   return (
     <main className="flex-1 bg-black">
       <div className="h-full flex flex-col min-h-[calc(100vh-120px)]">
-        <div className="flex border-b border-white/10  items-center justify-between px-12 pt-10 pb-5 overflow-auto">
+        <div className="flex border-b border-white/10  items-center justify-between px-12 pt-10 pb-5 overflow-auto hover-scrollbar">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -188,7 +188,7 @@ export default function MessagesChatPanel({
 
         <div className="flex gap-3 items-center">
           <span>Subject:</span>
-          <span className="truncate w-full bg-[#222222] overflow-auto py-2.5 px-4 rounded-[4px]">{headerTitle}</span>
+          <span className="truncate w-full bg-[#222222] overflow-auto py-2.5 px-4 rounded-[4px] hover-scrollbar">{headerTitle}</span>
         </div>
         </div>
 

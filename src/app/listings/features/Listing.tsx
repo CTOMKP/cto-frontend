@@ -397,7 +397,7 @@ export default function TopListings() {
             />
           </CardHeader>
 
-          <CardContent className="px-0 h-[690px] overflow-auto hide-scrollbar">
+          <CardContent className="px-0 h-[690px] overflow-auto hover-scrollbar">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[1200px] border-separate border-spacing-y-2">
                 <ListingTableHeader

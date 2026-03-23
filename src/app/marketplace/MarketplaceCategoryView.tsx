@@ -61,7 +61,7 @@ export default function MarketplaceCategoryView({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto mb-8">
+        <div className="flex items-center gap-2 overflow-x-auto hover-scrollbar mb-8">
           {tags.map((tag) => (
             <span key={tag} className="rounded-[20px] border min-w-fit border-white/20 bg-white/8 p-2 text-white">{tag}</span>
           ))}

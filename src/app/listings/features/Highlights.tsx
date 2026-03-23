@@ -51,7 +51,7 @@ export default function Highlights({
       </div>
 
       {!isHidden && (
-        <div className='flex flex-col lg:flex-row h-fit gap-2 w-full overflow-x-auto pb-5'>
+        <div className='flex flex-col lg:flex-row h-fit gap-2 w-full overflow-x-auto hover-scrollbar pb-5'>
             <div className='w-full lg:w-1/2'>
               <TrendingCoins apiData={apiData} isLoading={isLoading} />
             </div>

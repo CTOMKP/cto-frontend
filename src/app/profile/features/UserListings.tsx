@@ -177,7 +177,7 @@ export default function UserListings() {
     <div>
       <Card className="w-full p-3 border-none border-[#FF007510] text-white bg-transparent">
         <CardContent className="px-0 overflow-auto hide-scrollbar">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto hover-scrollbar">
             <table className="w-full min-w-[1200px] border-separate border-spacing-y-2">
               <UserListingsTableHeader
                 sortField={sortField}

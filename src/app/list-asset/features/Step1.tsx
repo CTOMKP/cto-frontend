@@ -450,7 +450,7 @@ export default function Step1({
             <Search size={16} color="#FFFFFF50" /> Scan Token
           </Button>
         </DialogTrigger>
-        <DialogContent className={`bg-[#010101] ${!scanComplete ? '!max-w-[484px]' : '!max-w-[534px]'} border-white/20 text-white py-6 px-6.5 max-h-full overflow-auto`}>
+        <DialogContent className={`bg-[#010101] ${!scanComplete ? '!max-w-[484px]' : '!max-w-[534px]'} border-white/20 text-white py-6 px-6.5 max-h-full overflow-auto hover-scrollbar`}>
           {!scanComplete ? (
             // Scanning UI
             <>

@@ -2,7 +2,7 @@
 
 export default function TxHistoryTableSkeleton() {
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto hover-scrollbar">
       <table className="min-w-full border-separate border-spacing-y-1">
         <thead>
           <tr className="text-left">
