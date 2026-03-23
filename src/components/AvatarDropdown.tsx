@@ -273,7 +273,7 @@ export default function AvatarDropdown() {
             <div className="flex justify-between items-center mb-2">
               <span className="text-xs text-white/70">XP Progress</span>
               <span className="text-xs text-white/70">
-                {currentXP} / {nextLevelXP} XP · {progressPct}%
+                {currentXP} XP · {progressPct}%
               </span>
             </div>
             <div className="w-full h-1 bg-[#27272A] rounded-full overflow-hidden">
