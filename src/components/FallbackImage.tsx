@@ -127,7 +127,7 @@ const FallbackImage: React.FC<Props> = ({
   if (!current || error) {
     return (
       <div 
-        className={`relative flex items-center justify-center bg-gray-800 rounded-full ${className || ''}`}
+        className={`relative flex items-center justify-center size-9 bg-gray-800 rounded-full ${className || ''}`}
         style={fill ? undefined : { width, height }}
       >
         <svg className="w-6 h-6 text-gray-600" fill="currentColor" viewBox="0 0 24 24">

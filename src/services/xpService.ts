@@ -1,4 +1,6 @@
 import axios from "axios";
+import { normalizeRewardData } from "@/lib/rewardStorage";
+import type { RewardProgress } from "@/types/auth.types";
 
 const backendUrl =
   process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.ctomarketplace.com";
@@ -34,26 +36,54 @@ export type XpMeResponse = {
   success: boolean;
   balance: number;
   history: XpHistoryEntry[];
+  /** Rank / streak fields merged from API payload when present */
+  rewardPatch: Partial<RewardProgress>;
 };
 
+function parseXpMeResponse(res: { data?: unknown }): XpMeResponse {
+  const data = (res.data as { data?: unknown })?.data ?? res.data;
+  const record =
+    data && typeof data === "object" ? (data as Record<string, unknown>) : {};
+  const balance = Number(record.balance ?? 0);
+  const rewardPatch = normalizeRewardData({
+    ...record,
+    balance,
+    xpBalance:
+      typeof record.xpBalance === "number" ? record.xpBalance : balance,
+  });
+
+  return {
+    success: !!record.success,
+    balance,
+    history: Array.isArray(record.history)
+      ? (record.history as XpHistoryEntry[])
+      : [],
+    rewardPatch,
+  };
+}
+
 export const xpService = {
-  /**
-   * GET /api/v1/xp/me?limit=100
-   * Returns XP balance + recent history.
-   */
-  async me(limit: number = 100): Promise<XpMeResponse> {
+  async getMe(): Promise<XpMeResponse> {
     const res = await axios.get(`${backendUrl}/api/v1/xp/me`, {
-      params: { limit },
       headers: authHeaders(),
     });
-    // Backend wraps: { data: { success, balance, history }, statusCode, timestamp }
-    const data = res.data?.data ?? res.data;
-    return {
-      success: !!data?.success,
-      balance: Number(data?.balance ?? 0),
-      history: Array.isArray(data?.history) ? (data.history as XpHistoryEntry[]) : [],
-    };
+    return parseXpMeResponse(res);
   },
+  async getBalance(): Promise<XpMeResponse> {
+    const res = await axios.get(`${backendUrl}/api/v1/xp/me`, {
+      headers: authHeaders(),
+    });
+    return parseXpMeResponse(res);
+  },
+  // Backward-compatible alias for existing usage in this repo.
+  async me(limit?: number): Promise<XpMeResponse> {
+    void limit;
+    return this.getMe();
+  },
+} satisfies {
+  getMe: () => Promise<XpMeResponse>;
+  getBalance: () => Promise<XpMeResponse>;
+  me: (limit?: number) => Promise<XpMeResponse>;
 };
 
 export default xpService;

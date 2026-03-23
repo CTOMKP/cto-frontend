@@ -78,18 +78,18 @@ export default function Categories() {
 
       <div className="w-[85.9%] mx-auto">
         <h2 className="text-[23.25px] font-normal mt-8 mb-6">Explore Category</h2>
-        <div className="flex items-center w-fit flex-wrap gap-6 mb-25">
+        <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-6 mb-25">
           {CategoriesFilter.map((category, index) => (
             <div
             key={index}
               className={`bg-gradient-to-r from-[rgba(236,72,153,0.5)] to-[rgba(250,204,21,0.5)] p-[1px] rounded-[8px] ${category.value === 'all' ? 'hidden' : ''}`}
             >
-              <div className="rounded-lg w-[392px] h-[328px] bg-[#010101]">
+              <div className="flex flex-col rounded-lg w-full h-full bg-[#010101]">
                 <Image
                   loading="lazy"
                   src={`/categories/${category.value}.png`}
                   alt={category.name}
-                  className="object-contain h-[218px] w-full"
+                  className="object-contain w-full flex-1 rounded-t-lg"
                   width={392}
                   height={218}
                 />

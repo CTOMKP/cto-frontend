@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { PrivyProvider as PrivyProviderBase } from '@privy-io/react-auth';
+import RewardProgressSync from '@/components/RewardProgressSync';
 
 interface PrivyProviderProps {
   children: React.ReactNode;
@@ -55,6 +56,7 @@ export default function PrivyProvider({ children }: PrivyProviderProps) {
         },
       }}
     >
+      <RewardProgressSync />
       {children}
     </PrivyProviderBase>
   );

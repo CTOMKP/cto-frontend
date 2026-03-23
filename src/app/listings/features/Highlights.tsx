@@ -26,7 +26,7 @@ export default function Highlights({
     <div className='text-white w-[87%] mx-auto'>
       <div className='flex items-center justify-between mt-4 mb-2 p-2'>
         <div className='flex items-center gap-1'>
-          <h1 className='text-2xl'>Highligts</h1><Image loading="lazy" className='mt-1' src="/emoji-icons/highlight-star.svg" alt="highlight-star" width={16} height={16} />
+          <h1 className='text-2xl'>Highlights</h1><Image loading="lazy" className='mt-1' src="/emoji-icons/highlight-star.svg" alt="highlight-star" width={16} height={16} />
           {isHidden && (
             <Button 
               onClick={toggleVisibility}

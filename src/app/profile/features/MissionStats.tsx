@@ -1,12 +1,20 @@
 "use client";
 
-import React from 'react';
+import React from "react";
+import { toXpProgressPct } from "@/lib/userRewardProgress";
 
 export default function MissionStats({
   currentXP,
+  // nextLevelXP = 150,
+  xpProgress = 0,
 }: {
   currentXP: number;
+  /** XP target for the current tier (denominator in stats). */
+  nextLevelXP?: number;
+  /** 0–100 raw; bar + “Level progress” use `toXpProgressPct` via parent or here. */
+  xpProgress?: number;
 }) {
+  const progressPct = toXpProgressPct(xpProgress);
   return (
     <div className="mb-4">
       <h3 className="text-[14px] text-[#E4E4E7] mb-4">
@@ -32,20 +40,19 @@ export default function MissionStats({
             <span className="text-white text-[14px] leading-5">
               {currentXP}
             </span>{" "}
-            / 135
           </div>
         </div>
-        <div>
+        {/* <div>
           <h4 className="text-[#71717B] text-[12px] leading-[12px] mb-1">
-            Total XP
+            Level Progress
           </h4>
           <div className="text-[#71717B] text-[12px] leading-[12px]">
             <span className="text-white text-[14px] leading-5">
               {currentXP}
             </span>{" "}
-            / 135
+            / {nextLevelXP}
           </div>
-        </div>
+        </div> */}
       </div>
 
       <div>
@@ -53,7 +60,7 @@ export default function MissionStats({
           Completion Rate
         </h4>
         <div className="text-[#71717B] text-[13.5px] leading-5">
-          86%
+          {progressPct}%
         </div>
       </div>
     </div>

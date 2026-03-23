@@ -21,6 +21,7 @@ import { getWalletsFromStorage } from '@/utils/localStorage';
 import { useWalletBalance } from '@/app/profile/features/wallet-balance/useWalletBalance';
 import WalletBalanceContent from '@/app/profile/features/wallet-balance/WalletBalanceContent';
 import { Button } from './ui/button';
+import { useRewardProgress, resetUserRewardProgress } from '@/lib/userRewardProgress';
 
 export default function AvatarDropdown() {
   // Initialize exactly like profile page - read raw URL from localStorage
@@ -36,9 +37,13 @@ export default function AvatarDropdown() {
   const [copiedAddress, setCopiedAddress] = useState(false);
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
-  const level = 4;
-  const currentXP = 45;
-  const nextLevelXP = 150;
+  const {
+    rankLevel,
+    rankLabel,
+    currentXP,
+    nextLevelXP,
+    progressPct,
+  } = useRewardProgress();
   const router = useRouter();
   const { logout } = usePrivyAuth();
   const { user } = usePrivy();
@@ -202,17 +207,16 @@ export default function AvatarDropdown() {
 
   const handleLogout = async () => {
     await logout();
+    resetUserRewardProgress();
     router.push('/listings');
   };
-
-  const xpProgress = nextLevelXP > 0 ? (currentXP / nextLevelXP) * 100 : 0;
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className='mx-8.5'>
         <div className="relative flex justify-center items-center rounded-lg size-13 border-[0.2px] border-[#FFFFFF20] overflow-hidden">
           {avatarUrl ? (
-            <div className='size-9'>
+            <div className='size-9 rounded-full'>
               <FallbackImage
                 src={avatarUrl}
                 alt="Profile"
@@ -258,7 +262,9 @@ export default function AvatarDropdown() {
                   loading="lazy"
                 />
               </div>
-              <p className="text-sm text-white/70">Level {level} - Senior Sapling</p>
+              <p className="text-sm text-white/70">
+                Level {rankLevel} - {rankLabel}
+              </p>
             </div>
           </div>
 
@@ -266,12 +272,14 @@ export default function AvatarDropdown() {
           <div className="mb-2">
             <div className="flex justify-between items-center mb-2">
               <span className="text-xs text-white/70">XP Progress</span>
-              <span className="text-xs text-white/70">{currentXP} / {nextLevelXP} XP</span>
+              <span className="text-xs text-white/70">
+                {currentXP} / {nextLevelXP} XP · {progressPct}%
+              </span>
             </div>
             <div className="w-full h-1 bg-[#27272A] rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-[#FF0075] via-[#FF4A15] to-[#FFCB45] transition-all duration-300"
-                style={{ width: `${xpProgress}%` }}
+                style={{ width: `${progressPct}%` }}
               />
             </div>
           </div>
@@ -392,7 +400,7 @@ export default function AvatarDropdown() {
             </div>
           </Link>
           <Link
-            href="/settings"
+            href="/#"
             className="block"
           >
             <div

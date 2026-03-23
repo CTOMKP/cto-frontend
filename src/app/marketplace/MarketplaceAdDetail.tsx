@@ -249,7 +249,7 @@ export default function MarketplaceAdDetail({ adId }: { adId: string }) {
 
             <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-[#86868630]">
               <Button variant="outline" className="border-white/20 text-white hover:bg-white/10" onClick={() => setSaved(!saved)}>{saved ? "Saved" : "Save to watchlist"}</Button>
-              <Button className="cta-gradient ml-auto gap-2"><Send className="h-4 w-4" /> Send a message (8 Points)</Button>
+              <Link href={`/marketplace/${adId}/apply`} className="cta-gradient ml-auto gap-2 rounded-lg flex items-center justify-center p-2"><Send className="h-4 w-4" /> Send a message (8 Points)</Link>
             </div>
           </div>
         </div>

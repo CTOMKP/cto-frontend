@@ -24,8 +24,7 @@ export type NotificationItem = {
   data?: unknown;
 };
 
-const getBackendUrl = () =>
-  process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.ctomarketplace.com";
+const getBackendUrl = () => process.env.NEXT_PUBLIC_BACKEND_URL;
 
 export default function Notifications() {
   const [isDropdownOpen, setDropdownOpen] = useState(false);
