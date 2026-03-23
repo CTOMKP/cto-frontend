@@ -57,7 +57,7 @@ export default function MissionStats({
 
       <div>
         <h4 className="text-[#71717B] text-[12px] leading-[12px] mb-1">
-          Completion Rate
+          Level Completion Rate
         </h4>
         <div className="text-[#71717B] text-[13.5px] leading-5">
           {progressPct}%
