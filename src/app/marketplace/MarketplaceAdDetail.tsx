@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -134,6 +134,26 @@ export default function MarketplaceAdDetail({ adId }: { adId: string }) {
   const contactLinks = (ad?.contactInfo as Record<string, string> | undefined)
     ? Object.entries(ad?.contactInfo as Record<string, string>).filter(([, v]) => v && typeof v === "string")
     : [];
+  const currentUserId = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    const raw = localStorage.getItem("cto_user_id");
+    const n = raw ? Number(raw) : NaN;
+    return Number.isFinite(n) ? n : null;
+  }, []);
+  const creatorUserIdRaw =
+    (ad?.userId as number | string | undefined) ??
+    ((ad?.user as { id?: number | string } | undefined)?.id);
+  const creatorUserId =
+    typeof creatorUserIdRaw === "number"
+      ? creatorUserIdRaw
+      : creatorUserIdRaw != null
+        ? Number(creatorUserIdRaw)
+        : null;
+  const isCreatorViewingOwnAd =
+    currentUserId != null &&
+    creatorUserId != null &&
+    Number.isFinite(creatorUserId) &&
+    currentUserId === creatorUserId;
 
   if (!adId) {
     return (
@@ -249,7 +269,16 @@ export default function MarketplaceAdDetail({ adId }: { adId: string }) {
 
             <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-[#86868630]">
               <Button variant="outline" className="border-white/20 text-white hover:bg-white/10" onClick={() => setSaved(!saved)}>{saved ? "Saved" : "Save to watchlist"}</Button>
-              <Link href={`/marketplace/${adId}/apply`} className="cta-gradient ml-auto gap-2 rounded-lg flex items-center justify-center p-2"><Send className="h-4 w-4" /> Send a message (8 Points)</Link>
+              {isCreatorViewingOwnAd ? (
+                <span
+                  className="ml-auto gap-2 rounded-lg flex items-center justify-center p-2 bg-white/10 text-white/50 cursor-not-allowed"
+                  aria-disabled
+                >
+                  <Send className="h-4 w-4" /> Send a message (8 Points)
+                </span>
+              ) : (
+                <Link href={`/marketplace/${adId}/apply`} className="cta-gradient ml-auto gap-2 rounded-lg flex items-center justify-center p-2"><Send className="h-4 w-4" /> Send a message (8 Points)</Link>
+              )}
             </div>
           </div>
         </div>
