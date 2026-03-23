@@ -48,6 +48,46 @@ body {
   display: none; /* Chrome, Safari, Opera */
 }
 
+/* Hide scrollbars by default; reveal on hover/focus for supported browsers */
+.hover-scrollbar {
+  -ms-overflow-style: auto;
+  scrollbar-width: none; /* Firefox */
+}
+
+.hover-scrollbar:hover,
+.hover-scrollbar:focus,
+.hover-scrollbar:focus-within {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgba(217, 217, 217, 0.75) transparent;
+}
+
+.hover-scrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.hover-scrollbar:hover::-webkit-scrollbar,
+.hover-scrollbar:focus::-webkit-scrollbar,
+.hover-scrollbar:focus-within::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.hover-scrollbar::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 9999px;
+}
+
+.hover-scrollbar:hover::-webkit-scrollbar-thumb,
+.hover-scrollbar:focus::-webkit-scrollbar-thumb,
+.hover-scrollbar:focus-within::-webkit-scrollbar-thumb {
+  background: rgba(217, 217, 217, 0.75);
+}
+
+.hover-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 /* Circle Wallet Profile Styles */
 @layer components {
   .btn-primary {

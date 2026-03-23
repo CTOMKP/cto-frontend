@@ -21,7 +21,6 @@ import WalletBalance from './features/WalletBalance';
 import PortfolioSection from './features/PortfolioSection';
 import TransactionHistory from './features/TransactionHistory';
 import WalletsDialog from './features/WalletsDialog';
-import xpService from '@/services/xpService';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -32,7 +31,6 @@ export default function ProfilePage() {
   const [movementWalletAddress, setMovementWalletAddress] = useState<string | null>(null);
   const [copiedAddress, setCopiedAddress] = useState(false);
   const [walletsDialogOpen, setWalletsDialogOpen] = useState(false);
-  const [xpBalance, setXpBalance] = useState<number | null>(null);
 
   useEffect(() => {
     if (ready && !authenticated) {
@@ -152,23 +150,6 @@ export default function ProfilePage() {
     }
   }, [authenticated, user, ready, checkMovementWallet, loadWallets]);
 
-  useEffect(() => {
-    if (!authenticated || !ready) return;
-    let cancelled = false;
-    xpService
-      .me(100)
-      .then((res) => {
-        if (cancelled) return;
-        setXpBalance(res.balance);
-      })
-      .catch(() => {
-        if (!cancelled) setXpBalance(0);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [authenticated, ready]);
-
   // const handleLogout = async () => {
   //   try {
   //     await logout();
@@ -268,11 +249,6 @@ export default function ProfilePage() {
     { name: 'Others', value: 10, color: '#EF4444' },
   ];
 
-  const level = 1;
-  const currentXP = xpBalance ?? 0;
-  const nextLevelXP = 150;
-  const xpProgress = (currentXP / nextLevelXP) * 100;
-
   return (
     <div className="pt-[50px]">
       <div className="2xl:mx-25 lg:mx-12 mx-5">
@@ -296,12 +272,7 @@ export default function ProfilePage() {
               }
             />
 
-            <LevelXPProgress
-              level={level}
-              currentXP={currentXP}
-              nextLevelXP={nextLevelXP}
-              xpProgress={xpProgress}
-            />
+            <LevelXPProgress />
 
             <div className="flex gap-4">
               <ReferralSection />
@@ -311,7 +282,7 @@ export default function ProfilePage() {
 
           {/* Right Column - My Assets */}
           <div className='h-full flex flex-col'>
-            <WalletBalance />
+            <WalletBalance primaryWalletAddress={primaryWalletAddress} />
 
             <PortfolioSection achievementData={achievementData} />
           </div>
