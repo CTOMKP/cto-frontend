@@ -632,7 +632,6 @@ export default function Step1({
                 })()}
 
                 <div className='flex flex-col items-center gap-3'>
-                <div className='flex flex-col items-center gap-3'>
                   {(() => {
                     // Check risk score threshold returned by backend
                     const nestedDetails = scanResult?.details?.details;
@@ -661,7 +660,7 @@ export default function Step1({
                         {!canProceed && (
                           <div className="w-full py-3 px-4 rounded-lg bg-red-500/20 border border-red-500/50">
                             <p className="text-sm text-red-400 text-center font-medium">
-                              ?? Risk score too low. Minimum required: {minRequiredScore}
+                              ⚠️ Risk score too low. Minimum required: {minRequiredScore}
                             </p>
                           </div>
                         )}
