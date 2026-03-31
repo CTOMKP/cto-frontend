@@ -641,12 +641,17 @@ export default function Step1({
                       scanResult?.details?.minimum_required_score ||
                       scanResult?.minimum_required_score ||
                       50;
+                    const backendEligible =
+                      nestedDetails?.eligible ??
+                      scanResult?.details?.eligible ??
+                      scanResult?.eligible ??
+                      false;
                     const provisionalReason =
                       nestedDetails?.provisional_reason ||
                       scanResult?.details?.provisional_reason ||
                       scanResult?.provisional_reason ||
                       null;
-                    const canProceed = riskScore >= minRequiredScore;
+                    const canProceed = backendEligible === true || riskScore >= minRequiredScore;
                     
                     return (
                       <>
