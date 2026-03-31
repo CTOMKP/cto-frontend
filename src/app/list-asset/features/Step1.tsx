@@ -632,18 +632,36 @@ export default function Step1({
                 })()}
 
                 <div className='flex flex-col items-center gap-3'>
+                <div className='flex flex-col items-center gap-3'>
                   {(() => {
-                    // Check risk score (user listings require risk_score >= 50)
+                    // Check risk score threshold returned by backend
                     const nestedDetails = scanResult?.details?.details;
                     const riskScore = nestedDetails?.risk_score || scanResult?.details?.risk_score || scanResult?.risk_score || 0;
-                    const canProceed = riskScore >= 50;
+                    const minRequiredScore =
+                      nestedDetails?.minimum_required_score ||
+                      scanResult?.details?.minimum_required_score ||
+                      scanResult?.minimum_required_score ||
+                      50;
+                    const provisionalReason =
+                      nestedDetails?.provisional_reason ||
+                      scanResult?.details?.provisional_reason ||
+                      scanResult?.provisional_reason ||
+                      null;
+                    const canProceed = riskScore >= minRequiredScore;
                     
                     return (
                       <>
+                        {!!provisionalReason && (
+                          <div className="w-full py-3 px-4 rounded-lg bg-amber-500/20 border border-amber-500/50">
+                            <p className="text-sm text-amber-300 text-center font-medium">
+                              {provisionalReason}
+                            </p>
+                          </div>
+                        )}
                         {!canProceed && (
                           <div className="w-full py-3 px-4 rounded-lg bg-red-500/20 border border-red-500/50">
                             <p className="text-sm text-red-400 text-center font-medium">
-                              ⚠️ Risk score too low. Minimum required: 50
+                              ?? Risk score too low. Minimum required: {minRequiredScore}
                             </p>
                           </div>
                         )}
