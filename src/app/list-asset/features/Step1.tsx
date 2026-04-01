@@ -677,35 +677,39 @@ export default function Step1({
 
                 <div className='flex flex-col items-center gap-3'>
                   {(() => {
+                    // Check risk score threshold returned by backend
                     const nestedDetails = scanResult?.details?.details;
-                    const riskScore = Number(
-                      scanResult?.risk_score ??
-                        nestedDetails?.risk_score ??
-                        scanResult?.details?.risk_score ??
-                        0,
-                    );
-                    const canProceedToNext =
-                      backendEligible === true || riskScore >= minRequiredScore;
-
+                    const riskScore = nestedDetails?.risk_score || scanResult?.details?.risk_score || scanResult?.risk_score || 0;
+                    const minRequiredScore =
+                      nestedDetails?.minimum_required_score ||
+                      scanResult?.details?.minimum_required_score ||
+                      scanResult?.minimum_required_score ||
+                      50;
+                    const backendEligible =
+                      nestedDetails?.eligible ??
+                      scanResult?.details?.eligible ??
+                      scanResult?.eligible ??
+                      false;
+                    const provisionalReason =
+                      nestedDetails?.provisional_reason ||
+                      scanResult?.details?.provisional_reason ||
+                      scanResult?.provisional_reason ||
+                      null;
+                    const canProceed = backendEligible === true || riskScore >= minRequiredScore;
+                    
                     return (
                       <>
-                        {(provisional || provisionalReason || provisionalMissingData.length > 0) && (
+                        {!!provisionalReason && (
                           <div className="w-full py-3 px-4 rounded-lg bg-amber-500/20 border border-amber-500/50">
                             <p className="text-sm text-amber-300 text-center font-medium">
-                              {provisionalReason ||
-                                `This ${scanResult?.tier || "tier"} classification is provisional due to missing data from providers.`}
+                              {provisionalReason}
                             </p>
-                            {provisionalMissingData.length > 0 && (
-                              <p className="text-xs text-amber-200/90 text-center mt-2">
-                                Missing data: {provisionalMissingData.join(", ")}
-                              </p>
-                            )}
                           </div>
                         )}
-                        {!canProceedToNext && (
+                        {!canProceed && (
                           <div className="w-full py-3 px-4 rounded-lg bg-red-500/20 border border-red-500/50">
                             <p className="text-sm text-red-400 text-center font-medium">
-                              Warning: Risk score too low. Minimum required: {minRequiredScore}
+                              ⚠️ Risk score too low. Minimum required: {minRequiredScore}
                             </p>
                           </div>
                         )}
