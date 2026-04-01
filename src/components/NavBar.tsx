@@ -82,6 +82,7 @@ export default function NavBar() {
           <NavDropdownMenu />
         </div>
         <div className="flex items-center gap-10">
+          <Link href="/listings">
           <Image
             loading="lazy"
             src="/nav-bar/logo.svg"
@@ -89,6 +90,7 @@ export default function NavBar() {
             width={188}
             height={51}
           />
+          </Link>
 
           <div className="flex items-center mx-6 mt-3 h-26">
             <NavigationMenu className="text-white">

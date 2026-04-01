@@ -29,6 +29,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import { ApiCoinItem } from "@/types/api";
 import FallbackImage from "@/components/FallbackImage";
 import { formatAgeYMD } from "./utils/listingUtils";
+import { slugify } from "@/lib/utils/slugify";
 
 // Helper function to create shorter address for TrendingCoins
 function shortenAddressForTrending(address: string): string {
@@ -142,9 +143,14 @@ export default function TrendingCoins({
   const [timeframe, setTimeframe] = useState<Timeframe>("1h");
   const router = useRouter();
 
-  const handleRowClick = (address?: string) => {
-    if (!address) return;
-    router.push(`/projectProfile/${address}`);
+  const handleRowClick = (projectName?: string, projectAddress?: string) => {
+    if (!projectName || !projectAddress) return;
+    const slug = slugify(projectName) || projectName;
+    router.push(
+      `/projects/${encodeURIComponent(slug)}?address=${encodeURIComponent(
+        projectAddress,
+      )}`,
+    );
   };
 
   // Function to calculate trending score based on multiple factors
@@ -206,9 +212,7 @@ export default function TrendingCoins({
 
   // Convert API data to the format expected by the component
   const trendingData = useMemo(() => {
-    console.log('TrendingCoins - apiData received:', apiData?.length || 0, 'items');
     if (!apiData || apiData.length === 0) {
-      console.log('TrendingCoins - No apiData, returning empty array');
       return [];
     }
     
@@ -251,8 +255,6 @@ export default function TrendingCoins({
         return bVolume - aVolume;
       })
       .slice(0, 6);
-    
-    console.log('TrendingCoins - Processed coins:', sortedCoins.length);
     
     return sortedCoins.map(({ item, ageStr }) => {
       
@@ -405,7 +407,7 @@ export default function TrendingCoins({
                 <TableRow
                   key={index}
                   className="border-none cursor-pointer"
-                  onClick={() => handleRowClick(data.address)}
+                  onClick={() => handleRowClick(data.name, data.address)}
                 >
                   <TableCell>
                       <div>
@@ -414,7 +416,6 @@ export default function TrendingCoins({
                           onClick={(e) => {
                             e.stopPropagation();
                             // Add your watchlist logic here
-                            console.log('Watchlist clicked for:', data.name);
                           }}
                         >
                           <Image

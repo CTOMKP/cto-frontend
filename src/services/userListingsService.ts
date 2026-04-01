@@ -5,7 +5,6 @@ const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarket
 function authHeaders() {
   const token = localStorage.getItem('cto_auth_token');
   if (!token) {
-    console.warn('⚠️ No auth token found in localStorage');
     return {
       'Content-Type': 'application/json',
     };
@@ -88,6 +87,10 @@ export interface ScanResultDetails {
   risk_level?: string;
   eligible?: boolean;
   summary?: string;
+  minimum_required_score?: number;
+  provisional?: boolean;
+  provisional_reason?: string | null;
+  provisional_missing_data?: string[];
   metadata?: ScanMetadata;
   vetting_results?: ScanMetadata['vetting_results'];
   id?: string;
@@ -103,6 +106,10 @@ export interface ScanResult {
   risk_level?: string;
   eligible: boolean;
   summary?: string;
+  minimum_required_score?: number;
+  provisional?: boolean;
+  provisional_reason?: string | null;
+  provisional_missing_data?: string[];
   metadata?: ScanMetadata;
   // Legacy fields for backward compatibility
   vettingScore?: number;
@@ -211,9 +218,6 @@ export const userListingsService = {
     }
     const errData = res.data?.data ?? res.data;
     const message = errData?.message || res.data?.message || `Request failed with status ${res.status}`;
-    if (res.status === 400 && errData?.message) {
-      console.error('[userListingsService.create] 400 response:', errData);
-    }
     const err = new Error(message) as Error & { response?: { data?: unknown }; status?: number };
     err.response = { data: res.data };
     err.status = res.status;

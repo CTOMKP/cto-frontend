@@ -12,6 +12,7 @@ import { userListingsService } from "@/services/userListingsService";
 import UserListingsTableHeader from "./UserListingsTableHeader";
 import UserListingsTableRow from "./UserListingsTableRow";
 import UserListingsTableSkeleton from "./UserListingsTableSkeleton";
+import { slugify } from "@/lib/utils/slugify";
 
 export default function UserListings() {
   const router = useRouter();
@@ -89,7 +90,6 @@ export default function UserListings() {
 
       setTableData(mapped);
     } catch (error) {
-      console.error("Failed to fetch user listings:", error);
       toast.error("Failed to load listings");
     } finally {
       setLoading(false);
@@ -169,8 +169,13 @@ export default function UserListings() {
     });
   }, [tableData, sortField, sortDirection]);
 
-  const handleProjectClick = (projectAddress: string) => {
-    router.push(`/projectProfile/${projectAddress}`);
+  const handleProjectClick = (projectName: string, projectAddress: string) => {
+    const slug = slugify(projectName) || projectAddress;
+    router.push(
+      `/projects/${encodeURIComponent(slug)}?address=${encodeURIComponent(
+        projectAddress,
+      )}`,
+    );
   };
 
   return (
