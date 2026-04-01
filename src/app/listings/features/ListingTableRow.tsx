@@ -16,14 +16,14 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 
 interface ListingTableRowProps {
   coin: MockLikeCoin;
-  onProjectClick: (address: string) => void;
+  onProjectClick: (projectName: string, projectAddress: string) => void;
 }
 
 export default function ListingTableRow({ coin, onProjectClick }: ListingTableRowProps) {
   return (
     <TableRow
       className="border-none rounded-lg bg-[#FFFFFF]/5 h-13 hover:!bg-[#FFFFFF1A] cursor-pointer"
-      onClick={() => onProjectClick(coin.address)}
+      onClick={() => onProjectClick(coin.name, coin.address)}
     >
       <TableCell>
         <div>
@@ -32,7 +32,6 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
             onClick={(e) => {
               e.stopPropagation();
               // Add your watchlist logic here
-              console.log('Watchlist clicked for:', coin.name);
             }}
           >
             <Image
@@ -226,7 +225,6 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
             onClick={(e) => {
               e.stopPropagation();
               // Add your buy logic here
-              console.log('Buy clicked for:', coin.name);
             }}
           >
             Buy

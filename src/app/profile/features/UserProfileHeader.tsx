@@ -1,11 +1,14 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from "react";
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Edit, LogOut, Check } from 'lucide-react';
 import { X } from 'lucide-react';
+import { Input } from "@/components/ui/input";
+import { toast } from "react-toastify";
+import { authService } from "@/services/authService";
 
 interface UserProfileHeaderProps {
   avatarUrl: string | null;
@@ -28,6 +31,52 @@ export default function UserProfileHeader({
   onWalletsDialogOpenChange,
   walletsDialogContent,
 }: UserProfileHeaderProps) {
+  const initialFallbackName = email?.includes("@") ? email.split("@")[0] : email;
+  const [displayName, setDisplayName] = useState<string>(
+    initialFallbackName || "User",
+  );
+  const [nameEditOpen, setNameEditOpen] = useState(false);
+  const [tempName, setTempName] = useState<string>("");
+  const [isSavingName, setIsSavingName] = useState(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("cto_user_name");
+    const fallback = email?.includes("@") ? email.split("@")[0] : email;
+    setDisplayName(stored || fallback || "User");
+  }, [email]);
+
+  useEffect(() => {
+    if (!nameEditOpen) return;
+    setTempName(displayName);
+  }, [nameEditOpen, displayName]);
+
+  const handleSaveName = async () => {
+    const nextName = tempName.trim();
+    if (nextName.length < 2) {
+      toast.error("Name must be at least 2 characters.");
+      return;
+    }
+
+    setIsSavingName(true);
+    try {
+      const userId =
+        localStorage.getItem("cto_user_id") ||
+        localStorage.getItem("cto_user_email") ||
+        email;
+
+      const updated = await authService.updateUser(userId, { name: nextName });
+      setDisplayName(updated?.name ?? nextName);
+      setNameEditOpen(false);
+      toast.success("Name updated.");
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to update name.";
+      toast.error(message);
+    } finally {
+      setIsSavingName(false);
+    }
+  };
+
   return (
     <div className="flex items-start justify-between mb-4 border-[0.5px] border-white/20 py-5 px-3 rounded-lg bg-[#FFFFFF]/3">
       <div className="flex items-start gap-4">
@@ -53,8 +102,61 @@ export default function UserProfileHeader({
               Username
             </h1>
             <div className="flex items-center gap-1">
-              <h2 className="font-bold text-[32px] ">User234353hgfk</h2>
-              <Edit size={14} />
+              <h2 className="font-bold text-[32px]">{displayName}</h2>
+
+              <Dialog open={nameEditOpen} onOpenChange={setNameEditOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-fit p-0 text-white/70 hover:text-white"
+                    aria-label="Edit name"
+                  >
+                    <Edit size={14} />
+                  </Button>
+                </DialogTrigger>
+
+                <DialogContent className="bg-[#010101] text-white border-2 border-[#86868630] max-w-[520px]">
+                  <DialogHeader className="pb-4 border-b-[0.5px] border-[#FFFFFF20]">
+                    <DialogTitle className="font-bold text-xl">Edit name</DialogTitle>
+                  </DialogHeader>
+
+                  <div className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-white/70" htmlFor="nameInput">
+                        Name
+                      </label>
+                      <Input
+                        id="nameInput"
+                        value={tempName}
+                        onChange={(e) => setTempName(e.target.value)}
+                        autoFocus
+                        disabled={isSavingName}
+                      />
+                    </div>
+
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="border-white/20 text-white/70 hover:bg-white/10"
+                        disabled={isSavingName}
+                        onClick={() => setNameEditOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="button"
+                        className="cta-gradient"
+                        disabled={isSavingName}
+                        onClick={handleSaveName}
+                      >
+                        {isSavingName ? "Saving..." : "Save"}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
             {/* <h2 className="text-2xl font-bold text-white">
                 {email.split('@')[0] || 'User'}

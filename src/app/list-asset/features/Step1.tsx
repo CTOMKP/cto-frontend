@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Check, Ellipsis, Search, X, Zap } from 'lucide-react'
@@ -150,6 +150,68 @@ export default function Step1({
   const router = useRouter();
   const { isAuthenticated } = usePrivyAuth();
 
+  /** Matches cto-test-frontend: backend threshold; 50 only when API omits minimum_required_score */
+  const minRequiredScore =
+    scanResult?.minimum_required_score ??
+    scanResult?.details?.minimum_required_score ??
+    (scanResult?.details?.details as { minimum_required_score?: number } | undefined)
+      ?.minimum_required_score ??
+    50;
+
+  const backendEligible =
+    scanResult?.eligible === true ||
+    scanResult?.details?.eligible === true ||
+    (scanResult?.details?.details as { eligible?: boolean } | undefined)
+      ?.eligible === true;
+
+  const provisional =
+    scanResult?.provisional ??
+    scanResult?.details?.provisional ??
+    false;
+
+  const provisionalReason =
+    scanResult?.provisional_reason ??
+    scanResult?.details?.provisional_reason ??
+    null;
+
+  const provisionalMissingData = useMemo(() => {
+    const fromRoot = scanResult?.provisional_missing_data;
+    if (Array.isArray(fromRoot) && fromRoot.length > 0) return fromRoot;
+
+    const fromDetails = scanResult?.details?.provisional_missing_data;
+    if (Array.isArray(fromDetails) && fromDetails.length > 0) return fromDetails;
+
+    const fromVetting =
+      scanResult?.metadata?.vetting_results?.missingData ??
+      scanResult?.details?.metadata?.vetting_results?.missingData ??
+      scanResult?.details?.details?.metadata?.vetting_results?.missingData;
+    if (Array.isArray(fromVetting) && fromVetting.length > 0) return fromVetting;
+
+    return [];
+  }, [scanResult]);
+
+  const selectedNetworkMeta = useMemo(
+    () =>
+      networks.find(
+        (n) => n.name.toLowerCase() === selectedNetwork.toLowerCase(),
+      ),
+    [networks, selectedNetwork],
+  );
+
+  const placeholderText = useMemo(() => {
+    const n = selectedNetwork.toLowerCase();
+    if (n === "aptos" || n === "movement") {
+      return "Enter Aptos coin type (0x...::module::Coin) or metadata address (0x...)";
+    }
+    if (n === "solana") {
+      return "Enter Solana contract address (base58, 32-44 chars)";
+    }
+    if (n === "bnb" || n === "base" || n === "monad") {
+      return `Enter ${selectedNetwork.toUpperCase()} contract address (0x..., 42 chars)`;
+    }
+    return "Enter contract address";
+  }, [selectedNetwork]);
+
   // Validation function for contract addresses based on chain
   const validateContractAddress = (address: string, network: string): { isValid: boolean | null; message: string } => {
     if (!address.trim()) {
@@ -159,9 +221,14 @@ export default function Step1({
     const trimmedAddress = address.trim();
     const networkLower = network.toLowerCase();
 
+    const aptosCoinTypeRegex =
+      /^0x[a-fA-F0-9]{1,64}::[A-Za-z_][A-Za-z0-9_]*::[A-Za-z_][A-Za-z0-9_]*$/;
+    const aptosHexRegex = /^0x[a-fA-F0-9]{1,64}$/;
+    const solanaPattern = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+    const evmPattern = /^0x[a-fA-F0-9]{40}$/;
+
     // Solana: Base58 encoded, 32-44 characters
     if (networkLower === 'solana') {
-      const solanaPattern = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
       if (solanaPattern.test(trimmedAddress)) {
         return { isValid: true, message: 'This contract is valid. Proceed to scan' };
       } else {
@@ -169,19 +236,17 @@ export default function Step1({
       }
     }
 
-    // Aptos/Movement: Hex format starting with 0x, 66 characters (0x + 64 hex chars)
+    // Aptos/Movement: support coin type (0x...::module::Coin) OR metadata address (0x...)
     if (networkLower === 'aptos' || networkLower === 'movement') {
-      const aptosPattern = /^0x[a-fA-F0-9]{64}$/;
-      if (aptosPattern.test(trimmedAddress)) {
+      if (aptosCoinTypeRegex.test(trimmedAddress) || aptosHexRegex.test(trimmedAddress)) {
         return { isValid: true, message: 'This contract is valid. Proceed to scan' };
       } else {
-        return { isValid: false, message: 'Invalid address format. Please enter a correct Aptos/Movement contract address' };
+        return { isValid: false, message: 'Use Aptos format: 0x...::module::CoinName or 0x... metadata address' };
       }
     }
 
     // BNB (BSC), Base, Monad: EVM format, hex starting with 0x, 42 characters
     if (networkLower === 'bnb' || networkLower === 'base' || networkLower === 'monad') {
-      const evmPattern = /^0x[a-fA-F0-9]{40}$/;
       if (evmPattern.test(trimmedAddress)) {
         return { isValid: true, message: 'This contract is valid. Proceed to scan' };
       } else {
@@ -218,12 +283,18 @@ export default function Step1({
 
   const startScan = async () => {
     if (!contractAddress.trim()) {
-      alert('Please enter a contract address');
+      toast.error('Please enter a contract address');
+      return;
+    }
+
+    const validation = validateContractAddress(contractAddress, selectedNetwork);
+    if (validation.isValid === false) {
+      toast.error(validation.message || 'Invalid contract address format');
       return;
     }
 
     if (!isAuthenticated) {
-      alert('Please login first to scan tokens');
+      toast.error('Please login first to scan tokens');
       return;
     }
 
@@ -247,10 +318,7 @@ export default function Step1({
       // Convert selectedNetwork to uppercase chain format (e.g., "aptos" -> "APTOS", "solana" -> "SOLANA")
       const chain = selectedNetwork.toUpperCase();
       
-      const scanResult = await userListingsService.scan(
-        contractAddress.trim(),
-        chain
-      );
+      const scanResult = await userListingsService.scan(contractAddress.trim(), chain);
       
       // Store scan result for use in payment dialog
       setScanResult(scanResult);
@@ -259,32 +327,6 @@ export default function Step1({
         onScanResultChange(scanResult);
       }
       
-      // Log the scan result data in a copyable format
-      console.log('📊 ========== SCAN RESULT DATA (COPY BELOW) ==========');
-      console.log(JSON.stringify(scanResult, null, 2));
-      console.log('📊 ========== END SCAN RESULT DATA ==========');
-      
-      // Also log in a more readable format
-      console.log('📊 Scan Result Summary:', {
-        success: scanResult.success,
-        risk_score: scanResult.risk_score,
-        tier: scanResult.tier,
-        eligible: scanResult.eligible,
-        summary: scanResult.summary,
-        hasMetadata: !!scanResult.metadata,
-        hasDetails: !!scanResult.details,
-        detailsTier: scanResult.details?.tier,
-        detailsRiskScore: scanResult.details?.risk_score,
-        detailsMetadata: scanResult.details?.metadata ? {
-          token_name: scanResult.details.metadata.token_name,
-          token_symbol: scanResult.details.metadata.token_symbol,
-          project_age_days: scanResult.details.metadata.project_age_days,
-          lp_amount_usd: scanResult.details.metadata.lp_amount_usd,
-          market_cap: scanResult.details.metadata.market_cap,
-          volume_24h: scanResult.details.metadata.volume_24h,
-        } : null,
-      });
-      
       // Complete progress animation
       setProgress(100);
       setTimeout(() => {
@@ -292,8 +334,6 @@ export default function Step1({
       }, 500);
 
     } catch (error) {
-      console.error('Scan failed:', error);
-
       // On 401, clear session and redirect (match cto-test-frontend)
       const is401 = axios.isAxiosError(error) && error.response?.status === 401;
       const isUnauthorized = error instanceof Error && error.message === 'Unauthorized';
@@ -312,7 +352,7 @@ export default function Step1({
       }
 
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      alert(`Scan failed: ${errorMessage}. Please try again.`);
+      toast.error(`Scan failed: ${errorMessage}. Please try again.`);
 
       setProgress(0);
       setScanComplete(false);
@@ -331,7 +371,7 @@ export default function Step1({
       <Select
         defaultOpen={networkDialogueOpen}
         onOpenChange={(open) => setNetworkDialogueOpen(open)}
-        defaultValue={selectedNetwork}
+        value={selectedNetwork}
         onValueChange={(value) => {
           setSelectedNetwork(value);
           // Re-validate address when network changes
@@ -342,20 +382,24 @@ export default function Step1({
         }}
       >
         <SelectTrigger className="w-full mt-6 h-10 rounded-lg border-[0.2px] border-[#FFFFFF20]">
-          <div className="w-full items-center pr-4 flex justify-between">
-            <span className="font-medium">Select Network</span>
-            <div className="flex gap-1 ml-1">
-              {networks.map((network, index) => (
-                <div key={index} className="size-[24px] -m-1.5">
+          <div className="w-full flex items-center justify-between gap-2 pr-1 min-w-0">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              {selectedNetworkMeta ? (
+                <>
                   <Image
-                    src={network.src}
-                    alt={`${network.name}-img`}
-                    className="w-full h-full rounded-full border-[0.3px] border-[#FFFFFF]"
+                    src={selectedNetworkMeta.src}
+                    alt=""
+                    className="size-6 shrink-0 rounded-full border-[0.3px] border-[#FFFFFF]"
                     width={24}
                     height={24}
                   />
-                </div>
-              ))}
+                  <span className="font-medium truncate text-left">
+                    {selectedNetworkMeta.name}
+                  </span>
+                </>
+              ) : (
+                <span className="font-medium text-white/60">Select network</span>
+              )}
             </div>
           </div>
         </SelectTrigger>
@@ -395,7 +439,7 @@ export default function Step1({
       <div className="mt-4">
         <div className="relative flex items-center">
           <Input
-            placeholder="Enter Contract address (32-44 characters)"
+            placeholder={placeholderText}
             className={`border-[0.2px] h-12 py-3 px-2 pr-12 bg-white/5 rounded-lg text-white placeholder:text-white/50 ${
               addressValidation.isValid === true
                 ? 'border-[#16C784]'
@@ -633,17 +677,35 @@ export default function Step1({
 
                 <div className='flex flex-col items-center gap-3'>
                   {(() => {
-                    // Check risk score (user listings require risk_score >= 50)
                     const nestedDetails = scanResult?.details?.details;
-                    const riskScore = nestedDetails?.risk_score || scanResult?.details?.risk_score || scanResult?.risk_score || 0;
-                    const canProceed = riskScore >= 50;
-                    
+                    const riskScore = Number(
+                      scanResult?.risk_score ??
+                        nestedDetails?.risk_score ??
+                        scanResult?.details?.risk_score ??
+                        0,
+                    );
+                    const canProceedToNext =
+                      backendEligible === true || riskScore >= minRequiredScore;
+
                     return (
                       <>
-                        {!canProceed && (
+                        {(provisional || provisionalReason || provisionalMissingData.length > 0) && (
+                          <div className="w-full py-3 px-4 rounded-lg bg-amber-500/20 border border-amber-500/50">
+                            <p className="text-sm text-amber-300 text-center font-medium">
+                              {provisionalReason ||
+                                `This ${scanResult?.tier || "tier"} classification is provisional due to missing data from providers.`}
+                            </p>
+                            {provisionalMissingData.length > 0 && (
+                              <p className="text-xs text-amber-200/90 text-center mt-2">
+                                Missing data: {provisionalMissingData.join(", ")}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        {!canProceedToNext && (
                           <div className="w-full py-3 px-4 rounded-lg bg-red-500/20 border border-red-500/50">
                             <p className="text-sm text-red-400 text-center font-medium">
-                              ⚠️ Risk score too low. Minimum required: 50
+                              Warning: Risk score too low. Minimum required: {minRequiredScore}
                             </p>
                           </div>
                         )}
@@ -651,7 +713,7 @@ export default function Step1({
                           onClick={() => {
                             setCurrentStep(2);
                           }}
-                          disabled={!canProceed}
+                          disabled={!canProceedToNext}
                           className="w-[155px] bg-gradient-to-r from-[#FF0075] via-[#FF4A15] to-[#FFCB45] rounded-lg h-9 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           List

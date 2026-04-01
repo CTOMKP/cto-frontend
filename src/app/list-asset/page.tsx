@@ -83,6 +83,50 @@ const getStarted = [
 
 const DRAFT_KEY = 'cto_draft_listing_id';
 
+function getScanRiskScore(scan: ScanResult | null): number {
+  if (!scan) return 0;
+  const nested = scan.details?.details;
+  return Number(
+    scan.risk_score ??
+      nested?.risk_score ??
+      scan.details?.risk_score ??
+      scan.vettingScore ??
+      0
+  );
+}
+
+function getBackendEligible(scan: ScanResult | null): boolean {
+  if (!scan) return false;
+  const nested = scan.details?.details as { eligible?: boolean } | undefined;
+  return (
+    scan.eligible === true ||
+    scan.details?.eligible === true ||
+    nested?.eligible === true
+  );
+}
+
+function getMinRequiredScore(scan: ScanResult | null): number {
+  if (!scan) return 50;
+  const nested = scan.details?.details as
+    | { minimum_required_score?: number }
+    | undefined;
+  return (
+    scan.minimum_required_score ??
+    scan.details?.minimum_required_score ??
+    nested?.minimum_required_score ??
+    50
+  );
+}
+
+/** Match cto-test-frontend: eligible bypasses risk threshold; else risk_score >= minimum_required_score (fallback 50). */
+function canProceedWithScan(scan: ScanResult | null): boolean {
+  if (!scan) return false;
+  const riskScore = getScanRiskScore(scan);
+  const minRequired = getMinRequiredScore(scan);
+  const backendEligible = getBackendEligible(scan);
+  return backendEligible === true || riskScore >= minRequired;
+}
+
 export default function ListingApplication() {
   const [selectedNetwork, setSelectedNetwork] = useState<string>("solana");
 
@@ -111,6 +155,27 @@ export default function ListingApplication() {
     telegram: '',
     discord: '',
   });
+
+  const goToStep = useCallback(
+    (step: number) => {
+      if (step === 1) {
+        setCurrentStep(1);
+        return;
+      }
+      if (!scanResult) {
+        toast.error("Complete step 1 (scan your token) first.");
+        return;
+      }
+      if (!canProceedWithScan(scanResult)) {
+        toast.error(
+          "Listing requires backend eligibility or a risk score at or above the minimum for this scan."
+        );
+        return;
+      }
+      setCurrentStep(step);
+    },
+    [scanResult]
+  );
 
   const getDraftId = useCallback(() => draftId || (typeof window !== 'undefined' ? localStorage.getItem(DRAFT_KEY) : null), [draftId]);
 
@@ -150,10 +215,9 @@ export default function ListingApplication() {
     // Do not create draft from image upload path — only when user clicks Continue
     if (!createIfMissing) return null;
     if (!scanResult || !contractAddress) return null;
-    // Only create draft when token is eligible (match cto-test-frontend)
-    if (!scanResult.success || !scanResult.eligible) return null;
+    if (!canProceedWithScan(scanResult)) return null;
     const tier = scanResult.details?.tier || scanResult.tier || scanResult.vettingTier || 'UNQUALIFIED';
-    const riskScore = Number(scanResult.details?.risk_score ?? scanResult.risk_score ?? scanResult.vettingScore ?? 0);
+    const riskScore = getScanRiskScore(scanResult);
     const title = (payload.title ?? (scanResult.metadata?.token_name as string) ?? 'Untitled').trim() || 'Untitled';
     const description = (payload.description ?? '').trim() || ' ';
     const rawBio = (payload.bio ?? bio)?.trim();
@@ -253,18 +317,28 @@ export default function ListingApplication() {
 
   const handleStep2Continue = useCallback(async () => {
     try {
-      if (scanResult?.eligible) {
-        // Draft is created only here (on Continue), not when uploading images
-        await ensureDraftExists({ bio, logoUrl: logoUrl || undefined, bannerUrl: bannerUrl || undefined, links }, { createIfMissing: true });
-      } else {
-        toast.info('You can continue, but saving/publishing requires a higher vetting score.');
+      if (!canProceedWithScan(scanResult)) {
+        toast.error(
+          "Listing requires backend eligibility or a risk score at or above the minimum for this scan."
+        );
+        return;
       }
+      // Draft is created only here (on Continue), not when uploading images
+      await ensureDraftExists(
+        {
+          bio,
+          logoUrl: logoUrl || undefined,
+          bannerUrl: bannerUrl || undefined,
+          links,
+        },
+        { createIfMissing: true }
+      );
       setCurrentStep(3);
     } catch (err: unknown) {
       const msg = (err as Error)?.message ?? 'Failed to save draft';
       toast.error(msg);
     }
-  }, [ensureDraftExists, scanResult?.eligible, bio, logoUrl, bannerUrl, links]);
+  }, [ensureDraftExists, scanResult, bio, logoUrl, bannerUrl, links]);
 
   return (
     <div>
@@ -282,7 +356,7 @@ export default function ListingApplication() {
             </span>
             <span className="bg-white/30 w-6 h-[1px]"></span>
             <span
-              onClick={() => setCurrentStep(2)}
+              onClick={() => goToStep(2)}
               className={`size-5 rounded-full font-bold text-[10.5px] flex justify-center items-center ${currentStep === 2
                   ? "text-white bg-white/10"
                   : "text-white/30 bg-white/5"
@@ -292,7 +366,7 @@ export default function ListingApplication() {
             </span>
             <span className="bg-white/30 w-6 h-[1px]"></span>
             <span
-              onClick={() => setCurrentStep(3)}
+              onClick={() => goToStep(3)}
               className={`size-5 rounded-full font-bold text-[10.5px] flex justify-center items-center ${currentStep === 3
                   ? "text-white bg-white/10"
                   : "text-white/30 bg-white/5"
@@ -327,7 +401,7 @@ export default function ListingApplication() {
                 width={16}
                 height={16}
               />{" "}
-              Seed
+              Sprout
             </span>
             <span className="rounded-lg p-1.5 font-bold text-[#15FF00] bg-[#15FF00]/20 flex items-center gap-2.5">
               <Image
@@ -336,7 +410,7 @@ export default function ListingApplication() {
                 width={16}
                 height={16}
               />{" "}
-              Seed
+              Bloom
             </span>
             <span className="rounded-lg p-1.5 font-bold text-[#FFBB00] bg-[#FFBB00]/20 flex items-center gap-2.5">
               <Image
@@ -345,7 +419,7 @@ export default function ListingApplication() {
                 width={16}
                 height={16}
               />{" "}
-              Seed
+              Stellar
             </span>
           </div>
 

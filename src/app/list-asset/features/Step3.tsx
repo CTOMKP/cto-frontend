@@ -54,6 +54,31 @@ export default function Step3({
       return;
     }
 
+    const nested = scanResult.details?.details as
+      | { risk_score?: number; eligible?: boolean; minimum_required_score?: number }
+      | undefined;
+    const riskScore = Number(
+      scanResult.risk_score ??
+        nested?.risk_score ??
+        scanResult.details?.risk_score ??
+        0,
+    );
+    const minRequired =
+      scanResult.minimum_required_score ??
+      scanResult.details?.minimum_required_score ??
+      nested?.minimum_required_score ??
+      50;
+    const backendEligible =
+      scanResult.eligible === true ||
+      scanResult.details?.eligible === true ||
+      nested?.eligible === true;
+    if (!backendEligible && riskScore < minRequired) {
+      toast.error(
+        `Listing requires eligibility or a risk score of at least ${minRequired}.`,
+      );
+      return;
+    }
+
     setIsCreatingListing(true);
 
     try {
@@ -101,7 +126,6 @@ export default function Step3({
         toast.success('Listing created! Proceed to payment.');
       }
     } catch (error) {
-      console.error('Failed to save listing:', error);
       let errorMsg = 'Failed to save listing';
       if (error instanceof Error) {
         errorMsg = error.message || errorMsg;

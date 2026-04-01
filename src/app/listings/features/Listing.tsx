@@ -20,6 +20,7 @@ import ListingTableHeader from "./ListingTableHeader";
 import ListingTableRow from "./ListingTableRow";
 import ListingFilters from "./ListingFilters";
 import ListingPagination from "./ListingPagination";
+import { slugify } from "@/lib/utils/slugify";
 
 
 export default function TopListings() {
@@ -69,7 +70,6 @@ export default function TopListings() {
         const res = await fetch(url, { signal });
         if (signal.aborted) return;
         if (!res.ok) {
-          console.error('Failed to fetch listings:', res.status, res.statusText);
           return;
         }
         const response = await res.json();
@@ -152,7 +152,6 @@ export default function TopListings() {
         setLiveItems(mapped);
       } catch (e) {
         if (signal.aborted) return;
-        console.log(e);
       } finally {
         if (!signal.aborted) setIsLoading(false);
       }
@@ -294,8 +293,13 @@ export default function TopListings() {
 
   const filteredData = listings[category];
 
-  const handleProjectClick = (projectAddress: string) => {
-    router.push(`/projectProfile/${projectAddress}`);
+  const handleProjectClick = (projectName: string, projectAddress: string) => {
+    const slug = slugify(projectName) || projectAddress;
+    router.push(
+      `/projects/${encodeURIComponent(slug)}?address=${encodeURIComponent(
+        projectAddress,
+      )}`,
+    );
   };
 
   const handleFilterChange = (filteredItems: ApiCoinItem[]) => {

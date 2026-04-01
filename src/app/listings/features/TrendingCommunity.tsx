@@ -18,6 +18,7 @@ import { ApiCoinItem } from "@/types/api";
 import { useRouter } from "next/navigation";
 import FallbackImage from "@/components/FallbackImage";
 import { formatAgeYMD } from "./utils/listingUtils";
+import { slugify } from "@/lib/utils/slugify";
 
 // Helper function to create shorter address for TrendingCommunity
 function shortenAddressForTrending(address: string): string {
@@ -99,16 +100,19 @@ export default function TrendingCommunity({
 }) {
   const router = useRouter();
 
-  const handleRowClick = (address?: string) => {
-    if (!address) return;
-    router.push(`/projectProfile/${address}`);
+  const handleRowClick = (projectName?: string, projectAddress?: string) => {
+    if (!projectName || !projectAddress) return;
+    const slug = slugify(projectName) || projectName;
+    router.push(
+      `/projects/${encodeURIComponent(slug)}?address=${encodeURIComponent(
+        projectAddress,
+      )}`,
+    );
   };
 
   // Convert API data to the format expected by the component
   const communityData = useMemo(() => {
-    console.log('TrendingCommunity - apiData received:', apiData?.length || 0, 'items');
     if (!apiData || apiData.length === 0) {
-      console.log('TrendingCommunity - No apiData, returning empty array');
       return [];
     }
     
@@ -151,8 +155,6 @@ export default function TrendingCommunity({
         return bVolume - aVolume;
       })
       .slice(0, 6);
-    
-    console.log('TrendingCommunity - Processed coins:', sortedCoins.length);
     
     return sortedCoins.map(({ item, communityScore }) => {
       // Use backend-provided age (actual token age) or fallback to calculating from createdAt
@@ -268,7 +270,7 @@ export default function TrendingCommunity({
                 <TableRow
                   key={index}
                   className="border-none cursor-pointer"
-                  onClick={() => handleRowClick(data.address)}
+                  onClick={() => handleRowClick(data.name, data.address)}
                 >
                   <TableCell className="!py-1">
                     <div className="flex items-center gap-1">

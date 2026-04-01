@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { ApiCoinItem } from "@/types/api";
 import { Info } from "./features/ProjectProfileInfoTabs";
 import LoadingSkeleton from "./features/LoadingSkeleton";
@@ -16,6 +16,8 @@ import { formatAgeYMD } from "@/app/listings/features/utils/listingUtils";
 export default function ProjectProfilePage() {
   const [info, setInfo] = useState<Info>("about");
   const { id } = useParams();
+  const searchParams = useSearchParams();
+  const addressFromQuery = searchParams.get("address");
   const [projectData, setProjectData] = useState<ApiCoinItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -48,16 +50,22 @@ export default function ProjectProfilePage() {
   // Fetch project data from API
   useEffect(() => {
     const fetchProjectData = async () => {
-      if (!id) return;
+      const idParam = Array.isArray(id) ? id[0] : id;
+      const fetchId = addressFromQuery || idParam;
+      if (!fetchId) return;
       
       setIsLoading(true);
       const base = process.env.NEXT_PUBLIC_BACKEND_URL;
-      const url = `${base}/api/v1/listing/${id}`;
+      if (!base) {
+        setIsLoading(false);
+        return;
+      }
+
+      const url = `${base}/api/v1/listing/${fetchId}`;
       
       try {
         const res = await fetch(url);
         if (!res.ok) {
-          console.error('Failed to fetch project data');
           setIsLoading(false);
           return;
         }
@@ -66,20 +74,15 @@ export default function ProjectProfilePage() {
         // Handle wrapped response from TransformInterceptor
         const data: ApiCoinItem = response?.data || response;
         
-        // Log in a copyable JSON format
-        console.log("=== ApiCoinItem Full Structure (Copy this) ===");
-        console.log(JSON.stringify(data, null, 2));
-        console.log("=== End of ApiCoinItem ===");
         setProjectData(data);
         setIsLoading(false);
       } catch (error) {
-        console.error('Error fetching project data:', error);
         setIsLoading(false);
       }
     };
 
     fetchProjectData();
-  }, [id]);
+  }, [id, addressFromQuery]);
 
   if (isLoading) {
     return <LoadingSkeleton />;
