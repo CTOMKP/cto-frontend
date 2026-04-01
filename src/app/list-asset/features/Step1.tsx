@@ -717,7 +717,7 @@ export default function Step1({
                           onClick={() => {
                             setCurrentStep(2);
                           }}
-                          disabled={!canProceedToNext}
+                          disabled={!canProceed}
                           className="w-[155px] bg-gradient-to-r from-[#FF0075] via-[#FF4A15] to-[#FFCB45] rounded-lg h-9 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           List
