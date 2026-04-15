@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { X, Check } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "./ui/button";
 import Image from "next/image";
 import { io, type Socket } from "socket.io-client";
@@ -27,6 +28,7 @@ export type NotificationItem = {
 const getBackendUrl = () => process.env.NEXT_PUBLIC_BACKEND_URL;
 
 export default function Notifications() {
+  const router = useRouter();
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<Filter>("all");
   const [items, setItems] = useState<NotificationItem[]>([]);
@@ -36,6 +38,64 @@ export default function Notifications() {
   );
 
   const filters: Filter[] = ["all", "unread"];
+
+  const parseData = (data: unknown) => {
+    if (!data) return null;
+    if (typeof data === "object") return data as Record<string, unknown>;
+    if (typeof data === "string") {
+      try {
+        return JSON.parse(data) as Record<string, unknown>;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  };
+
+  const getNotificationRoute = (n: NotificationItem): string | null => {
+    const data = parseData(n.data);
+
+    if (typeof data?.redirectPath === "string" && data.redirectPath.startsWith("/")) {
+      return data.redirectPath;
+    }
+
+    if (n.type === "LISTING_APPROVAL" && typeof data?.listingId === "string") {
+      const isRejected =
+        data?.status === "REJECTED" ||
+        data?.action === "VIEW_REJECTED_LISTING" ||
+        typeof data?.reason === "string" ||
+        /rejected/i.test(String(n.title || ""));
+
+      if (isRejected) {
+        return `/user-listings/${data.listingId}`;
+      }
+      return `/user-listings/${data.listingId}/live`;
+    }
+
+    if (n.type === "AD_APPROVAL" && typeof data?.adId === "string") {
+      return `/marketplace/${data.adId}`;
+    }
+
+    return null;
+  };
+
+  const notificationSubtitle = (n: NotificationItem): string | null => {
+    if (n.body) return n.body;
+    const data = parseData(n.data);
+
+    if (n.type === "LISTING_APPROVAL") {
+      const isRejected =
+        data?.status === "REJECTED" ||
+        data?.action === "VIEW_REJECTED_LISTING" ||
+        typeof data?.reason === "string" ||
+        /rejected/i.test(String(n.title || ""));
+      return isRejected
+        ? "Click to view rejection feedback."
+        : "Click to view your listing status page.";
+    }
+
+    return null;
+  };
 
   const loadNotifications = useCallback(async () => {
     try {
@@ -127,6 +187,14 @@ export default function Notifications() {
         ),
       );
       setUnreadCount((prev) => (prev > 0 ? prev - 1 : 0));
+
+      const route = getNotificationRoute(n);
+      if (route) {
+        setDropdownOpen(false);
+        router.push(route);
+        return;
+      }
+
       const message = [n.title, n.body].filter(Boolean).join("\n\n");
       if (message) alert(message);
     } catch {
@@ -235,8 +303,8 @@ export default function Notifications() {
                   }`}
                 >
                   <div className="text-sm font-medium">{n.title ?? "Notification"}</div>
-                  {n.body && (
-                    <div className="text-xs text-[#FFFFFFB2] mt-0.5">{n.body}</div>
+                  {notificationSubtitle(n) && (
+                    <div className="text-xs text-[#FFFFFFB2] mt-0.5">{notificationSubtitle(n)}</div>
                   )}
                 </button>
               ))}
