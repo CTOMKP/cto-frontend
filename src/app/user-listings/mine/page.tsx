@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import userListingsService from "@/services/userListingsService";
+import { userListingsService } from "@/services/userListingsService";
 
 type ListingItem = {
   id: string;
