@@ -9,6 +9,7 @@ import { X } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { toast } from "react-toastify";
 import { authService } from "@/services/authService";
+import { usePrivyAuth } from "@/hooks/usePrivyAuth";
 
 interface UserProfileHeaderProps {
   avatarUrl: string | null;
@@ -31,19 +32,15 @@ export default function UserProfileHeader({
   onWalletsDialogOpenChange,
   walletsDialogContent,
 }: UserProfileHeaderProps) {
-  const initialFallbackName = email?.includes("@") ? email.split("@")[0] : email;
-  const [displayName, setDisplayName] = useState<string>(
-    initialFallbackName || "User",
-  );
   const [nameEditOpen, setNameEditOpen] = useState(false);
   const [tempName, setTempName] = useState<string>("");
   const [isSavingName, setIsSavingName] = useState(false);
 
-  useEffect(() => {
-    const stored = localStorage.getItem("cto_user_name");
-    const fallback = email?.includes("@") ? email.split("@")[0] : email;
-    setDisplayName(stored || fallback || "User");
-  }, [email]);
+  const fallbackName = email?.includes("@") ? email.split("@")[0] : email;
+
+  const { userData, setUserData } = usePrivyAuth();
+
+const displayName = userData?.name ||fallbackName || "User";
 
   useEffect(() => {
     if (!nameEditOpen) return;
@@ -65,7 +62,12 @@ export default function UserProfileHeader({
         email;
 
       const updated = await authService.updateUser(userId, { name: nextName });
-      setDisplayName(updated?.name ?? nextName);
+      const finalName = updated?.name ?? nextName;
+      localStorage.setItem("cto_user_name", finalName);
+      setUserData((prev) => ({
+        ...prev,
+        name: finalName,
+      }));
       setNameEditOpen(false);
       toast.success("Name updated.");
     } catch (err) {

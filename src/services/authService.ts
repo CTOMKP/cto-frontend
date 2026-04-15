@@ -41,37 +41,37 @@ class AuthService {
     localStorage.removeItem('cto_auth_token');
   }
 
-  private async fetchProfile(): Promise<User | null> {
+  async fetchProfile(): Promise<User | null> {
     try {
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'https://api.ctomarketplace.com';
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
       const response = await axios.get(
         `${backendUrl}/api/v1/auth/profile`,
         { headers: this.getHeaders() }
       );
 
       const profile = response.data;
-      if (!profile?.email) return null;
+      if (!profile?.data?.email) return null;
 
-      if (profile.id) localStorage.setItem('cto_user_id', String(profile.id));
-      localStorage.setItem('cto_user_email', profile.email);
-      if (profile.name) {
-        localStorage.setItem('cto_user_name', profile.name);
-      } else if (Object.prototype.hasOwnProperty.call(profile, 'name')) {
+      if (profile.data.id) localStorage.setItem('cto_user_id', String(profile.data.id));
+      localStorage.setItem('cto_user_email', profile.data.email);
+      if (profile.data.name) {
+        localStorage.setItem('cto_user_name', profile.data.name);
+      } else if (Object.prototype.hasOwnProperty.call(profile.data, 'name')) {
         localStorage.removeItem('cto_user_name');
       }
-      if (profile.createdAt) {
-        localStorage.setItem('cto_user_created', profile.createdAt);
+      if (profile.data.createdAt) {
+        localStorage.setItem('cto_user_created', profile.data.createdAt);
       }
-      if (profile.walletId) {
-        localStorage.setItem('cto_wallet_id', profile.walletId);
+      if (profile.data.walletId) {
+        localStorage.setItem('cto_wallet_id', profile.data.walletId);
       }
-      if (profile.avatarUrl) {
-        localStorage.setItem('cto_user_avatar_url', profile.avatarUrl);
-        localStorage.setItem('profile_avatar_url', profile.avatarUrl);
+      if (profile.data.avatarUrl) {
+        localStorage.setItem('cto_user_avatar_url', profile.data.avatarUrl);
+        localStorage.setItem('profile_avatar_url', profile.data.avatarUrl);
       }
-      persistRewardData(profile);
+      persistRewardData(profile.data);
 
-      return profile;
+      return profile.data;
     } catch (error) {
       return null;
     }
@@ -79,7 +79,7 @@ class AuthService {
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'https://api.ctomarketplace.com';
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
       
       // Use the simple login endpoint
       const response = await axios.post(
@@ -150,7 +150,7 @@ class AuthService {
   async signup(credentials: SignUpCredentials): Promise<AuthResponse> {
     try {
       // Use our Circle backend for user creation
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'https://api.ctomarketplace.com';
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
       
       const response = await axios.post(
         `${backendUrl}/api/circle/users`,
@@ -239,7 +239,7 @@ class AuthService {
 
   async updateUser(userId: string, updates: Partial<User>): Promise<User> {
     try {
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'https://api.ctomarketplace.com';
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
       const response = await axios.put(
         `${backendUrl}/api/v1/auth/users/me`,
         updates,
@@ -265,7 +265,7 @@ class AuthService {
 
   async forgotPassword(userId: string, newPassword: string): Promise<void> {
     try {
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'https://api.ctomarketplace.com';
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
       
       const response = await axios.post(
         `${backendUrl}/api/circle/users/forgot-password`,
@@ -287,7 +287,7 @@ class AuthService {
 
   async refreshToken(): Promise<{ access_token: string; expires_in: number }> {
     try {
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'https://api.ctomarketplace.com';
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
       const currentToken = this.getToken();
       
       if (!currentToken) {
