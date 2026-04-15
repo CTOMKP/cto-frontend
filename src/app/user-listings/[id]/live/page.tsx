@@ -4,7 +4,7 @@ import Link from "next/link";
 import { CheckCircle2, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import userListingsService from "@/services/userListingsService";
+import { userListingsService } from "@/services/userListingsService";
 
 type ListingLike = {
   id: string;
