@@ -59,7 +59,11 @@ export default function Notifications() {
       return data.redirectPath;
     }
 
-    if (n.type === "LISTING_APPROVAL" && typeof data?.listingId === "string") {
+    if (
+      n.type === "LISTING_APPROVAL" &&
+      (typeof data?.listingId === "string" || typeof data?.listingId === "number")
+    ) {
+      const listingId = String(data.listingId);
       const isRejected =
         data?.status === "REJECTED" ||
         data?.action === "VIEW_REJECTED_LISTING" ||
@@ -67,13 +71,16 @@ export default function Notifications() {
         /rejected/i.test(String(n.title || ""));
 
       if (isRejected) {
-        return `/user-listings/${data.listingId}`;
+        return `/user-listings/${listingId}`;
       }
-      return `/user-listings/${data.listingId}/live`;
+      return `/user-listings/${listingId}/live`;
     }
 
-    if (n.type === "AD_APPROVAL" && typeof data?.adId === "string") {
-      return `/marketplace/${data.adId}`;
+    if (
+      n.type === "AD_APPROVAL" &&
+      (typeof data?.adId === "string" || typeof data?.adId === "number")
+    ) {
+      return `/marketplace/${String(data.adId)}`;
     }
 
     return null;
@@ -91,7 +98,7 @@ export default function Notifications() {
         /rejected/i.test(String(n.title || ""));
       return isRejected
         ? "Click to view rejection feedback."
-        : "Click to view your listing status page.";
+        : "Click to view your approved listing.";
     }
 
     return null;
