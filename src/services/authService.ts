@@ -3,6 +3,7 @@ import { LoginCredentials, SignUpCredentials, AuthResponse, User } from '../type
 import { API_ENDPOINTS } from '../utils/constants';
 import { handleApiError } from '../utils/helpers';
 import { clearRewardData, getStoredRewardData, persistRewardData } from '../utils/rewardStorage';
+import { AUTH_TOKEN_KEY } from '@/lib/authSession';
 
 class AuthService {
   private baseUrl: string;
@@ -30,15 +31,15 @@ class AuthService {
   }
 
   private getToken(): string | null {
-    return localStorage.getItem('cto_auth_token');
+    return localStorage.getItem(AUTH_TOKEN_KEY);
   }
 
   private setToken(token: string): void {
-    localStorage.setItem('cto_auth_token', token);
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
   }
 
   private removeToken(): void {
-    localStorage.removeItem('cto_auth_token');
+    localStorage.removeItem(AUTH_TOKEN_KEY);
   }
 
   async fetchProfile(): Promise<User | null> {

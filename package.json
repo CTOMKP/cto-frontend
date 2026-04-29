@@ -12,6 +12,7 @@
     "dev:full": "concurrently \"npm run server:dev\" \"npm run dev\""
   },
   "dependencies": {
+    "@aptos-labs/ts-sdk": "^1.39.0",
     "@panoraexchange/widget-sdk": "^1.0.13",
     "@privy-io/react-auth": "^3.3.0",
     "@radix-ui/react-accordion": "^1.2.12",
@@ -26,6 +27,7 @@
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@react-oauth/google": "^0.12.2",
+    "@tanstack/react-query": "^5.100.6",
     "axios": "^1.7.9",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
