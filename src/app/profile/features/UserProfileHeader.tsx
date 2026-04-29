@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -11,6 +12,7 @@ import { toast } from "react-toastify";
 import { authService } from "@/services/authService";
 import { getUserEmail, getUserId, USER_NAME_KEY } from "@/lib/authSession";
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
+import { profileKeys } from "@/lib/queryKeys";
 
 interface UserProfileHeaderProps {
   avatarUrl: string | null;
@@ -40,8 +42,9 @@ export default function UserProfileHeader({
   const fallbackName = email?.includes("@") ? email.split("@")[0] : email;
 
   const { userData, setUserData } = usePrivyAuth();
+  const queryClient = useQueryClient();
 
-const displayName = userData?.name ||fallbackName || "User";
+  const displayName = userData?.name || fallbackName || "User";
 
   useEffect(() => {
     if (!nameEditOpen) return;
@@ -62,6 +65,7 @@ const displayName = userData?.name ||fallbackName || "User";
       const updated = await authService.updateUser(userId, { name: nextName });
       const finalName = updated?.name ?? nextName;
       localStorage.setItem(USER_NAME_KEY, finalName);
+      await queryClient.invalidateQueries({ queryKey: profileKeys.all });
       setUserData((prev) => ({
         ...prev,
         name: finalName,

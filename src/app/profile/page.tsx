@@ -14,6 +14,7 @@ interface WalletWithMovement extends BackendWallet {
 }
 
 import { getAuthToken, getStoredAvatarUrl, getUserId } from '@/lib/authSession';
+import { useProfileQuery } from '@/hooks/useProfileQuery';
 import { getWalletsKey } from '@/utils/localStorage';
 import UserProfileHeader from './features/UserProfileHeader';
 import LevelXPProgress from './features/LevelXPProgress';
@@ -27,6 +28,7 @@ import WalletsDialog from './features/WalletsDialog';
 export default function ProfilePage() {
   const router = useRouter();
   const { user, authenticated, ready } = usePrivy();
+  const profileQuery = useProfileQuery({ enabled: !!(ready && authenticated) });
   // Keep allWallets for potential future use (displaying all wallets)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [allWallets, setAllWallets] = useState<BackendWallet[]>([]);
@@ -256,6 +258,18 @@ export default function ProfilePage() {
   return (
     <div className="pt-[50px]">
       <div className="2xl:mx-25 lg:mx-12 mx-5">
+        {profileQuery.isError && (
+          <div className="mb-4 rounded-lg border border-red-500/35 bg-red-500/10 px-4 py-3 text-sm text-red-200 flex flex-wrap items-center justify-between gap-2">
+            <span>{profileQuery.error instanceof Error ? profileQuery.error.message : 'Could not refresh profile.'}</span>
+            <button
+              type="button"
+              onClick={() => void profileQuery.refetch()}
+              className="underline text-red-100 hover:text-white"
+            >
+              Retry
+            </button>
+          </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
           {/* Left Container - User Profile, Level/XP, Achievement Task, Wallet Stats */}
           <div className="border-none w-full">

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { apiGet } from '@/lib/apiClient';
 import { LoginCredentials, SignUpCredentials, AuthResponse, User } from '../types/auth.types';
 import { API_ENDPOINTS } from '../utils/constants';
 import { handleApiError } from '../utils/helpers';
@@ -54,40 +55,43 @@ class AuthService {
     clearAuthToken();
   }
 
-  async fetchProfile(): Promise<User | null> {
-    try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
-      const response = await axios.get(
-        `${backendUrl}/api/v1/auth/profile`,
-        { headers: this.getHeaders() }
-      );
-
-      const profile = response.data;
-      if (!profile?.data?.email) return null;
-
-      if (profile.data.id) localStorage.setItem(USER_ID_KEY, String(profile.data.id));
-      localStorage.setItem(USER_EMAIL_KEY, profile.data.email);
-      if (profile.data.name) {
-        localStorage.setItem(USER_NAME_KEY, profile.data.name);
-      } else if (Object.prototype.hasOwnProperty.call(profile.data, 'name')) {
-        localStorage.removeItem(USER_NAME_KEY);
-      }
-      if (profile.data.createdAt) {
-        localStorage.setItem(USER_CREATED_KEY, profile.data.createdAt);
-      }
-      if (profile.data.walletId) {
-        localStorage.setItem(WALLET_ID_KEY, profile.data.walletId);
-      }
-      if (profile.data.avatarUrl) {
-        localStorage.setItem(USER_AVATAR_URL_KEY, profile.data.avatarUrl);
-        localStorage.setItem(PROFILE_AVATAR_URL_KEY, profile.data.avatarUrl);
-      }
-      persistRewardData(profile.data);
-
-      return profile.data;
-    } catch (error) {
-      return null;
+  private applyUserProfileToStorage(profileData: User): void {
+    if (profileData.id) localStorage.setItem(USER_ID_KEY, String(profileData.id));
+    localStorage.setItem(USER_EMAIL_KEY, profileData.email);
+    if (profileData.name) {
+      localStorage.setItem(USER_NAME_KEY, profileData.name);
+    } else if (Object.prototype.hasOwnProperty.call(profileData, "name")) {
+      localStorage.removeItem(USER_NAME_KEY);
     }
+    if (profileData.createdAt) {
+      localStorage.setItem(USER_CREATED_KEY, profileData.createdAt);
+    }
+    if (profileData.walletId) {
+      localStorage.setItem(WALLET_ID_KEY, profileData.walletId);
+    }
+    if (profileData.avatarUrl) {
+      localStorage.setItem(USER_AVATAR_URL_KEY, profileData.avatarUrl);
+      localStorage.setItem(PROFILE_AVATAR_URL_KEY, profileData.avatarUrl);
+    }
+    persistRewardData(profileData);
+  }
+
+  /**
+   * Loads `/api/v1/auth/profile` via shared fetch client; persists snapshot to session storage.
+   * Throws on HTTP failure (e.g. `ApiError` from `apiClient`) or invalid payload so TanStack Query can surface errors.
+   */
+  async fetchProfile(signal?: AbortSignal): Promise<User> {
+    const body = await apiGet<{ data?: User }>(`/api/v1/auth/profile`, {
+      signal,
+      clearSessionOn401: true,
+    });
+    const profile = body?.data;
+    if (!profile?.email) {
+      throw new Error("Profile response is missing user email.");
+    }
+
+    this.applyUserProfileToStorage(profile);
+    return profile;
   }
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
@@ -109,8 +113,13 @@ class AuthService {
         // Login successful, store token and return user info
         const { token, user } = response.data;
         this.setToken(token);
-        const profile = await this.fetchProfile();
-        const resolvedUser = profile || user;
+        let profile: User | null = null;
+        try {
+          profile = await this.fetchProfile();
+        } catch (e) {
+          console.warn("Profile fetch after login failed; using login payload:", e);
+        }
+        const resolvedUser = profile ?? (user as User);
         
         return {
           user: resolvedUser,
@@ -228,8 +237,11 @@ class AuthService {
     
     if (!token) return null;
 
-    const profile = await this.fetchProfile();
-    if (profile) return profile;
+    try {
+      return await this.fetchProfile();
+    } catch {
+      // Network / server error — use cached snapshot when possible
+    }
 
     // Fallback to localStorage if profile fetch fails
     const email = localStorage.getItem(USER_EMAIL_KEY);

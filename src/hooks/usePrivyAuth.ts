@@ -4,10 +4,12 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useCreateWallet } from '@privy-io/react-auth/extended-chains';
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { privyService } from '@/services/privyService';
 import { createMovementWallet, getMovementWallet } from '@/lib/movement-wallet';
 import { authService } from '@/services/authService';
 import { getAuthToken, getUserId } from '@/lib/authSession';
+import { profileKeys } from '@/lib/queryKeys';
 
 // Module-level Set to track processing user IDs across ALL hook instances
 // This prevents multiple parallel runs even if hook is instantiated multiple times
@@ -22,7 +24,8 @@ export function usePrivyAuth() {
     logout: privyLogout, 
     getAccessToken 
   } = usePrivy();
-  
+
+  const queryClient = useQueryClient();
   
   const router = useRouter();
   const { createWallet } = useCreateWallet();
@@ -247,9 +250,11 @@ export function usePrivyAuth() {
       console.log('🔗 Calling backend sync...');
       const backendSyncResult = await privyService.syncUser(privyToken, getAccessToken);
       console.log('✅ Backend sync successful');
-  
-      // 🔥 NEW: fetch full profile
-      const profile = await authService.fetchProfile();
+
+      const profile = await queryClient.fetchQuery({
+        queryKey: profileKeys.detail(),
+        queryFn: ({ signal }) => authService.fetchProfile(signal),
+      });
 
       console.log('profiles', profile);
   
@@ -267,7 +272,7 @@ export function usePrivyAuth() {
       console.error('❌ Backend sync call failed:', error);
       return null;
     }
-  }, [user, authenticated, getAccessToken]);
+  }, [user, authenticated, getAccessToken, queryClient]);
 
   const handleLogin = useCallback(async () => {
     try {
@@ -284,6 +289,9 @@ export function usePrivyAuth() {
     try {
       // Clear Privy session
       await privyLogout();
+
+      // Drop cached server state (profile, notifications, etc.)
+      queryClient.clear();
       
       // Clear all localStorage data
       privyService.logout();
@@ -302,6 +310,7 @@ export function usePrivyAuth() {
       console.log('✅ Logout successful');
     } catch (error) {
       console.error('Logout failed:', error);
+      queryClient.clear();
       // Even if Privy logout fails, clear localStorage
       privyService.logout();
       if (user?.id) {
@@ -311,7 +320,7 @@ export function usePrivyAuth() {
       router.push('/listings');
       throw error;
     }
-  }, [privyLogout, router, user?.id]);
+  }, [privyLogout, queryClient, router, user?.id]);
 
   return {
     user,
