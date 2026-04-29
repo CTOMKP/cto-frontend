@@ -7,6 +7,7 @@ import axios from 'axios';
 import CategorySelectionStep from './features/CategorySelectionStep';
 import ProjectDetailsStep, { ProjectDetailsData } from './features/ProjectDetailsStep';
 import PreviewStep from './features/PreviewStep';
+import { getUserId } from '@/lib/authSession';
 import marketplaceService from '@/services/marketplaceService';
 import { pfpService } from '@/services/pfpService';
 
@@ -20,7 +21,7 @@ interface FormData extends ProjectDetailsData {
 
 /** Upload ad images via presign (same as cto-test-frontend pfpService.uploadProfileImage). Returns view URLs in order. */
 async function uploadAdImages(files: (File | null)[]): Promise<string[]> {
-  const userId = typeof window !== 'undefined' ? localStorage.getItem('cto_user_id') : null;
+  const userId = getUserId();
   if (!userId) return [];
   const viewUrls: string[] = [];
   for (const file of files) {

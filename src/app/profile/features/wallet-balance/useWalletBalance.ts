@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import axios from "axios";
 import { PrivyUser, BackendWallet } from "@/types/privy";
+import { getAuthToken, getUserId, WALLET_ID_KEY } from "@/lib/authSession";
 import { getMovementWallet } from "@/lib/movement-wallet";
 import { movementWalletService } from "@/services/movementWalletService";
 import { getTokenLogo } from "./utils";
@@ -50,8 +51,8 @@ export function useWalletBalance() {
       retryCountRef.current = 0;
 
       const findAndSetWallet = async () => {
-        const userId = localStorage.getItem("cto_user_id") || user?.id;
-        const token = localStorage.getItem("cto_auth_token");
+        const userId = getUserId() || user?.id;
+        const token = getAuthToken();
 
         // GUARD: Don't run if already recovering or if we already have an active wallet
         if (!userId || isAutoRecovering) {
@@ -98,7 +99,7 @@ export function useWalletBalance() {
           }
 
           if (moveWallet) {
-            localStorage.setItem("cto_wallet_id", moveWallet.id);
+            localStorage.setItem(WALLET_ID_KEY, moveWallet.id);
             return moveWallet.id; 
           } else {
             // setIsAutoRecovering(true);

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getAuthToken } from '@/lib/authSession';
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
 
@@ -13,7 +14,7 @@ export const movementPaymentService = {
    * @returns Payment data including transaction data for Privy signing
    */
   async createListingPayment(listingId: string) {
-    const token = localStorage.getItem('cto_auth_token');
+    const token = getAuthToken();
     if (!token) {
       console.error('❌ No auth token found in localStorage');
       throw new Error('Authentication required. Please login first.');
@@ -71,7 +72,7 @@ export const movementPaymentService = {
    * @returns Payment data including transaction data for Privy signing
    */
   async createAdPayment(adId: string) {
-    const token = localStorage.getItem('cto_auth_token');
+    const token = getAuthToken();
     if (!token) {
       console.error('❌ No auth token found in localStorage');
       throw new Error('Authentication required. Please login first.');
@@ -123,7 +124,7 @@ export const movementPaymentService = {
    * @returns Verification result
    */
   async verifyPayment(paymentId: string, txHash: string) {
-    const token = localStorage.getItem('cto_auth_token');
+    const token = getAuthToken();
     if (!token) {
       console.error('❌ No auth token found in localStorage');
       throw new Error('Authentication required. Please login first.');

@@ -3,7 +3,19 @@ import { LoginCredentials, SignUpCredentials, AuthResponse, User } from '../type
 import { API_ENDPOINTS } from '../utils/constants';
 import { handleApiError } from '../utils/helpers';
 import { clearRewardData, getStoredRewardData, persistRewardData } from '../utils/rewardStorage';
-import { AUTH_TOKEN_KEY } from '@/lib/authSession';
+import {
+  clearSessionStorage,
+  getAuthToken,
+  PROFILE_AVATAR_URL_KEY,
+  setAuthToken,
+  USER_AVATAR_URL_KEY,
+  USER_CREATED_KEY,
+  USER_EMAIL_KEY,
+  USER_ID_KEY,
+  USER_NAME_KEY,
+  WALLET_ID_KEY,
+  clearAuthToken,
+} from '@/lib/authSession';
 
 class AuthService {
   private baseUrl: string;
@@ -31,15 +43,15 @@ class AuthService {
   }
 
   private getToken(): string | null {
-    return localStorage.getItem(AUTH_TOKEN_KEY);
+    return getAuthToken();
   }
 
   private setToken(token: string): void {
-    localStorage.setItem(AUTH_TOKEN_KEY, token);
+    setAuthToken(token);
   }
 
   private removeToken(): void {
-    localStorage.removeItem(AUTH_TOKEN_KEY);
+    clearAuthToken();
   }
 
   async fetchProfile(): Promise<User | null> {
@@ -53,22 +65,22 @@ class AuthService {
       const profile = response.data;
       if (!profile?.data?.email) return null;
 
-      if (profile.data.id) localStorage.setItem('cto_user_id', String(profile.data.id));
-      localStorage.setItem('cto_user_email', profile.data.email);
+      if (profile.data.id) localStorage.setItem(USER_ID_KEY, String(profile.data.id));
+      localStorage.setItem(USER_EMAIL_KEY, profile.data.email);
       if (profile.data.name) {
-        localStorage.setItem('cto_user_name', profile.data.name);
+        localStorage.setItem(USER_NAME_KEY, profile.data.name);
       } else if (Object.prototype.hasOwnProperty.call(profile.data, 'name')) {
-        localStorage.removeItem('cto_user_name');
+        localStorage.removeItem(USER_NAME_KEY);
       }
       if (profile.data.createdAt) {
-        localStorage.setItem('cto_user_created', profile.data.createdAt);
+        localStorage.setItem(USER_CREATED_KEY, profile.data.createdAt);
       }
       if (profile.data.walletId) {
-        localStorage.setItem('cto_wallet_id', profile.data.walletId);
+        localStorage.setItem(WALLET_ID_KEY, profile.data.walletId);
       }
       if (profile.data.avatarUrl) {
-        localStorage.setItem('cto_user_avatar_url', profile.data.avatarUrl);
-        localStorage.setItem('profile_avatar_url', profile.data.avatarUrl);
+        localStorage.setItem(USER_AVATAR_URL_KEY, profile.data.avatarUrl);
+        localStorage.setItem(PROFILE_AVATAR_URL_KEY, profile.data.avatarUrl);
       }
       persistRewardData(profile.data);
 
@@ -167,8 +179,8 @@ class AuthService {
       if (response.data.success) {
         // Account created successfully, but no token yet (user needs to login)
         // Store user info in localStorage for now
-        localStorage.setItem('cto_user_email', credentials.email);
-        localStorage.setItem('cto_user_created', new Date().toISOString());
+        localStorage.setItem(USER_EMAIL_KEY, credentials.email);
+        localStorage.setItem(USER_CREATED_KEY, new Date().toISOString());
         
         const user: User = {
           id: credentials.email, // Use email as ID
@@ -207,11 +219,7 @@ class AuthService {
   }
 
   async logout(): Promise<void> {
-    // Simply remove the token from localStorage
-    this.removeToken();
-    localStorage.removeItem('cto_user_email');
-    localStorage.removeItem('cto_user_name');
-    localStorage.removeItem('cto_wallet_id');
+    clearSessionStorage();
     clearRewardData();
   }
 
@@ -224,16 +232,16 @@ class AuthService {
     if (profile) return profile;
 
     // Fallback to localStorage if profile fetch fails
-    const email = localStorage.getItem('cto_user_email');
+    const email = localStorage.getItem(USER_EMAIL_KEY);
     if (!email) return null;
 
     return {
       id: email,
       email: email,
-      walletId: localStorage.getItem('cto_wallet_id') || '',
-      name: localStorage.getItem('cto_user_name') || undefined,
+      walletId: localStorage.getItem(WALLET_ID_KEY) || '',
+      name: localStorage.getItem(USER_NAME_KEY) || undefined,
       ...getStoredRewardData(),
-      createdAt: localStorage.getItem('cto_user_created') || new Date().toISOString(),
+      createdAt: localStorage.getItem(USER_CREATED_KEY) || new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
   }
@@ -249,13 +257,13 @@ class AuthService {
 
       const updatedUser = response.data.user;
       if (updatedUser?.name) {
-        localStorage.setItem('cto_user_name', updatedUser.name);
+        localStorage.setItem(USER_NAME_KEY, updatedUser.name);
       } else if (Object.prototype.hasOwnProperty.call(updatedUser || {}, 'name')) {
-        localStorage.removeItem('cto_user_name');
+        localStorage.removeItem(USER_NAME_KEY);
       }
       if (updatedUser?.avatarUrl) {
-        localStorage.setItem('cto_user_avatar_url', updatedUser.avatarUrl);
-        localStorage.setItem('profile_avatar_url', updatedUser.avatarUrl);
+        localStorage.setItem(USER_AVATAR_URL_KEY, updatedUser.avatarUrl);
+        localStorage.setItem(PROFILE_AVATAR_URL_KEY, updatedUser.avatarUrl);
       }
       persistRewardData(updatedUser);
       return updatedUser;

@@ -1,4 +1,10 @@
 import axios from 'axios';
+import {
+  getAuthToken,
+  getUserId,
+  PROFILE_AVATAR_URL_KEY,
+  USER_AVATAR_URL_KEY,
+} from '@/lib/authSession';
 import { getCloudFrontUrl } from '@/lib/image-url-helper';
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -17,7 +23,7 @@ class PFPService {
    */
   async getCards(): Promise<PFPCard[]> {
     try {
-      const token = localStorage.getItem('cto_auth_token');
+      const token = getAuthToken();
       if (!token) {
         console.warn('No authentication token found, using default cards');
         // Return default cards if not authenticated
@@ -62,7 +68,7 @@ class PFPService {
       throw new Error('Image must be 10MB or less');
     }
 
-    const token = localStorage.getItem('cto_auth_token');
+    const token = getAuthToken();
     if (!token) {
       throw new Error('No authentication token');
     }
@@ -175,7 +181,7 @@ class PFPService {
    */
   async savePFP(imageFileOrUrl: File | string, userId?: string): Promise<{ success: boolean; message?: string; imageUrl?: string }> {
     try {
-      const token = localStorage.getItem('cto_auth_token');
+      const token = getAuthToken();
       if (!token) {
         throw new Error('No authentication token');
       }
@@ -185,7 +191,7 @@ class PFPService {
       // If it's a File, upload it first
       if (imageFileOrUrl instanceof File) {
         if (!userId) {
-          const userIdFromStorage = localStorage.getItem('cto_user_id');
+          const userIdFromStorage = getUserId();
           if (!userIdFromStorage) {
             throw new Error('User ID is required for file upload');
           }
@@ -197,7 +203,7 @@ class PFPService {
       } else if (imageFileOrUrl.startsWith('data:image/')) {
         // It's a data URL (base64) - convert to File and upload
         if (!userId) {
-          const userIdFromStorage = localStorage.getItem('cto_user_id');
+          const userIdFromStorage = getUserId();
           if (!userIdFromStorage) {
             throw new Error('User ID is required for file upload');
           }
@@ -264,8 +270,8 @@ class PFPService {
         });
         
         // Store CloudFront URL in localStorage for quick access (both keys for compatibility)
-        localStorage.setItem('profile_avatar_url', finalAvatarUrl);
-        localStorage.setItem('cto_user_avatar_url', finalAvatarUrl);
+        localStorage.setItem(PROFILE_AVATAR_URL_KEY, finalAvatarUrl);
+        localStorage.setItem(USER_AVATAR_URL_KEY, finalAvatarUrl);
         
         // Dispatch custom event to notify components of avatar update
         // Use a small delay to ensure localStorage is updated before event fires

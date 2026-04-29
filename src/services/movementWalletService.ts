@@ -1,9 +1,10 @@
 import axios from 'axios';
+import { getAuthToken } from '@/lib/authSession';
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('cto_auth_token');
+  const token = getAuthToken();
   return {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${token}`,

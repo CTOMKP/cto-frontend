@@ -12,6 +12,7 @@ import NavBar from "@/components/NavBar";
 import MarketTrends from "@/components/MarketTrends";
 import TokenSwapCard from "@/components/TokenSwapCard";
 import { Dialog } from "@/components/ui/dialog";
+import { QueryProvider } from "@/providers/QueryProvider";
 
 const grotesqueArabicPro = localFont({
   src: './fonts/BasisGrotesqueArabicPro-Regular.woff2',
@@ -41,7 +42,8 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.className} ${grotesqueArabicPro.className} antialiased`}>
         <PrivyProvider>
-          <Dialog>
+          <QueryProvider>
+            <Dialog>
               <HeaderAd />
               <NavBar />
               <MarketTrends />
@@ -50,7 +52,8 @@ export default function RootLayout({
               <div className="fixed bottom-15 right-20 z-50">
                 <TokenSwapCard />
               </div>
-          </Dialog>
+            </Dialog>
+          </QueryProvider>
         </PrivyProvider>
         <ToastContainer
           position="top-right"

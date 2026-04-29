@@ -1,5 +1,15 @@
 import axios from 'axios';
 import { getCloudFrontUrl } from '@/lib/image-url-helper';
+import {
+  clearSessionStorage,
+  getAuthToken,
+  PROFILE_AVATAR_URL_KEY,
+  setAuthToken,
+  USER_AVATAR_URL_KEY,
+  USER_EMAIL_KEY,
+  USER_ID_KEY,
+  WALLET_ADDRESS_KEY,
+} from '@/lib/authSession';
 import { BackendWallet } from '@/types/privy';
 import { saveWalletsToStorage } from '@/utils/localStorage';
 
@@ -130,20 +140,20 @@ class PrivyService {
       console.log('✅ Backend sync successful:', responseData);
 
       // Store our JWT token and user info (matching test frontend exactly)
-      localStorage.setItem('cto_auth_token', responseData.token);
-      localStorage.setItem('cto_user_email', responseData.user.email);
-      localStorage.setItem('cto_user_id', responseData.user.id.toString());
-      
+      setAuthToken(responseData.token);
+      localStorage.setItem(USER_EMAIL_KEY, responseData.user.email);
+      localStorage.setItem(USER_ID_KEY, responseData.user.id.toString());
+
       if (responseData.user.walletAddress) {
-        localStorage.setItem('cto_wallet_address', responseData.user.walletAddress);
-          }
+        localStorage.setItem(WALLET_ADDRESS_KEY, responseData.user.walletAddress);
+      }
 
       // Store avatarUrl if available (from database) - transform to CloudFront URL
       if (responseData.user.avatarUrl) {
         const cloudfrontUrl = getCloudFrontUrl(responseData.user.avatarUrl);
         console.log('✅ Storing avatarUrl from backend sync (CloudFront):', cloudfrontUrl);
-        localStorage.setItem('cto_user_avatar_url', cloudfrontUrl);
-        localStorage.setItem('profile_avatar_url', cloudfrontUrl);
+        localStorage.setItem(USER_AVATAR_URL_KEY, cloudfrontUrl);
+        localStorage.setItem(PROFILE_AVATAR_URL_KEY, cloudfrontUrl);
         } else {
         console.log('⚠️ No avatarUrl in sync response');
       }
@@ -182,10 +192,10 @@ class PrivyService {
     
     if (possibleUserId && responseData?.token) {
       console.warn('⚠️ Found user ID and token in unexpected structure, attempting to save anyway...');
-      localStorage.setItem('cto_auth_token', responseData.token);
-      localStorage.setItem('cto_user_id', possibleUserId.toString());
+      setAuthToken(responseData.token);
+      localStorage.setItem(USER_ID_KEY, possibleUserId.toString());
       if (responseData.user?.email) {
-        localStorage.setItem('cto_user_email', responseData.user.email);
+        localStorage.setItem(USER_EMAIL_KEY, responseData.user.email);
       }
       return responseData;
           }
@@ -223,7 +233,7 @@ class PrivyService {
    */
   async getMe() {
     try {
-      const token = localStorage.getItem('cto_auth_token');
+      const token = getAuthToken();
       if (!token) {
         throw new Error('No authentication token');
       }
@@ -249,7 +259,7 @@ class PrivyService {
    */
   async getUserWallets() {
     try {
-      const token = localStorage.getItem('cto_auth_token');
+      const token = getAuthToken();
       if (!token) {
         throw new Error('No authentication token');
       }
@@ -274,30 +284,8 @@ class PrivyService {
    * Logout user (clear all tokens and user data)
    */
   logout() {
-    // Clear authentication tokens
-    localStorage.removeItem('cto_auth_token');
-    localStorage.removeItem('cto_user_email');
-    localStorage.removeItem('cto_user_id');
-    localStorage.removeItem('cto_wallet_address');
-    // Remove all user-specific wallet caches
-    Object.keys(localStorage)
-      .filter(key => key.startsWith('cto_user_wallets_'))
-      .forEach(key => localStorage.removeItem(key));
-    
-    // Clear avatar/profile data
-    localStorage.removeItem('cto_user_avatar_url');
-    localStorage.removeItem('profile_avatar_url');
-    localStorage.removeItem('profile_avatar_meta');
-    localStorage.removeItem('profile_banner_url');
-    
-    // Clear any generic wallet data that might exist
-    localStorage.removeItem('cto_user_wallets');
-    
-    // Clear any other user-related data
-    localStorage.removeItem('cto_token');
-    localStorage.removeItem('cto_user');
-    
-    console.log('✅ User logged out - all localStorage cleared');
+    clearSessionStorage();
+    console.log('✅ User logged out - session storage cleared');
   }
 }
 

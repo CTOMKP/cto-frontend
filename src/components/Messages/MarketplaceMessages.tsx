@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import { useRouter } from "next/navigation";
 import { io, type Socket } from "socket.io-client";
+import { getAuthToken, getUserId } from "@/lib/authSession";
 import { toast } from "react-toastify";
 import messagesService from "@/services/messagesService";
 import escrowService from "@/services/escrowService";
@@ -147,7 +148,7 @@ export default function MarketplaceMessages({
 
   const currentUserId = useMemo(() => {
     if (typeof window === "undefined") return null;
-    const raw = localStorage.getItem("cto_user_id");
+    const raw = getUserId();
     const n = raw ? Number(raw) : NaN;
     return Number.isFinite(n) ? n : null;
   }, []);
@@ -328,7 +329,7 @@ export default function MarketplaceMessages({
   }, [loadThreads]);
 
   useEffect(() => {
-    const token = localStorage.getItem("cto_auth_token");
+    const token = getAuthToken();
     if (!token) return;
 
     const socket: Socket = io(`${backendUrl}/ws`, {
@@ -513,7 +514,7 @@ export default function MarketplaceMessages({
   };
 
   const uploadAttachmentViaPresign = async (file: File) => {
-    const token = localStorage.getItem("cto_auth_token");
+    const token = getAuthToken();
     const uid = currentUserId ?? 0;
     const response = await fetch(`${backendUrl}/api/v1/images/presign`, {
       method: "POST",

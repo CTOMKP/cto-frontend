@@ -4,6 +4,7 @@ import Link from "next/link";
 import { CheckCircle2, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { getAuthToken } from "@/lib/authSession";
 import { userListingsService } from "@/services/userListingsService";
 
 type ListingLike = {
@@ -72,7 +73,7 @@ export default function UserListingLivePage() {
         setError(null);
         let response: unknown = null;
 
-        const token = localStorage.getItem("cto_auth_token");
+        const token = getAuthToken();
         if (token) {
           try {
             response = await userListingsService.getMyListing(id);

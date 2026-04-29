@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "./ui/button";
 import Image from "next/image";
 import { io, type Socket } from "socket.io-client";
+import { AUTH_TOKEN_KEY, getAuthToken } from "@/lib/authSession";
 import notificationsService from "@/services/notificationsService";
 
 export type Filter = "all" | "unread";
@@ -33,9 +34,7 @@ export default function Notifications() {
   const [selectedFilter, setSelectedFilter] = useState<Filter>("all");
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [token, setToken] = useState<string | null>(() =>
-    typeof window !== "undefined" ? localStorage.getItem("cto_auth_token") : null,
-  );
+  const [token, setToken] = useState<string | null>(() => getAuthToken());
 
   const filters: Filter[] = ["all", "unread"];
 
@@ -127,15 +126,18 @@ export default function Notifications() {
 
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
-      if (e.key === "cto_auth_token") setToken(e.newValue);
+      if (e.key === AUTH_TOKEN_KEY) setToken(e.newValue);
     };
+    const onSessionCleared = () => setToken(null);
     window.addEventListener("storage", onStorage);
+    window.addEventListener("cto-session-cleared", onSessionCleared);
     const interval = setInterval(() => {
-      const next = localStorage.getItem("cto_auth_token");
+      const next = getAuthToken();
       if (next !== token) setToken(next);
     }, 1000);
     return () => {
       window.removeEventListener("storage", onStorage);
+      window.removeEventListener("cto-session-cleared", onSessionCleared);
       clearInterval(interval);
     };
   }, [token]);

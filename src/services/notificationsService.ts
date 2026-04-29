@@ -1,8 +1,10 @@
-const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com'; 
+import { getAuthToken } from '@/lib/authSession';
+
+const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
 
 const notificationsService = {
   async list(unreadOnly?: boolean) {
-    const token = localStorage.getItem('cto_auth_token');
+    const token = getAuthToken();
     const query = unreadOnly ? '?unread=1' : '';
     const res = await fetch(`${backendUrl}/api/v1/notifications${query}`, {
       headers: {
@@ -17,7 +19,7 @@ const notificationsService = {
   },
 
   async markRead(id: string) {
-    const token = localStorage.getItem('cto_auth_token');
+    const token = getAuthToken();
     const res = await fetch(`${backendUrl}/api/v1/notifications/${id}/read`, {
       method: 'POST',
       headers: {

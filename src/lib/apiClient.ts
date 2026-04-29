@@ -1,4 +1,4 @@
-import { clearAuthToken, getAuthToken } from "@/lib/authSession";
+import { clearSessionStorage, getAuthToken } from "@/lib/authSession";
 import { ApiError } from "@/lib/apiError";
 
 const DEFAULT_BASE = "https://api.ctomarketplace.com";
@@ -72,7 +72,7 @@ export async function apiRequest<T>(options: ApiRequestOptions): Promise<T> {
 
   if (!res.ok) {
     if (clearSessionOn401 && res.status === 401) {
-      clearAuthToken();
+      clearSessionStorage();
     }
     throw new ApiError(res.status, res.statusText, parsed);
   }

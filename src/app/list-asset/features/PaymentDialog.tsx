@@ -16,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { movementPaymentService } from '@/services/movementPaymentService';
 import { movementWalletService } from '@/services/movementWalletService';
 import { getMovementWallet, sendMovementTransaction } from '@/lib/movement-wallet';
+import { getAuthToken, getUserId } from '@/lib/authSession';
 import { getWalletsFromStorage } from '@/utils/localStorage';
 import { toast } from 'react-toastify';
 import axios from 'axios';
@@ -111,7 +112,7 @@ export default function PaymentDialog({
       let walletId: string | null = null;
       
       // Try to get wallets from localStorage first
-      const userId = localStorage.getItem('cto_user_id');
+      const userId = getUserId();
       let backendWallets: BackendWallet[] = [];
       try {
         const storedWallets = getWalletsFromStorage(userId);
@@ -125,7 +126,7 @@ export default function PaymentDialog({
       // If not in localStorage, fetch from backend
       if (backendWallets.length === 0) {
         try {
-          const token = localStorage.getItem('cto_auth_token');
+          const token = getAuthToken();
           if (token) {
             const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
             const response = await axios.get(
@@ -220,7 +221,7 @@ export default function PaymentDialog({
     const actualListingId = listingId.replace('#', '');
 
     // Check both Privy authentication and localStorage token
-    const token = localStorage.getItem('cto_auth_token');
+    const token = getAuthToken();
     if (!authenticated || !user || !token) {
       console.error('❌ Payment blocked - Auth check failed:', {
         authenticated,

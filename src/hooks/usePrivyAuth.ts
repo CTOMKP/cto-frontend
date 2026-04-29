@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { privyService } from '@/services/privyService';
 import { createMovementWallet, getMovementWallet } from '@/lib/movement-wallet';
 import { authService } from '@/services/authService';
+import { getAuthToken, getUserId } from '@/lib/authSession';
 
 // Module-level Set to track processing user IDs across ALL hook instances
 // This prevents multiple parallel runs even if hook is instantiated multiple times
@@ -36,7 +37,7 @@ export function usePrivyAuth() {
 
   useEffect(() => {
     if (ready && !authenticated) {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('cto_auth_token') : null;
+      const token = getAuthToken();
       if (!token) {
         setIsAuthenticated(false);
         setIsLoading(false);
@@ -80,7 +81,7 @@ export function usePrivyAuth() {
     if (!authenticated || !user || !ready) {
       // If Privy is not authenticated, ensure isAuthenticated is false
       if (!authenticated) {
-    const token = localStorage.getItem('cto_auth_token');
+    const token = getAuthToken();
         // Only set to false if there's no token in localStorage
         if (!token) {
           setIsAuthenticated(false);
@@ -102,8 +103,8 @@ export function usePrivyAuth() {
     }
     
     // Check if we've already synced for this user in this session
-    const existingToken = localStorage.getItem('cto_auth_token');
-    const existingUserId = localStorage.getItem('cto_user_id');
+    const existingToken = getAuthToken();
+    const existingUserId = getUserId();
     if (existingToken && existingUserId === userId) {
       console.log('✅ User already synced, authenticated state already set');
       setIsLoading(false);
@@ -223,7 +224,7 @@ export function usePrivyAuth() {
       processingUserIds.delete(userId);
       
       // Even if sync fails, check if we have a token now
-        const token = localStorage.getItem('cto_auth_token');
+        const token = getAuthToken();
         if (token) {
         console.log('⚠️ Sync failed but token exists, setting authenticated');
           setIsAuthenticated(true);

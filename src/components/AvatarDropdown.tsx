@@ -16,6 +16,14 @@ import { toast } from 'react-toastify';
 import Link from 'next/link';
 import { BackendWallet } from '@/types/privy';
 import FallbackImage from './FallbackImage';
+import {
+  getStoredAvatarUrl,
+  getUserEmail,
+  getUserId,
+  PROFILE_AVATAR_URL_KEY,
+  USER_AVATAR_URL_KEY,
+  USER_USERNAME_KEY,
+} from '@/lib/authSession';
 import { getCloudFrontUrl } from '@/lib/image-url-helper';
 import { getWalletsFromStorage } from '@/utils/localStorage';
 import { useWalletBalance } from '@/app/profile/features/wallet-balance/useWalletBalance';
@@ -26,11 +34,10 @@ import { useRewardProgress, resetUserRewardProgress } from '@/lib/userRewardProg
 export default function AvatarDropdown() {
   // Initialize exactly like profile page - read raw URL from localStorage
   const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
-    // Initialize from localStorage
     if (typeof window !== 'undefined') {
-      const raw = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
+      const raw = getStoredAvatarUrl();
       console.log('[AvatarDropdown] 🎯 Initial state - raw from localStorage:', raw);
-      return raw; // Return raw URL, transformation happens in useEffect (like profile page)
+      return raw;
     }
     return null;
   });
@@ -69,9 +76,9 @@ export default function AvatarDropdown() {
   // Set email and username on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const userEmail = user?.email?.address || localStorage.getItem('cto_user_email') || '';
+      const userEmail = user?.email?.address || getUserEmail() || '';
       setEmail(userEmail);
-      const storedUsername = localStorage.getItem('cto_user_username') || userEmail.split('@')[0] || 'User';
+      const storedUsername = localStorage.getItem(USER_USERNAME_KEY) || userEmail.split('@')[0] || 'User';
       setUsername(storedUsername);
     }
   }, [user]);
@@ -80,7 +87,7 @@ export default function AvatarDropdown() {
     if (typeof window === 'undefined') return;
 
     const handleAvatarUpdate = () => {
-      const rawUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
+      const rawUrl = getStoredAvatarUrl();
       if (rawUrl) {
         const newAvatarUrl = getCloudFrontUrl(rawUrl);
         if (newAvatarUrl !== avatarUrl) {
@@ -94,7 +101,7 @@ export default function AvatarDropdown() {
 
     // Listen for localStorage changes (cross-tab updates)
     const handleStorageChange = (e: StorageEvent) => {
-      if ((e.key === 'cto_user_avatar_url' || e.key === 'profile_avatar_url') && e.newValue) {
+      if ((e.key === USER_AVATAR_URL_KEY || e.key === PROFILE_AVATAR_URL_KEY) && e.newValue) {
         const cloudfrontUrl = getCloudFrontUrl(e.newValue);
         setAvatarUrl(cloudfrontUrl);
       }
@@ -102,7 +109,7 @@ export default function AvatarDropdown() {
 
     // Check localStorage periodically (same-tab updates)
     const checkAvatar = () => {
-      const rawUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
+      const rawUrl = getStoredAvatarUrl();
       if (rawUrl) {
         const cloudfrontUrl = getCloudFrontUrl(rawUrl);
         if (cloudfrontUrl !== avatarUrl) {
@@ -160,7 +167,7 @@ export default function AvatarDropdown() {
     if (!user) return;
 
     // First, try to load from localStorage - use user-specific key
-    const userId = localStorage.getItem('cto_user_id');
+    const userId = getUserId();
     try {
       const wallets = getWalletsFromStorage(userId);
       if (wallets) {

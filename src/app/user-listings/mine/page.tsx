@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { getAuthToken } from "@/lib/authSession";
 import { userListingsService } from "@/services/userListingsService";
 
 type ListingItem = {
@@ -41,7 +42,7 @@ export default function MyUserListingsPage() {
       try {
         setLoading(true);
         setError(null);
-        const token = localStorage.getItem("cto_auth_token");
+        const token = getAuthToken();
         if (!token) {
           setError("Please log in to view your listing status.");
           return;

@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import NavDropdownMenu from "./DropdownMenu";
+import { getStoredAvatarUrl } from "@/lib/authSession";
 import { usePathname } from "next/navigation";
 import NavBarChats from "./NavBarChats";
 
@@ -53,7 +54,7 @@ export default function NavBar() {
     if (typeof window !== 'undefined') {
       const checkAvatar = () => {
         if (authResolved && isAuthenticated) {
-          const avatarUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
+          const avatarUrl = getStoredAvatarUrl();
           setHasAvatar(!!avatarUrl);
         } else {
           setHasAvatar(false);

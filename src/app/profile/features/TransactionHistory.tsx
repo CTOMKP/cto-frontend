@@ -8,6 +8,7 @@ import { getMovementWallet } from '@/lib/movement-wallet';
 import { BackendWallet } from '@/types/privy';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { getAuthToken, getUserId, WALLET_ID_KEY } from '@/lib/authSession';
 import UserListings from './UserListings';
 import TxHistoryTab from './TxHistoryTab';
 import MyAdsTab from './MyAdsTab';
@@ -22,8 +23,8 @@ export default function TransactionHistory() {
   // Find and set wallet ID using same pattern as useWalletBalance.ts
   useEffect(() => {
     const findAndSetWallet = async () => {
-      const userId = localStorage.getItem("cto_user_id") || user?.id;
-      const token = localStorage.getItem("cto_auth_token");
+      const userId = getUserId() || user?.id;
+      const token = getAuthToken();
 
       // GUARD: Don't run if already recovering or if we already have an active wallet
       if (!userId) {
@@ -67,7 +68,7 @@ export default function TransactionHistory() {
         }
 
         if (moveWallet) {
-          localStorage.setItem("cto_wallet_id", moveWallet.id);
+          localStorage.setItem(WALLET_ID_KEY, moveWallet.id);
           return moveWallet.id; 
         }
       } catch (err) {

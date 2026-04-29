@@ -13,6 +13,8 @@ interface WalletWithMovement extends BackendWallet {
   walletClient?: string;
 }
 
+import { getAuthToken, getStoredAvatarUrl, getUserId } from '@/lib/authSession';
+import { getWalletsKey } from '@/utils/localStorage';
 import UserProfileHeader from './features/UserProfileHeader';
 import LevelXPProgress from './features/LevelXPProgress';
 import ReferralSection from './features/ReferralSection';
@@ -64,12 +66,16 @@ export default function ProfilePage() {
   const loadWallets = React.useCallback(async () => {
     try {
       // First, try to load from localStorage (faster and more reliable)
-      const userId = localStorage.getItem('cto_user_id');
+      const userId = getUserId();
       let walletsJson: string | null = null;
-      
+
       // Only use user-specific key format, no fallback to generic key
       if (userId) {
-        walletsJson = localStorage.getItem(`cto_user_wallets_${userId}`);
+        try {
+          walletsJson = localStorage.getItem(getWalletsKey(userId));
+        } catch {
+          walletsJson = null;
+        }
       }
       if (walletsJson) {
         try {
@@ -94,7 +100,7 @@ export default function ProfilePage() {
       }
       
       // Fallback: Fetch from backend if localStorage is empty or invalid
-      const token = localStorage.getItem('cto_auth_token');
+      const token = getAuthToken();
       
       if (!token || !userId) {
         // No token or user ID, can't fetch from backend
@@ -191,9 +197,7 @@ export default function ProfilePage() {
   // This matches the test frontend pattern
   const email = user?.email?.address || user?.wallet?.address || 'Privy User';
   
-  const avatarUrl = typeof window !== 'undefined' 
-    ? localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url')
-    : null;
+  const avatarUrl = getStoredAvatarUrl();
 
   // Combine Privy wallets with backend wallets
   // Privy's user.linkedAccounts is LinkedAccountWithMetadata[], so we need to filter and cast

@@ -25,6 +25,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Progress } from "@/components/ui/progress"
+import { clearSessionStorage } from '@/lib/authSession';
 import { userListingsService, ScanResult } from '@/services/userListingsService';
 import PaymentDialog from './PaymentDialog';
 
@@ -339,10 +340,7 @@ export default function Step1({
       const isUnauthorized = error instanceof Error && error.message === 'Unauthorized';
       if (is401 || isUnauthorized) {
         if (typeof window !== 'undefined') {
-          localStorage.removeItem('cto_user_email');
-          localStorage.removeItem('cto_user_created');
-          localStorage.removeItem('cto_wallet_id');
-          localStorage.removeItem('cto_auth_token');
+          clearSessionStorage();
         }
         toast.error('Session expired. Please sign in again.');
         router.push('/');

@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getAuthToken } from "@/lib/authSession";
 import { normalizeRewardData } from "@/lib/rewardStorage";
 import type { RewardProgress } from "@/types/auth.types";
 
@@ -6,7 +7,7 @@ const backendUrl =
   process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.ctomarketplace.com";
 
 function authHeaders() {
-  const token = localStorage.getItem("cto_auth_token");
+  const token = getAuthToken();
   if (!token) {
     console.warn("⚠️ No auth token found in localStorage");
     return {

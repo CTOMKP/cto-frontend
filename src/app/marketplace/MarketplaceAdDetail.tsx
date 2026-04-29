@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { getUserId } from "@/lib/authSession";
 import marketplaceService from "@/services/marketplaceService";
 import { getCloudFrontUrl } from "@/utils/helper/image-url-helper";
 
@@ -136,7 +137,7 @@ export default function MarketplaceAdDetail({ adId }: { adId: string }) {
     : [];
   const currentUserId = useMemo(() => {
     if (typeof window === "undefined") return null;
-    const raw = localStorage.getItem("cto_user_id");
+    const raw = getUserId();
     const n = raw ? Number(raw) : NaN;
     return Number.isFinite(n) ? n : null;
   }, []);

@@ -9,6 +9,7 @@ import { X } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { toast } from "react-toastify";
 import { authService } from "@/services/authService";
+import { getUserEmail, getUserId, USER_NAME_KEY } from "@/lib/authSession";
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
 
 interface UserProfileHeaderProps {
@@ -56,14 +57,11 @@ const displayName = userData?.name ||fallbackName || "User";
 
     setIsSavingName(true);
     try {
-      const userId =
-        localStorage.getItem("cto_user_id") ||
-        localStorage.getItem("cto_user_email") ||
-        email;
+      const userId = getUserId() || getUserEmail() || email;
 
       const updated = await authService.updateUser(userId, { name: nextName });
       const finalName = updated?.name ?? nextName;
-      localStorage.setItem("cto_user_name", finalName);
+      localStorage.setItem(USER_NAME_KEY, finalName);
       setUserData((prev) => ({
         ...prev,
         name: finalName,

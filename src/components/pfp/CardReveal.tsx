@@ -9,6 +9,7 @@ import { pfpService } from '@/services/pfpService';
 import { toast } from 'react-toastify';
 import { usePrivy } from '@privy-io/react-auth';
 import { getMascotImageUrl } from '@/lib/image-url-helper';
+import { getAuthToken, getUserId } from '@/lib/authSession';
 import { useRouter } from 'next/navigation';
 
 interface CardRevealProps {
@@ -133,7 +134,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageS
   // Get user ID from localStorage only (matching main branch exactly)
   const getUserId = useCallback((): string | null => {
     if (typeof window !== 'undefined') {
-      const storedUserId = localStorage.getItem('cto_user_id');
+      const storedUserId = getUserId();
       if (storedUserId) {
         return storedUserId;
       }
@@ -144,7 +145,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageS
   // Check if authentication token exists (memoized for useEffect dependency)
   const hasAuthToken = useCallback((): boolean => {
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('cto_auth_token');
+      const token = getAuthToken();
       return !!token;
     }
     return false;

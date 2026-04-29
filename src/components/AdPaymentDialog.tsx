@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { movementWalletService } from '@/services/movementWalletService';
 import { getMovementWallet, sendMovementTransaction } from '@/lib/movement-wallet';
+import { getAuthToken, getUserId } from '@/lib/authSession';
 import { getWalletsFromStorage } from '@/utils/localStorage';
 import { toast } from 'react-toastify';
 import axios from 'axios';
@@ -103,7 +104,7 @@ export default function AdPaymentDialog({
       setWalletAddress(movementWallet.address);
 
       let walletId: string | null = null;
-      const userId = localStorage.getItem('cto_user_id');
+      const userId = getUserId();
       let backendWallets: BackendWallet[] = [];
       try {
         const storedWallets = getWalletsFromStorage(userId);
@@ -112,7 +113,7 @@ export default function AdPaymentDialog({
 
       if (backendWallets.length === 0) {
         try {
-          const token = localStorage.getItem('cto_auth_token');
+          const token = getAuthToken();
           if (token) {
             const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
             const response = await axios.get(

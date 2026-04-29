@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
+import { getAuthToken } from "@/lib/authSession";
 import { userListingsService } from "@/services/userListingsService";
 
 type ListingLike = {
@@ -61,7 +62,7 @@ export default function UserListingDetailPage() {
         setError(null);
 
         let response: unknown = null;
-        const token = localStorage.getItem("cto_auth_token");
+        const token = getAuthToken();
         if (token) {
           try {
             response = await userListingsService.getMyListing(id);

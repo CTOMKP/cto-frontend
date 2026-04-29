@@ -1,13 +1,11 @@
 import axios from "axios";
+import { getAuthToken } from "@/lib/authSession";
 
 const backendUrl =
   process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.ctomarketplace.com";
 
 function authHeaders() {
-  const token =
-    typeof window !== "undefined"
-      ? localStorage.getItem("cto_auth_token")
-      : null;
+  const token = getAuthToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 

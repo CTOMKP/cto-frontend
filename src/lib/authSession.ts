@@ -46,6 +46,13 @@ export function getUserEmail(): string | null {
   return storage()?.getItem(USER_EMAIL_KEY) ?? null;
 }
 
+/** Prefer primary avatar key; fall back to legacy profile key. */
+export function getStoredAvatarUrl(): string | null {
+  const ls = storage();
+  if (!ls) return null;
+  return ls.getItem(USER_AVATAR_URL_KEY) || ls.getItem(PROFILE_AVATAR_URL_KEY);
+}
+
 /**
  * Clears JWT, user snapshot, avatars, wallet caches, and legacy keys.
  * Does not clear reward/Xp keys — call `clearRewardData()` from `@/utils/rewardStorage` when logging out fully.

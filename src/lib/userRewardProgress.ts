@@ -7,6 +7,7 @@
 
 import { create } from "zustand";
 import { useEffect } from "react";
+import { getAuthToken } from "@/lib/authSession";
 import {
   getStoredRewardData,
   persistRewardData,
@@ -88,7 +89,7 @@ export const useRewardProgressStore = create<RewardProgressStore>((set, get) => 
   refresh: async (opts) => {
     if (typeof window === "undefined") return;
 
-    const token = localStorage.getItem("cto_auth_token");
+    const token = getAuthToken();
     if (!token) {
       set({ isLoading: false, error: null });
       return;
