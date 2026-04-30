@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { userListingsService } from "@/services/userListingsService";
+import { getAuthToken } from "@/lib/authSession";
+import { useUserListingsQuery } from "@/hooks/useUserListingsQuery";
 
 type ListingItem = {
   id: string;
@@ -32,35 +33,21 @@ const formatDate = (value?: string) => {
 
 export default function MyUserListingsPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [items, setItems] = useState<ListingItem[]>([]);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const token = localStorage.getItem("cto_auth_token");
-        if (!token) {
-          setError("Please log in to view your listing status.");
-          return;
-        }
+  const authed = mounted && !!getAuthToken();
+  const listQuery = useUserListingsQuery({ enabled: authed });
 
-        const response = await userListingsService.mine();
-        const nextItems = (response?.items || []) as ListingItem[];
-        setItems(nextItems);
-      } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : "Failed to load your listing status.";
-        setError(message);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const items = ((listQuery.data as { items?: ListingItem[] } | undefined)?.items ??
+    []) as ListingItem[];
 
-    load();
-  }, []);
+  const loading = authed && listQuery.isPending;
+  const error = authed && listQuery.isError
+    ? listQuery.error instanceof Error
+      ? listQuery.error.message
+      : "Failed to load your listing status."
+    : null;
 
   return (
     <div className="min-h-screen bg-[#010101] text-white px-5 py-8">
@@ -80,25 +67,38 @@ export default function MyUserListingsPage() {
           Track pending, approved, and rejected listings in one place.
         </p>
 
+        {mounted && !authed && (
+          <div className="mt-6 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-amber-200">
+            Please log in to view your listing status.
+          </div>
+        )}
+
         {loading && (
           <div className="mt-6 rounded-xl border border-white/10 p-6 text-white/70">
             Loading listings...
           </div>
         )}
 
-        {!loading && error && (
-          <div className="mt-6 rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-red-300">
-            {error}
+        {!loading && authed && error && (
+          <div className="mt-6 rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-red-300 flex flex-col gap-3">
+            <span>{error}</span>
+            <button
+              type="button"
+              className="w-fit rounded-md border border-red-400/50 px-3 py-1.5 text-sm hover:bg-red-500/20"
+              onClick={() => listQuery.refetch()}
+            >
+              Retry
+            </button>
           </div>
         )}
 
-        {!loading && !error && items.length === 0 && (
+        {!loading && authed && !error && items.length === 0 && (
           <div className="mt-6 rounded-xl border border-white/10 p-6 text-white/70">
             No listings found.
           </div>
         )}
 
-        {!loading && !error && items.length > 0 && (
+        {!loading && authed && !error && items.length > 0 && (
           <div className="mt-6 space-y-3">
             {items.map((listing) => {
               const statusStyle =
@@ -166,4 +166,3 @@ export default function MyUserListingsPage() {
     </div>
   );
 }
-

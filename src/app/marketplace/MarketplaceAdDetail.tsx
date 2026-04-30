@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useMarketplaceAdDetailQuery } from "@/hooks/useMarketplaceAdDetailQuery";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -23,7 +24,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import marketplaceService from "@/services/marketplaceService";
+import { useSessionStore } from "@/lib/sessionStore";
 import { getCloudFrontUrl } from "@/utils/helper/image-url-helper";
 
 const CHAIN_ICON: Record<string, string> = {
@@ -83,9 +84,16 @@ const MOCK_COMMENTS = [
 
 export default function MarketplaceAdDetail({ adId }: { adId: string }) {
   const router = useRouter();
-  const [ad, setAd] = useState<Record<string, unknown> | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const sessionUserId = useSessionStore((s) => s.userId);
+  const adQuery = useMarketplaceAdDetailQuery(adId || undefined);
+  const ad = (adQuery.data as Record<string, unknown> | null) ?? null;
+  const loading = adQuery.isPending && adQuery.data === undefined;
+  const error =
+    adQuery.isError
+      ? adQuery.error instanceof Error
+        ? adQuery.error.message
+        : "Failed to load ad"
+      : null;
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [saved, setSaved] = useState(false);
   const [liked, setLiked] = useState(false);
@@ -95,26 +103,6 @@ export default function MarketplaceAdDetail({ adId }: { adId: string }) {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
-
-  useEffect(() => {
-    if (!adId) {
-      setLoading(false);
-      return;
-    }
-    let cancelled = false;
-    marketplaceService
-      .getPublicAd(adId)
-      .then((data) => {
-        if (!cancelled && data) setAd(typeof data === "object" ? data : { id: adId });
-      })
-      .catch(() => {
-        if (!cancelled) setError("Failed to load ad");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [adId]);
 
   const images: string[] = Array.isArray(ad?.images)
     ? (ad.images as string[]).map(toImageUrl).filter(Boolean)
@@ -135,11 +123,10 @@ export default function MarketplaceAdDetail({ adId }: { adId: string }) {
     ? Object.entries(ad?.contactInfo as Record<string, string>).filter(([, v]) => v && typeof v === "string")
     : [];
   const currentUserId = useMemo(() => {
-    if (typeof window === "undefined") return null;
-    const raw = localStorage.getItem("cto_user_id");
+    const raw = sessionUserId;
     const n = raw ? Number(raw) : NaN;
     return Number.isFinite(n) ? n : null;
-  }, []);
+  }, [sessionUserId]);
   const creatorUserIdRaw =
     (ad?.userId as number | string | undefined) ??
     ((ad?.user as { id?: number | string } | undefined)?.id);
@@ -178,6 +165,16 @@ export default function MarketplaceAdDetail({ adId }: { adId: string }) {
     return (
       <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center gap-4">
         <p className="text-white/70">{error || "Ad not found."}</p>
+        {adQuery.isError && (
+          <Button
+            type="button"
+            variant="outline"
+            className="border-white/30 text-white"
+            onClick={() => adQuery.refetch()}
+          >
+            Retry
+          </Button>
+        )}
         <Button asChild variant="link" className="text-white">
           <Link href="/marketplace">Back to Marketplace</Link>
         </Button>

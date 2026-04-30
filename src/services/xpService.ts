@@ -1,23 +1,7 @@
-import axios from "axios";
+import { apiGet } from "@/lib/apiClient";
+import { toRecord, unwrapApiData } from "@/lib/apiResponse";
 import { normalizeRewardData } from "@/lib/rewardStorage";
 import type { RewardProgress } from "@/types/auth.types";
-
-const backendUrl =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.ctomarketplace.com";
-
-function authHeaders() {
-  const token = localStorage.getItem("cto_auth_token");
-  if (!token) {
-    console.warn("⚠️ No auth token found in localStorage");
-    return {
-      "Content-Type": "application/json",
-    };
-  }
-  return {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  };
-}
 
 export type XpHistoryEntryType = "EARN" | "SPEND" | string;
 
@@ -40,10 +24,8 @@ export type XpMeResponse = {
   rewardPatch: Partial<RewardProgress>;
 };
 
-function parseXpMeResponse(res: { data?: unknown }): XpMeResponse {
-  const data = (res.data as { data?: unknown })?.data ?? res.data;
-  const record =
-    data && typeof data === "object" ? (data as Record<string, unknown>) : {};
+function parseXpMeResponse(res: unknown): XpMeResponse {
+  const record = toRecord(unwrapApiData(res));
   const balance = Number(record.balance ?? 0);
   const rewardPatch = normalizeRewardData({
     ...record,
@@ -64,15 +46,11 @@ function parseXpMeResponse(res: { data?: unknown }): XpMeResponse {
 
 export const xpService = {
   async getMe(): Promise<XpMeResponse> {
-    const res = await axios.get(`${backendUrl}/api/v1/xp/me`, {
-      headers: authHeaders(),
-    });
+    const res = await apiGet<unknown>(`/api/v1/xp/me`);
     return parseXpMeResponse(res);
   },
   async getBalance(): Promise<XpMeResponse> {
-    const res = await axios.get(`${backendUrl}/api/v1/xp/me`, {
-      headers: authHeaders(),
-    });
+    const res = await apiGet<unknown>(`/api/v1/xp/me`);
     return parseXpMeResponse(res);
   },
   // Backward-compatible alias for existing usage in this repo.

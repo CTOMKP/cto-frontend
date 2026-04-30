@@ -2,11 +2,16 @@
 
 import { usePrivy } from '@privy-io/react-auth';
 import { useCreateWallet } from '@privy-io/react-auth/extended-chains';
-import { useCallback, useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { privyService } from '@/services/privyService';
 import { createMovementWallet, getMovementWallet } from '@/lib/movement-wallet';
 import { authService } from '@/services/authService';
+import { getAuthToken, getUserId } from '@/lib/authSession';
+import { profileKeys } from '@/lib/queryKeys';
+import { bindSessionStoreListeners, useSessionStore } from '@/lib/sessionStore';
+import { findMovementWalletInBackend } from '@/services/walletsService';
 
 // Module-level Set to track processing user IDs across ALL hook instances
 // This prevents multiple parallel runs even if hook is instantiated multiple times
@@ -21,7 +26,8 @@ export function usePrivyAuth() {
     logout: privyLogout, 
     getAccessToken 
   } = usePrivy();
-  
+
+  const queryClient = useQueryClient();
   
   const router = useRouter();
   const { createWallet } = useCreateWallet();
@@ -35,11 +41,16 @@ export function usePrivyAuth() {
   } | null>(null);
 
   useEffect(() => {
+    bindSessionStoreListeners();
+  }, []);
+
+  useEffect(() => {
     if (ready && !authenticated) {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('cto_auth_token') : null;
+      const token = getAuthToken();
       if (!token) {
         setIsAuthenticated(false);
         setIsLoading(false);
+        useSessionStore.getState().clear();
       }
     }
   }, [ready, authenticated]);
@@ -52,17 +63,13 @@ export function usePrivyAuth() {
 
   // Check auth status - prioritize localStorage like test frontend
   const checkAuthStatus = useCallback(async () => {
-    console.log('🔄 checkAuthStatus called');
-    
     try {
       setIsLoading(true);
       
       // SECOND: If no localStorage token, check Privy state
       if (authenticated && user && ready) {
-        console.log('🔄 No localStorage token, checking Privy state...');
         await syncWithBackend();
       } else {
-        console.log('🔄 No authentication data found');
         setIsAuthenticated(false);
         setIsLoading(false);
       }
@@ -80,7 +87,7 @@ export function usePrivyAuth() {
     if (!authenticated || !user || !ready) {
       // If Privy is not authenticated, ensure isAuthenticated is false
       if (!authenticated) {
-    const token = localStorage.getItem('cto_auth_token');
+    const token = getAuthToken();
         // Only set to false if there's no token in localStorage
         if (!token) {
           setIsAuthenticated(false);
@@ -97,15 +104,13 @@ export function usePrivyAuth() {
     
     // CRITICAL: Check module-level Set FIRST to prevent parallel runs
     if (processingUserIds.has(userId)) {
-      console.log('⏭️ User ID already being processed (module-level check), skipping');
       return;
     }
     
     // Check if we've already synced for this user in this session
-    const existingToken = localStorage.getItem('cto_auth_token');
-    const existingUserId = localStorage.getItem('cto_user_id');
+    const existingToken = getAuthToken();
+    const existingUserId = getUserId();
     if (existingToken && existingUserId === userId) {
-      console.log('✅ User already synced, authenticated state already set');
       setIsLoading(false);
       return;
     }
@@ -125,17 +130,14 @@ export function usePrivyAuth() {
     
     for (let i = 0; i < maxRetries; i++) {
       if (user?.linkedAccounts && user.linkedAccounts.length > 0) {
-        console.log(`✅ Privy accounts loaded after ${i + 1} attempt(s)`);
         return true;
       }
       
       if (i < maxRetries - 1) {
-        console.log(`⏳ Waiting for Privy accounts to load... (attempt ${i + 1}/${maxRetries})`);
         await new Promise(resolve => setTimeout(resolve, delayMs));
       }
     }
     
-    console.warn('⚠️ Privy accounts not fully loaded, proceeding anyway...');
     return false;
   };
 
@@ -148,7 +150,6 @@ export function usePrivyAuth() {
         await waitForPrivyAccounts();
         
       // Step 2: Initial Sync with backend FIRST (like test frontend)
-      console.log('🔄 Step 1: Initial sync with backend...');
       const syncResult = await syncWithBackend();
       
       if (!syncResult) {
@@ -156,8 +157,8 @@ export function usePrivyAuth() {
         }
         
       // Step 3: Check if user has Movement wallet in backend or Privy
-      const backendHasMovementWallet = syncResult.wallets?.some(
-        (w) => w.blockchain === 'MOVEMENT' || w.blockchain === 'APTOS' || w.chainType === 'aptos' || w.chainType === 'movement'
+      const backendHasMovementWallet = !!findMovementWalletInBackend(
+        Array.isArray(syncResult.wallets) ? syncResult.wallets : [],
       );
       
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -165,16 +166,8 @@ export function usePrivyAuth() {
         const privyHasMovementWallet = !!movementWallet;
       const hasMoveWallet = backendHasMovementWallet || privyHasMovementWallet;
 
-      console.log('📊 Movement Wallet Check:', { 
-        backendHasMovementWallet, 
-        privyHasMovementWallet, 
-        hasMoveWallet 
-      });
-
       // Step 4: Create wallet if needed
       if (!hasMoveWallet) {
-        console.log('🔄 Step 2: Creating Movement wallet...');
-          
           try {
           setIsLoading(true);
           
@@ -185,14 +178,12 @@ export function usePrivyAuth() {
             setTimeout(() => reject(new Error('Wallet creation timed out')), 15000)
             );
             
-          await Promise.race([walletCreationPromise, timeoutPromise]);
-          console.log('✅ Movement wallet created');
+            await Promise.race([walletCreationPromise, timeoutPromise]);
             
           // CRITICAL: Give Privy indexing time (matching test frontend strategy)
           await new Promise(resolve => setTimeout(resolve, 1500));
             
           // Step 5: Final Sync to save the new wallet (like test frontend)
-          console.log('🔄 Step 3: Final sync with backend...');
           await syncWithBackend();
           } catch (walletError: unknown) {
             const errorMessage = walletError instanceof Error ? walletError.message : 'Unknown error';
@@ -207,11 +198,9 @@ export function usePrivyAuth() {
           }
           }
         } else {
-        console.log('✅ Movement wallet already exists, skipping creation');
           }
 
       // Step 6: Set authenticated (no redirect - let user stay on current page)
-      console.log('✅ Authentication flow complete');
         setIsAuthenticated(true);
       setIsLoading(false);
         
@@ -223,9 +212,8 @@ export function usePrivyAuth() {
       processingUserIds.delete(userId);
       
       // Even if sync fails, check if we have a token now
-        const token = localStorage.getItem('cto_auth_token');
+        const token = getAuthToken();
         if (token) {
-        console.log('⚠️ Sync failed but token exists, setting authenticated');
           setIsAuthenticated(true);
         } else {
           setIsAuthenticated(false);
@@ -243,15 +231,13 @@ export function usePrivyAuth() {
         throw new Error('No Privy access token available');
       }
   
-      console.log('🔗 Calling backend sync...');
       const backendSyncResult = await privyService.syncUser(privyToken, getAccessToken);
-      console.log('✅ Backend sync successful');
-  
-      // 🔥 NEW: fetch full profile
-      const profile = await authService.fetchProfile();
 
-      console.log('profiles', profile);
-  
+      const profile = await queryClient.fetchQuery({
+        queryKey: profileKeys.detail(),
+        queryFn: ({ signal }) => authService.fetchProfile(signal),
+      });
+
       if (profile) {
         setUserData({
           id: String(profile.id),
@@ -259,18 +245,22 @@ export function usePrivyAuth() {
           name: profile.name,
           walletId: profile.walletId,
         });
+        useSessionStore.getState().setUserId(String(profile.id));
+        useSessionStore.getState().setEmail(profile.email ?? null);
+        useSessionStore.getState().setUsername(profile.name ?? null);
+        useSessionStore.getState().hydrateFromStorage();
       }
+      useSessionStore.getState().setToken(getAuthToken());
   
       return backendSyncResult;
     } catch (error) {
       console.error('❌ Backend sync call failed:', error);
       return null;
     }
-  }, [user, authenticated, getAccessToken]);
+  }, [user, authenticated, getAccessToken, queryClient]);
 
   const handleLogin = useCallback(async () => {
     try {
-      console.log('🔄 Starting OAuth login...');
       await login();
       // After login, Privy will update authenticated state, which triggers sync via useEffect
     } catch (error) {
@@ -283,6 +273,9 @@ export function usePrivyAuth() {
     try {
       // Clear Privy session
       await privyLogout();
+
+      // Drop cached server state (profile, notifications, etc.)
+      queryClient.clear();
       
       // Clear all localStorage data
       privyService.logout();
@@ -294,23 +287,24 @@ export function usePrivyAuth() {
       
       // Reset state
       setIsAuthenticated(false);
+      useSessionStore.getState().clear();
       
       // Force page reload to clear all UI state (like test frontend)
       window.location.href = '/listings';
-      
-      console.log('✅ Logout successful');
     } catch (error) {
       console.error('Logout failed:', error);
+      queryClient.clear();
       // Even if Privy logout fails, clear localStorage
       privyService.logout();
       if (user?.id) {
         processingUserIds.delete(user.id);
       }
       setIsAuthenticated(false);
+      useSessionStore.getState().clear();
       router.push('/listings');
       throw error;
     }
-  }, [privyLogout, router, user?.id]);
+  }, [privyLogout, queryClient, router, user?.id]);
 
   return {
     user,

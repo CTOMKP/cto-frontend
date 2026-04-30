@@ -1,6 +1,13 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { invalidateListingQueries } from "@/lib/queryInvalidation";
+import {
+  useCreateUserListingMutation,
+  usePublishUserListingMutation,
+  useUpdateUserListingMutation,
+} from "@/hooks/mutations/useUserListingMutations";
 import Image from "next/image";
 import Step1 from "./features/Step1";
 import Step2, { SocialLinks } from "./features/Step2";
@@ -128,6 +135,10 @@ function canProceedWithScan(scan: ScanResult | null): boolean {
 }
 
 export default function ListingApplication() {
+  const queryClient = useQueryClient();
+  const createListingMutation = useCreateUserListingMutation();
+  const updateListingMutation = useUpdateUserListingMutation();
+  const publishListingMutation = usePublishUserListingMutation();
   const [selectedNetwork, setSelectedNetwork] = useState<string>("solana");
 
   // Clear stale draft when starting a new listing flow (match cto-test-frontend)
@@ -208,7 +219,10 @@ export default function ListingApplication() {
       if (Object.keys(updates).length > 0) {
         try {
           await userListingsService.update(existing, updates as Partial<CreateUserListingPayload>);
-        } catch {}
+          await invalidateListingQueries(queryClient);
+        } catch {
+          /* best-effort autosave; avoid blocking the flow */
+        }
       }
       return existing;
     }
@@ -247,15 +261,29 @@ export default function ListingApplication() {
         discord: linkDiscord,
       };
     }
-    const res = await userListingsService.create(createPayload);
-    const data = res?.data ?? res;
-    const id = data?.id ?? data?.listingId;
-    const backendMessage = (res as { message?: string })?.message ?? (data as { message?: string })?.message;
+    const created = await createListingMutation.mutateAsync(createPayload) as {
+      id?: string;
+      listingId?: string;
+      message?: string;
+    };
+    const id = created?.id ?? created?.listingId;
+    const backendMessage = created?.message;
     if (!id) throw new Error(backendMessage || 'Failed to create draft');
     setDraftId(id);
     if (typeof window !== 'undefined') localStorage.setItem(DRAFT_KEY, id);
     return id;
-  }, [scanResult, contractAddress, selectedNetwork, bio, logoUrl, bannerUrl, links, getDraftId]);
+  }, [
+    scanResult,
+    contractAddress,
+    selectedNetwork,
+    bio,
+    logoUrl,
+    bannerUrl,
+    links,
+    getDraftId,
+    createListingMutation,
+    queryClient,
+  ]);
 
   const handleProfilePictureChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -274,7 +302,14 @@ export default function ListingApplication() {
       );
       setLogoUrl(viewUrl);
       if (draft) {
-        try { await userListingsService.update(draft, { logoUrl: viewUrl }); } catch {}
+        try {
+          await updateListingMutation.mutateAsync({
+            id: draft,
+            payload: { logoUrl: viewUrl },
+          });
+        } catch {
+          /* mutation onError toasts; still show success if upload worked */
+        }
       }
       toast.success('Profile picture uploaded');
     } catch (err: unknown) {
@@ -284,7 +319,7 @@ export default function ListingApplication() {
     } finally {
       setLogoUploading(false);
     }
-  }, [ensureDraftExists]);
+  }, [ensureDraftExists, updateListingMutation]);
 
   const handleBannerChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -303,7 +338,14 @@ export default function ListingApplication() {
       );
       setBannerUrl(viewUrl);
       if (draft) {
-        try { await userListingsService.update(draft, { bannerUrl: viewUrl }); } catch {}
+        try {
+          await updateListingMutation.mutateAsync({
+            id: draft,
+            payload: { bannerUrl: viewUrl },
+          });
+        } catch {
+          /* mutation onError toasts */
+        }
       }
       toast.success('Banner uploaded');
     } catch (err: unknown) {
@@ -313,7 +355,7 @@ export default function ListingApplication() {
     } finally {
       setBannerUploading(false);
     }
-  }, [ensureDraftExists]);
+  }, [ensureDraftExists, updateListingMutation]);
 
   const handleStep2Continue = useCallback(async () => {
     try {
@@ -465,8 +507,13 @@ export default function ListingApplication() {
                   const id = getDraftId();
                   if (id) {
                     try {
-                      await userListingsService.publish(id);
-                    } catch {}
+                      await publishListingMutation.mutateAsync({
+                        id,
+                        meta: { silent: true },
+                      });
+                    } catch {
+                      /* silent publish failure: no toast */
+                    }
                     localStorage.removeItem(DRAFT_KEY);
                     setDraftId(null);
                   }

@@ -8,13 +8,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useState, useMemo, useEffect } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { listingKeys, type ListingTableFilters } from "@/lib/queryKeys";
+import { fetchListingTable } from "@/services/listingPublicService";
 import { Category } from "../../../components/ListingsCategoryFilter";
 import { MemeCategory } from "../../../components/MemeCategoryFilter";
 import { Network } from "../../../components/NetworkFilter";
-import { ApiCoinItem, ApiListingResponse } from "@/types/api";
+import type { ApiCoinItem } from "@/types/api";
 import { SortField, SortDirection, MockLikeCoin } from "./types/listing";
-import { formatAgeYMD } from "./utils/listingUtils";
+import { mapApiCoinItemsToMockLikeCoins } from "./utils/listingUtils";
 import ListingTableSkeleton from "./ListingTableSkeleton";
 import ListingTableHeader from "./ListingTableHeader";
 import ListingTableRow from "./ListingTableRow";
@@ -30,13 +33,39 @@ export default function TopListings() {
   const [selectedNetwork, setSelectedNetwork] = useState<Network | null>(null);
   const [page, setPage] = useState<number>(1);
 
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [total, setTotal] = useState<number>(0);
   const [limit] = useState<number>(20);
   const [liveItems, setLiveItems] = useState<MockLikeCoin[]>([]);
-  const [rawApiItems, setRawApiItems] = useState<ApiCoinItem[]>([]);
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+  const tableFilters = useMemo<ListingTableFilters>(
+    () => ({
+      page,
+      limit,
+      chain: selectedNetwork ? selectedNetwork.toUpperCase() : null,
+    }),
+    [page, limit, selectedNetwork],
+  );
+
+  const {
+    data,
+    isFetching,
+    isPending,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: listingKeys.table(tableFilters),
+    queryFn: ({ signal }) => fetchListingTable(tableFilters, signal),
+    enabled: !!backendUrl,
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+  });
+
+  const total = data?.total ?? 0;
+  const rawApiItems: ApiCoinItem[] = data?.items ?? [];
+
   const totalPages = useMemo(() => (total && limit ? Math.max(1, Math.ceil(total / limit)) : 1), [total, limit]);
 
   // Reset page to 1 when network changes
@@ -44,121 +73,10 @@ export default function TopListings() {
     setPage(1);
   }, [selectedNetwork]);
 
-  // Fetch data for Listing component (separate from highlights)
   useEffect(() => {
-    const base = process.env.NEXT_PUBLIC_BACKEND_URL;
-    if (!base) {
-      setIsLoading(false);
-      return;
-    }
-
-    const controller = new AbortController();
-    const { signal } = controller;
-
-    const fetchListings = async () => {
-      setIsLoading(true);
-
-      let url: string;
-      if (selectedNetwork === null) {
-        url = `${base}/api/v1/listing/listings?category=MEME&sort=updatedAt%3Adesc&page=${page}&limit=${limit}`;
-      } else {
-        const chainParam = selectedNetwork.toUpperCase();
-        url = `${base}/api/v1/listing/listings?chain=${chainParam}&category=MEME&sort=updatedAt%3Adesc&page=${page}&limit=${limit}`;
-      }
-
-      try {
-        const res = await fetch(url, { signal });
-        if (signal.aborted) return;
-        if (!res.ok) {
-          return;
-        }
-        const response = await res.json();
-        if (signal.aborted) return;
-
-        let data: ApiListingResponse;
-        if (response && typeof response === 'object') {
-          if ('data' in response && response.data) {
-            data = response.data;
-          } else if ('items' in response || 'total' in response) {
-            data = response as ApiListingResponse;
-          } else {
-            data = { total: 0, items: [], page: 1, limit: 20 };
-          }
-        } else {
-          data = { total: 0, items: [], page: 1, limit: 20 };
-        }
-
-        setTotal(data.total || 0);
-        setRawApiItems(data.items || []);
-
-        const mapped: MockLikeCoin[] = (data.items || []).map((it) => {
-          // Use backend-provided age (actual token age) or fallback to calculating from createdAt
-          let ageStr: string | null = null;
-          if (it.age && typeof it.age === 'string' && it.age.trim() !== '') {
-            // Convert to "1y 2mo 4d" format
-            ageStr = formatAgeYMD(it.age);
-          } else {
-            const createdAt = it.createdAt ? new Date(it.createdAt) : null;
-            ageStr = createdAt ? formatAgeYMD(createdAt) : null;
-          }
-          
-          // Get holders from multiple possible sources - preserve null for "N/A" display
-          const holderCount = it.holders ?? it?.metadata?.market?.holders ?? null;
-          
-          // Get tier and normalize it
-          let tier: string | null = it.tier || null;
-          if (tier) {
-            tier = String(tier).trim().toLowerCase();
-            // Normalize various invalid tier values to null (including all dash variations)
-            if (tier === 'none' || tier === 'null' || tier === 'undefined' || tier === '' || 
-                tier === '—' || tier === '----' || tier === '------' || 
-                tier.startsWith('---') || tier === 'n/a' || tier === 'na' ||
-                /^[-—]+$/.test(tier)) { // Match any string that's only dashes/em-dashes
-              tier = null;
-            }
-          }
-          
-          return {
-            name: it.name || it.symbol || "",
-            whale: false,
-            age: ageStr,
-            address: it.contractAddress,
-            x: undefined,
-            website: undefined,
-            image: it.logoUrl || it?.metadata?.market?.logoUrl,
-            chain: it.chain || "solana",
-            category: it.category || "meme",
-            communityScore: typeof it.communityScore === "number" ? it.communityScore : (it?.metadata?.market?.communityScore ?? 0),
-            degenAudit: typeof it.riskScore === "number" ? it.riskScore : (it?.metadata?.market?.riskScore ?? 0),
-            tier: tier,
-            mindshare: undefined,
-            price: {
-              amount: Number(it.priceUsd ?? 0),
-              change: {
-                "1m": 0,
-                "5m": 0,
-                "1h": Number(it.change1h ?? 0),
-                "5h": 0,
-                "24h": Number(it.change24h ?? 0),
-              },
-            },
-            marketCap: Number(it.marketCap ?? it?.metadata?.market?.fdv ?? 0),
-            liquidity: Number(it.liquidityUsd ?? 0),
-            volume: { amount: Number(it.volume24h ?? it?.metadata?.market?.volume?.h24 ?? 0) },
-            holders: holderCount !== null && holderCount !== undefined ? Number(holderCount) : null,
-          } as MockLikeCoin;
-        });
-        if (signal.aborted) return;
-        setLiveItems(mapped);
-      } catch (e) {
-        if (signal.aborted) return;
-      } finally {
-        if (!signal.aborted) setIsLoading(false);
-      }
-    };
-    fetchListings();
-    return () => controller.abort();
-  }, [page, limit, selectedNetwork]);
+    if (!data?.items) return;
+    setLiveItems(mapApiCoinItemsToMockLikeCoins(data.items));
+  }, [data]);
 
   // Sorting function
   const handleSort = (field: SortField) => {
@@ -293,6 +211,9 @@ export default function TopListings() {
 
   const filteredData = listings[category];
 
+  const showTableSkeleton =
+    !!backendUrl && !data && (isPending || isFetching);
+
   const handleProjectClick = (projectName: string, projectAddress: string) => {
     const slug = slugify(projectName) || projectAddress;
     router.push(
@@ -303,70 +224,28 @@ export default function TopListings() {
   };
 
   const handleFilterChange = (filteredItems: ApiCoinItem[]) => {
-    // Convert filtered API items to MockLikeCoin format for display
-    const mapped: MockLikeCoin[] = filteredItems.map((it) => {
-      // Use backend-provided age (actual token age) or fallback to calculating from createdAt
-      let ageStr: string | null = null;
-      if (it.age && typeof it.age === 'string' && it.age.trim() !== '') {
-        // Convert to "1y 2mo 4d" format
-        ageStr = formatAgeYMD(it.age);
-      } else {
-        const createdAt = it.createdAt ? new Date(it.createdAt) : null;
-        ageStr = createdAt ? formatAgeYMD(createdAt) : null;
-      }
-      
-      // Get holders from multiple possible sources - preserve null for "N/A" display
-      const holderCount = it.holders ?? it?.metadata?.market?.holders ?? null;
-      
-      // Get tier and normalize it
-      let tier: string | null = it.tier || null;
-      if (tier) {
-        tier = String(tier).trim().toLowerCase();
-        // Normalize various invalid tier values to null (including all dash variations)
-        if (tier === 'none' || tier === 'null' || tier === 'undefined' || tier === '' || 
-            tier === '—' || tier === '----' || tier === '------' || 
-            tier.startsWith('---') || tier === 'n/a' || tier === 'na' ||
-            /^[-—]+$/.test(tier)) { // Match any string that's only dashes/em-dashes
-          tier = null;
-        }
-      }
-      
-      return {
-        name: it.name || it.symbol || "",
-        age: ageStr,
-        address: it.contractAddress,
-        x: it.logoUrl,
-        website: undefined,
-        image: it.logoUrl || it?.metadata?.market?.logoUrl,
-        chain: it.chain || "solana", // Default to solana if no chain specified
-        category: it.category || "meme", // Include category from API
-        communityScore: typeof it.communityScore === "number" ? it.communityScore : (it?.metadata?.market?.communityScore ?? 0),
-        degenAudit: typeof it.riskScore === "number" ? it.riskScore : (it?.metadata?.market?.riskScore ?? 0),
-        tier: tier,
-        mindshare: undefined,
-        price: {
-          amount: Number(it.priceUsd ?? 0),
-          change: {
-            "1m": 0,
-            "5m": 0,
-            "1h": Number(it.change1h ?? 0),
-            "5h": 0,
-            "24h": Number(it.change24h ?? 0),
-          },
-        },
-        marketCap: Number(it.marketCap ?? it?.metadata?.market?.fdv ?? 0),
-        liquidity: Number(it.liquidityUsd ?? 0),
-        volume: { amount: Number(it.volume24h ?? it?.metadata?.market?.volume?.h24 ?? 0) },
-        holders: Number(holderCount),
-      } as MockLikeCoin;
-    });
-    setLiveItems(mapped);
+    setLiveItems(mapApiCoinItemsToMockLikeCoins(filteredItems));
   };
 
   return (
     <div>
       <div className="h-px w-full bg-[#FF007510] mt-7 mb-4.5"></div>
       <div className="w-[87%] mx-auto">
+        {isError && (
+          <div
+            className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-100"
+            role="alert"
+          >
+            <span>Could not load listings. Check your connection and try again.</span>
+            <button
+              type="button"
+              className="shrink-0 rounded-md border border-amber-400/50 px-2 py-1 text-xs font-medium hover:bg-amber-500/20"
+              onClick={() => refetch()}
+            >
+              Retry
+            </button>
+          </div>
+        )}
         <Card className="w-full p-3 border-none border-[#FF007510] text-white">
           <CardHeader className="flex flex-wrap justify-between items-center px-0">
             <CardTitle className="hidden">
@@ -410,7 +289,7 @@ export default function TopListings() {
                   onSort={handleSort}
                 />
                 <tbody>
-                  {isLoading ? (
+                  {showTableSkeleton ? (
                     <ListingTableSkeleton />
                   ) : (
                     (filteredData ?? []).map((coin, index) => (

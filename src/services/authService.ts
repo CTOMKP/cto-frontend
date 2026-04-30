@@ -1,8 +1,23 @@
-import axios from 'axios';
+import { ApiError } from '@/lib/apiError';
+import { apiGet, apiPost, apiPut } from '@/lib/apiClient';
+import { toRecord, unwrapApiData } from '@/lib/apiResponse';
 import { LoginCredentials, SignUpCredentials, AuthResponse, User } from '../types/auth.types';
 import { API_ENDPOINTS } from '../utils/constants';
 import { handleApiError } from '../utils/helpers';
 import { clearRewardData, getStoredRewardData, persistRewardData } from '../utils/rewardStorage';
+import {
+  clearSessionStorage,
+  getAuthToken,
+  PROFILE_AVATAR_URL_KEY,
+  setAuthToken,
+  USER_AVATAR_URL_KEY,
+  USER_CREATED_KEY,
+  USER_EMAIL_KEY,
+  USER_ID_KEY,
+  USER_NAME_KEY,
+  WALLET_ID_KEY,
+  clearAuthToken,
+} from '@/lib/authSession';
 
 class AuthService {
   private baseUrl: string;
@@ -30,51 +45,65 @@ class AuthService {
   }
 
   private getToken(): string | null {
-    return localStorage.getItem('cto_auth_token');
+    return getAuthToken();
   }
 
   private setToken(token: string): void {
-    localStorage.setItem('cto_auth_token', token);
+    setAuthToken(token);
   }
 
   private removeToken(): void {
-    localStorage.removeItem('cto_auth_token');
+    clearAuthToken();
   }
 
-  async fetchProfile(): Promise<User | null> {
-    try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
-      const response = await axios.get(
-        `${backendUrl}/api/v1/auth/profile`,
-        { headers: this.getHeaders() }
-      );
-
-      const profile = response.data;
-      if (!profile?.data?.email) return null;
-
-      if (profile.data.id) localStorage.setItem('cto_user_id', String(profile.data.id));
-      localStorage.setItem('cto_user_email', profile.data.email);
-      if (profile.data.name) {
-        localStorage.setItem('cto_user_name', profile.data.name);
-      } else if (Object.prototype.hasOwnProperty.call(profile.data, 'name')) {
-        localStorage.removeItem('cto_user_name');
-      }
-      if (profile.data.createdAt) {
-        localStorage.setItem('cto_user_created', profile.data.createdAt);
-      }
-      if (profile.data.walletId) {
-        localStorage.setItem('cto_wallet_id', profile.data.walletId);
-      }
-      if (profile.data.avatarUrl) {
-        localStorage.setItem('cto_user_avatar_url', profile.data.avatarUrl);
-        localStorage.setItem('profile_avatar_url', profile.data.avatarUrl);
-      }
-      persistRewardData(profile.data);
-
-      return profile.data;
-    } catch (error) {
-      return null;
+  private parseUpdatedUserFromResponse(body: unknown): User | null {
+    const normalized = toRecord(unwrapApiData(body));
+    if (normalized.user && typeof normalized.user === "object") {
+      return normalized.user as User;
     }
+    if (typeof normalized.email === "string") {
+      return normalized as unknown as User;
+    }
+    return null;
+  }
+
+  private applyUserProfileToStorage(profileData: User): void {
+    if (profileData.id) localStorage.setItem(USER_ID_KEY, String(profileData.id));
+    localStorage.setItem(USER_EMAIL_KEY, profileData.email);
+    if (profileData.name) {
+      localStorage.setItem(USER_NAME_KEY, profileData.name);
+    } else if (Object.prototype.hasOwnProperty.call(profileData, "name")) {
+      localStorage.removeItem(USER_NAME_KEY);
+    }
+    if (profileData.createdAt) {
+      localStorage.setItem(USER_CREATED_KEY, profileData.createdAt);
+    }
+    if (profileData.walletId) {
+      localStorage.setItem(WALLET_ID_KEY, profileData.walletId);
+    }
+    if (profileData.avatarUrl) {
+      localStorage.setItem(USER_AVATAR_URL_KEY, profileData.avatarUrl);
+      localStorage.setItem(PROFILE_AVATAR_URL_KEY, profileData.avatarUrl);
+    }
+    persistRewardData(profileData);
+  }
+
+  /**
+   * Loads `/api/v1/auth/profile` via shared fetch client; persists snapshot to session storage.
+   * Throws on HTTP failure (e.g. `ApiError` from `apiClient`) or invalid payload so TanStack Query can surface errors.
+   */
+  async fetchProfile(signal?: AbortSignal): Promise<User> {
+    const body = await apiGet<unknown>(`/api/v1/auth/profile`, {
+      signal,
+      clearSessionOn401: true,
+    });
+    const profile = unwrapApiData<User>(body);
+    if (!profile?.email) {
+      throw new Error("Profile response is missing user email.");
+    }
+
+    this.applyUserProfileToStorage(profile);
+    return profile;
   }
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
@@ -82,7 +111,7 @@ class AuthService {
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
       
       // Use the simple login endpoint
-      const response = await axios.post(
+      const response = await apiPost<{ success?: boolean; token?: string; user?: User }>(
         `${backendUrl}/api/circle/users/login`,
         {
           userId: credentials.email,
@@ -90,14 +119,19 @@ class AuthService {
         }
       );
       
-      console.log('🔍 Response received:', response.status, response.data);
+      console.log('🔍 Response received:', response);
       
-      if (response.data.success) {
+      if (response.success && response.token) {
         // Login successful, store token and return user info
-        const { token, user } = response.data;
+        const { token, user } = response;
         this.setToken(token);
-        const profile = await this.fetchProfile();
-        const resolvedUser = profile || user;
+        let profile: User | null = null;
+        try {
+          profile = await this.fetchProfile();
+        } catch (e) {
+          console.warn("Profile fetch after login failed; using login payload:", e);
+        }
+        const resolvedUser = profile ?? (user as User);
         
         return {
           user: resolvedUser,
@@ -111,15 +145,14 @@ class AuthService {
       console.error('🚨 Login failed:', error);
       console.error('🚨 Error details:', {
         message: error instanceof Error ? error.message : 'Unknown error',
-        isAxiosError: axios.isAxiosError(error),
-        hasResponse: axios.isAxiosError(error) ? !!error.response : false,
-        hasRequest: axios.isAxiosError(error) ? !!error.request : false,
+        isApiError: error instanceof ApiError,
+        status: error instanceof ApiError ? error.status : undefined,
       });
       
       // Handle axios errors with specific status codes
-      if (axios.isAxiosError(error)) {
-        if (error.response) {
-          const { status, data } = error.response;
+      if (error instanceof ApiError) {
+        const status = error.status;
+        const data = error.body as { error?: string } | undefined;
           console.error('🚨 Response error:', { status, data });
           
           switch (status) {
@@ -134,11 +167,6 @@ class AuthService {
             default:
               throw new Error(data?.error || `Login failed with status ${status}`);
           }
-        } else if (error.request) {
-          throw new Error('Unable to connect to server. Please check your internet connection.');
-        } else {
-          throw new Error('Login request failed. Please try again.');
-        }
       }
       
       // Handle other types of errors
@@ -152,7 +180,7 @@ class AuthService {
       // Use our Circle backend for user creation
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
       
-      const response = await axios.post(
+      const response = await apiPost<{ success?: boolean; error?: string }>(
         `${backendUrl}/api/circle/users`,
         {
           userId: credentials.email, // Use email as userId
@@ -161,13 +189,13 @@ class AuthService {
         }
       );
       
-      console.log('🔍 Signup response received:', response.status, response.data);
+      console.log('🔍 Signup response received:', response);
       
-      if (response.data.success) {
+      if (response.success) {
         // Account created successfully, but no token yet (user needs to login)
         // Store user info in localStorage for now
-        localStorage.setItem('cto_user_email', credentials.email);
-        localStorage.setItem('cto_user_created', new Date().toISOString());
+        localStorage.setItem(USER_EMAIL_KEY, credentials.email);
+        localStorage.setItem(USER_CREATED_KEY, new Date().toISOString());
         
         const user: User = {
           id: credentials.email, // Use email as ID
@@ -183,20 +211,18 @@ class AuthService {
           message: 'Account created successfully. Please login to continue.'
         };
       } else {
-        throw new Error(response.data.error || 'Failed to create user');
+        throw new Error(response.error || 'Failed to create user');
       }
     } catch (error) {
       console.error('🚨 Circle API failed:', error);
       console.error('🚨 Signup Error details:', {
         message: error instanceof Error ? error.message : 'Unknown error',
-        isAxiosError: axios.isAxiosError(error),
-        hasResponse: axios.isAxiosError(error) ? !!error.response : false,
-        hasRequest: axios.isAxiosError(error) ? !!error.request : false,
-        code: axios.isAxiosError(error) ? error.code : 'N/A',
+        isApiError: error instanceof ApiError,
+        status: error instanceof ApiError ? error.status : undefined,
       });
       
       // Check if this is a user already exists error (409 Conflict)
-      if (axios.isAxiosError(error) && error.response?.status === 409) {
+      if (error instanceof ApiError && error.status === 409) {
         throw new Error('Account already exists. Please login instead.');
       }
       
@@ -206,11 +232,7 @@ class AuthService {
   }
 
   async logout(): Promise<void> {
-    // Simply remove the token from localStorage
-    this.removeToken();
-    localStorage.removeItem('cto_user_email');
-    localStorage.removeItem('cto_user_name');
-    localStorage.removeItem('cto_wallet_id');
+    clearSessionStorage();
     clearRewardData();
   }
 
@@ -219,55 +241,53 @@ class AuthService {
     
     if (!token) return null;
 
-    const profile = await this.fetchProfile();
-    if (profile) return profile;
+    try {
+      return await this.fetchProfile();
+    } catch {
+      // Network / server error — use cached snapshot when possible
+    }
 
     // Fallback to localStorage if profile fetch fails
-    const email = localStorage.getItem('cto_user_email');
+    const email = localStorage.getItem(USER_EMAIL_KEY);
     if (!email) return null;
 
     return {
       id: email,
       email: email,
-      walletId: localStorage.getItem('cto_wallet_id') || '',
-      name: localStorage.getItem('cto_user_name') || undefined,
+      walletId: localStorage.getItem(WALLET_ID_KEY) || '',
+      name: localStorage.getItem(USER_NAME_KEY) || undefined,
       ...getStoredRewardData(),
-      createdAt: localStorage.getItem('cto_user_created') || new Date().toISOString(),
+      createdAt: localStorage.getItem(USER_CREATED_KEY) || new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
   }
 
-  async updateUser(userId: string, updates: Partial<User>): Promise<User> {
-    try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
-      const response = await axios.put(
-        `${backendUrl}/api/v1/auth/users/me`,
-        updates,
-        { headers: this.getHeaders() }
-      );
-
-      const updatedUser = response.data.user;
-      if (updatedUser?.name) {
-        localStorage.setItem('cto_user_name', updatedUser.name);
-      } else if (Object.prototype.hasOwnProperty.call(updatedUser || {}, 'name')) {
-        localStorage.removeItem('cto_user_name');
-      }
-      if (updatedUser?.avatarUrl) {
-        localStorage.setItem('cto_user_avatar_url', updatedUser.avatarUrl);
-        localStorage.setItem('profile_avatar_url', updatedUser.avatarUrl);
-      }
-      persistRewardData(updatedUser);
-      return updatedUser;
-    } catch (error) {
-      throw new Error(`Failed to update user: ${handleApiError(error)}`);
+  async updateUser(_userId: string, updates: Partial<User>): Promise<User> {
+    const raw = await apiPut<unknown>(`/api/v1/auth/users/me`, updates, {
+      clearSessionOn401: true,
+    });
+    const updatedUser = this.parseUpdatedUserFromResponse(raw);
+    if (!updatedUser) {
+      throw new Error("Invalid update profile response.");
     }
+    if (updatedUser?.name) {
+      localStorage.setItem(USER_NAME_KEY, updatedUser.name);
+    } else if (Object.prototype.hasOwnProperty.call(updatedUser || {}, "name")) {
+      localStorage.removeItem(USER_NAME_KEY);
+    }
+    if (updatedUser?.avatarUrl) {
+      localStorage.setItem(USER_AVATAR_URL_KEY, updatedUser.avatarUrl);
+      localStorage.setItem(PROFILE_AVATAR_URL_KEY, updatedUser.avatarUrl);
+    }
+    persistRewardData(updatedUser);
+    return updatedUser;
   }
 
   async forgotPassword(userId: string, newPassword: string): Promise<void> {
     try {
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
       
-      const response = await axios.post(
+      const response = await apiPost<{ success?: boolean }>(
         `${backendUrl}/api/circle/users/forgot-password`,
         {
           userId: userId,
@@ -275,7 +295,7 @@ class AuthService {
         }
       );
       
-      if (!response.data.success) {
+      if (!response.success) {
         throw new Error('Failed to reset password');
       }
     } catch (error) {
@@ -294,15 +314,14 @@ class AuthService {
         throw new Error('No token to refresh');
       }
 
-      const response = await axios.post(
+      const response = await apiPost<{ access_token?: string; expires_in?: number }>(
         `${backendUrl}/api/v1/auth/refresh`,
         {},
-        { headers: this.getHeaders() }
       );
 
-      if (response.data.access_token) {
-        this.setToken(response.data.access_token);
-        return response.data;
+      if (response.access_token) {
+        this.setToken(response.access_token);
+        return { access_token: response.access_token, expires_in: response.expires_in ?? 0 };
       } else {
         throw new Error('No access token in refresh response');
       }

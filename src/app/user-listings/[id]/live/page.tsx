@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { CheckCircle2, Zap } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { userListingsService } from "@/services/userListingsService";
+import { useUserListingDetailQuery } from "@/hooks/useUserListingDetailQuery";
 
 type ListingLike = {
   id: string;
@@ -60,43 +60,14 @@ export default function UserListingLivePage() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [listing, setListing] = useState<ListingLike | null>(null);
-
-  useEffect(() => {
-    const load = async () => {
-      if (!id) return;
-      try {
-        setLoading(true);
-        setError(null);
-        let response: unknown = null;
-
-        const token = localStorage.getItem("cto_auth_token");
-        if (token) {
-          try {
-            response = await userListingsService.getMyListing(id);
-          } catch {
-            response = null;
-          }
-        }
-
-        if (!response) {
-          response = await userListingsService.getPublicListing(id);
-        }
-
-        setListing(response as ListingLike);
-      } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : "Failed to load approved listing.";
-        setError(message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    load();
-  }, [id]);
+  const listQuery = useUserListingDetailQuery(id);
+  const loading = listQuery.isPending && listQuery.data === undefined;
+  const error = listQuery.isError
+    ? listQuery.error instanceof Error
+      ? listQuery.error.message
+      : "Failed to load approved listing."
+    : null;
+  const listing = (listQuery.data as ListingLike | null | undefined) ?? null;
 
   const metadata = useMemo(() => {
     if (!listing) return {};
@@ -147,8 +118,17 @@ export default function UserListingLivePage() {
           <Link href="/user-listings/mine" className="text-sm text-white/70 underline">
             Back
           </Link>
-          <div className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-            {error || "Listing not found"}
+          <div className="mt-4 flex flex-col gap-3 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+            <p>{error || "Listing not found"}</p>
+            {listQuery.isError && id && (
+              <button
+                type="button"
+                className="w-fit rounded-md border border-red-400/50 px-3 py-1.5 text-red-100 hover:bg-red-500/20"
+                onClick={() => listQuery.refetch()}
+              >
+                Retry
+              </button>
+            )}
           </div>
         </div>
       </div>

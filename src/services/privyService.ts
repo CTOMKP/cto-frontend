@@ -1,7 +1,20 @@
-import axios from 'axios';
+import { ApiError } from '@/lib/apiError';
+import { apiGet, apiPost } from '@/lib/apiClient';
+import { toRecord, unwrapApiData } from '@/lib/apiResponse';
 import { getCloudFrontUrl } from '@/lib/image-url-helper';
+import {
+  clearSessionStorage,
+  getAuthToken,
+  PROFILE_AVATAR_URL_KEY,
+  setAuthToken,
+  USER_AVATAR_URL_KEY,
+  USER_EMAIL_KEY,
+  USER_ID_KEY,
+  WALLET_ADDRESS_KEY,
+} from '@/lib/authSession';
 import { BackendWallet } from '@/types/privy';
 import { saveWalletsToStorage } from '@/utils/localStorage';
+import walletsService from '@/services/walletsService';
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
 
@@ -10,6 +23,10 @@ const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
  * Handles Privy authentication and syncs with CTO backend
  */
 class PrivyService {
+  private isSyncSuccessPayload(payload: Record<string, any>): boolean {
+    return (payload?.success === true || (payload?.user && payload?.token)) && !!payload?.user && !!payload?.token;
+  }
+
   /**
    * Sync Privy user with CTO backend
    * @param privyToken - Privy authentication token from frontend
@@ -27,7 +44,7 @@ class PrivyService {
     wallets: BackendWallet[];
   }> {
     // Match test frontend: retry logic with fresh tokens and 30 second timeout
-    let response;
+    let response: unknown = null;
     let retryCount = 0;
     const maxRetries = 2; // Match test frontend: 2 retries
     
@@ -44,13 +61,9 @@ class PrivyService {
         
         console.log(`🔄 Sync attempt ${retryCount + 1}: Using token: ${freshToken.substring(0, 20)}...`);
         
-        response = await axios.post(
+        response = await apiPost<unknown>(
         `${API_BASE}/api/v1/auth/privy/sync`,
           { privyToken: freshToken },
-        {
-            headers: { 'Content-Type': 'application/json' },
-            timeout: 30000 // 30 second timeout (matching test frontend)
-          }
         );
         
         // If we get here, the request succeeded
@@ -60,21 +73,21 @@ class PrivyService {
         console.log(`❌ Sync attempt ${retryCount + 1} failed:`, errorMessage);
         
         // Log full error details for debugging on every attempt
-        if (axios.isAxiosError(error)) {
+        if (error instanceof ApiError) {
           console.error(`❌ Backend error (attempt ${retryCount + 1}):`, {
-            status: error.response?.status,
-            statusText: error.response?.statusText,
-            data: error.response?.data,
-            message: error.response?.data?.message || error.response?.data?.error,
-            url: error.config?.url,
+            status: error.status,
+            data: error.body,
+            message: (error.body as { message?: string; error?: string } | undefined)?.message || (error.body as { message?: string; error?: string } | undefined)?.error || error.message,
+            url: `${API_BASE}/api/v1/auth/privy/sync`,
           });
         }
         
         if (retryCount === maxRetries) {
           // On final failure, throw with detailed error
-          if (axios.isAxiosError(error)) {
-            const backendMessage = error.response?.data?.message || error.response?.data?.error || error.message;
-            throw new Error(`Failed to sync user: ${backendMessage} (Status: ${error.response?.status || 'N/A'})`);
+          if (error instanceof ApiError) {
+            const body = error.body as { message?: string; error?: string } | undefined;
+            const backendMessage = body?.message || body?.error || error.message;
+            throw new Error(`Failed to sync user: ${backendMessage} (Status: ${error.status || 'N/A'})`);
           }
           throw error; // Re-throw the last error
         }
@@ -85,65 +98,47 @@ class PrivyService {
       }
     }
 
-    if (!response) {
+    if (response == null) {
       throw new Error('No response received from backend');
     }
 
-    // Check HTTP status first - if it's an error status, treat as error
-    if (response.status >= 400) {
-      console.error('❌ Backend returned error status:', {
-        status: response.status,
-        statusText: response.statusText,
-        data: response.data,
-      });
-      const errorMessage = response.data?.message || response.data?.error || `Backend returned status ${response.status}`;
-      throw new Error(`Failed to sync user: ${errorMessage} (Status: ${response.status})`);
-        }
-
     // Log the full response for debugging - CRITICAL for debugging
-    const dataKeys = response.data ? Object.keys(response.data) : [];
+    const rawResponse = toRecord(unwrapApiData(response));
+    const dataKeys = rawResponse ? Object.keys(rawResponse) : [];
     console.log('📦 Backend sync response:', {
-      status: response.status,
-      statusText: response.statusText,
-      hasData: !!response.data,
+      hasData: !!rawResponse,
       dataKeys: dataKeys,
       dataKeysString: dataKeys.join(', '), // Show actual keys
-      success: response.data?.success,
-      hasUser: !!response.data?.user,
-      userId: response.data?.user?.id,
-      hasToken: !!response.data?.token,
-      fullResponseData: JSON.stringify(response.data, null, 2),
+      success: (rawResponse as { success?: unknown })?.success,
+      hasUser: !!(rawResponse as { user?: unknown })?.user,
+      userId: (rawResponse as { user?: { id?: unknown } })?.user?.id,
+      hasToken: !!(rawResponse as { token?: unknown })?.token,
+      fullResponseData: JSON.stringify(rawResponse, null, 2),
     });
 
-    // Extract response data - handle different possible response structures
-    let responseData = response.data;
-    
-    // Check if data is nested (some APIs wrap responses)
-    if (responseData?.data && typeof responseData.data === 'object') {
-      console.log('⚠️ Response data appears to be nested, trying nested structure...');
-      responseData = responseData.data;
-        }
+    // Response is already normalized through unwrapApiData.
+    const responseData: Record<string, any> = rawResponse as Record<string, any>;
 
     // Check if response has success flag (backend should return success: true)
     // Also allow response without success flag if it has user and token (more flexible)
-    if ((responseData?.success === true || (responseData?.user && responseData?.token)) && responseData?.user && responseData?.token) {
+    if (this.isSyncSuccessPayload(responseData)) {
       console.log('✅ Backend sync successful:', responseData);
 
       // Store our JWT token and user info (matching test frontend exactly)
-      localStorage.setItem('cto_auth_token', responseData.token);
-      localStorage.setItem('cto_user_email', responseData.user.email);
-      localStorage.setItem('cto_user_id', responseData.user.id.toString());
-      
+      setAuthToken(responseData.token);
+      localStorage.setItem(USER_EMAIL_KEY, responseData.user.email);
+      localStorage.setItem(USER_ID_KEY, responseData.user.id.toString());
+
       if (responseData.user.walletAddress) {
-        localStorage.setItem('cto_wallet_address', responseData.user.walletAddress);
-          }
+        localStorage.setItem(WALLET_ADDRESS_KEY, responseData.user.walletAddress);
+      }
 
       // Store avatarUrl if available (from database) - transform to CloudFront URL
       if (responseData.user.avatarUrl) {
         const cloudfrontUrl = getCloudFrontUrl(responseData.user.avatarUrl);
         console.log('✅ Storing avatarUrl from backend sync (CloudFront):', cloudfrontUrl);
-        localStorage.setItem('cto_user_avatar_url', cloudfrontUrl);
-        localStorage.setItem('profile_avatar_url', cloudfrontUrl);
+        localStorage.setItem(USER_AVATAR_URL_KEY, cloudfrontUrl);
+        localStorage.setItem(PROFILE_AVATAR_URL_KEY, cloudfrontUrl);
         } else {
         console.log('⚠️ No avatarUrl in sync response');
       }
@@ -161,7 +156,17 @@ class PrivyService {
         }
       }
 
-      return responseData;
+      return responseData as {
+        success: boolean;
+        token: string;
+        user: {
+          id: number;
+          email: string;
+          walletAddress?: string;
+          walletsCount: number;
+        };
+        wallets: BackendWallet[];
+      };
         }
 
     // If we get here, the response structure is unexpected
@@ -182,12 +187,22 @@ class PrivyService {
     
     if (possibleUserId && responseData?.token) {
       console.warn('⚠️ Found user ID and token in unexpected structure, attempting to save anyway...');
-      localStorage.setItem('cto_auth_token', responseData.token);
-      localStorage.setItem('cto_user_id', possibleUserId.toString());
+      setAuthToken(responseData.token);
+      localStorage.setItem(USER_ID_KEY, possibleUserId.toString());
       if (responseData.user?.email) {
-        localStorage.setItem('cto_user_email', responseData.user.email);
+        localStorage.setItem(USER_EMAIL_KEY, responseData.user.email);
       }
-      return responseData;
+      return responseData as {
+        success: boolean;
+        token: string;
+        user: {
+          id: number;
+          email: string;
+          walletAddress?: string;
+          walletsCount: number;
+        };
+        wallets: BackendWallet[];
+      };
           }
     
     throw new Error(`Failed to sync user: Invalid response structure. Keys: ${Object.keys(responseData || {}).join(', ')}, Success: ${responseData?.success}, Has User: ${!!responseData?.user}, Has Token: ${!!responseData?.token}`);
@@ -200,17 +215,12 @@ class PrivyService {
    */
   async verifyToken(token: string) {
     try {
-      const response = await axios.post(
+      const response = await apiPost<unknown>(
         `${API_BASE}/api/v1/auth/privy/verify`,
         { token },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
       );
 
-      return response.data;
+      return unwrapApiData(response);
     } catch (error) {
       console.error('❌ Token verification error:', error);
       return { valid: false };
@@ -223,21 +233,13 @@ class PrivyService {
    */
   async getMe() {
     try {
-      const token = localStorage.getItem('cto_auth_token');
+      const token = getAuthToken();
       if (!token) {
         throw new Error('No authentication token');
       }
 
-      const response = await axios.get(
-        `${API_BASE}/api/v1/auth/privy/me`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      return response.data;
+      const response = await apiGet<unknown>(`${API_BASE}/api/v1/auth/privy/me`);
+      return unwrapApiData(response);
     } catch (error) {
       console.error('❌ Get user error:', error);
       throw error;
@@ -249,21 +251,18 @@ class PrivyService {
    */
   async getUserWallets() {
     try {
-      const token = localStorage.getItem('cto_auth_token');
+      const token = getAuthToken();
       if (!token) {
         throw new Error('No authentication token');
       }
-
-      const response = await axios.get(
-        `${API_BASE}/api/v1/auth/privy/wallets`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      return response.data;
+      const wallets = await walletsService.listPrivyWallets({
+        preferStorage: false,
+      });
+      return {
+        success: true,
+        wallets,
+        data: { wallets },
+      };
     } catch (error) {
       console.error('❌ Get wallets error:', error);
       throw error;
@@ -274,30 +273,8 @@ class PrivyService {
    * Logout user (clear all tokens and user data)
    */
   logout() {
-    // Clear authentication tokens
-    localStorage.removeItem('cto_auth_token');
-    localStorage.removeItem('cto_user_email');
-    localStorage.removeItem('cto_user_id');
-    localStorage.removeItem('cto_wallet_address');
-    // Remove all user-specific wallet caches
-    Object.keys(localStorage)
-      .filter(key => key.startsWith('cto_user_wallets_'))
-      .forEach(key => localStorage.removeItem(key));
-    
-    // Clear avatar/profile data
-    localStorage.removeItem('cto_user_avatar_url');
-    localStorage.removeItem('profile_avatar_url');
-    localStorage.removeItem('profile_avatar_meta');
-    localStorage.removeItem('profile_banner_url');
-    
-    // Clear any generic wallet data that might exist
-    localStorage.removeItem('cto_user_wallets');
-    
-    // Clear any other user-related data
-    localStorage.removeItem('cto_token');
-    localStorage.removeItem('cto_user');
-    
-    console.log('✅ User logged out - all localStorage cleared');
+    clearSessionStorage();
+    console.log('✅ User logged out - session storage cleared');
   }
 }
 

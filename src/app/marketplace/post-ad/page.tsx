@@ -2,13 +2,19 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import {
+  useCreateMarketplaceDraftMutation,
+  useUpdateMarketplaceDraftMutation,
+} from '@/hooks/mutations/useMarketplaceDraftMutations';
 import { toast } from 'react-toastify';
-import axios from 'axios';
 import CategorySelectionStep from './features/CategorySelectionStep';
 import ProjectDetailsStep, { ProjectDetailsData } from './features/ProjectDetailsStep';
 import PreviewStep from './features/PreviewStep';
-import marketplaceService from '@/services/marketplaceService';
+import { getUserId } from '@/lib/authSession';
 import { pfpService } from '@/services/pfpService';
+import { isApiError } from '@/lib/apiError';
+import { toRecord, unwrapApiData } from '@/lib/apiResponse';
+import { useSessionStore } from '@/lib/sessionStore';
 
 type Step = 'category' | 'details' | 'preview';
 
@@ -19,8 +25,7 @@ interface FormData extends ProjectDetailsData {
 }
 
 /** Upload ad images via presign (same as cto-test-frontend pfpService.uploadProfileImage). Returns view URLs in order. */
-async function uploadAdImages(files: (File | null)[]): Promise<string[]> {
-  const userId = typeof window !== 'undefined' ? localStorage.getItem('cto_user_id') : null;
+async function uploadAdImages(files: (File | null)[], userId: string | null): Promise<string[]> {
   if (!userId) return [];
   const viewUrls: string[] = [];
   for (const file of files) {
@@ -81,6 +86,9 @@ function buildDraftPayload(formData: FormData, imageUrls: string[]): Record<stri
 }
 
 export default function PostAdPage() {
+  const sessionUserId = useSessionStore((s) => s.userId);
+  const updateMarketplaceDraftMutation = useUpdateMarketplaceDraftMutation();
+  const createMarketplaceDraftMutation = useCreateMarketplaceDraftMutation();
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState<Step>('category');
   const [formData, setFormData] = useState<FormData>({});
@@ -132,7 +140,7 @@ export default function PostAdPage() {
 
   const ensureDraftSaved = useCallback(async (): Promise<string | null> => {
     try {
-      let imageUrls = await uploadAdImages(formData.images ?? []);
+      let imageUrls = await uploadAdImages(formData.images ?? [], sessionUserId || getUserId());
       if (draftAdId && imageUrls.length === 0 && formData.imagePreviews?.length) {
         imageUrls = formData.imagePreviews.filter(
           (u): u is string => typeof u === 'string' && (u.startsWith('http') || u.startsWith('/'))
@@ -140,27 +148,31 @@ export default function PostAdPage() {
       }
       const payload = buildDraftPayload(formData, imageUrls);
       if (draftAdId) {
-        await marketplaceService.updateDraft(draftAdId, payload);
+        await updateMarketplaceDraftMutation.mutateAsync({
+          id: draftAdId,
+          payload,
+        });
         return draftAdId;
       }
-      const res = await marketplaceService.createDraft(payload);
-      const data = res as { id?: string; data?: { id?: string } };
-      const id = data?.id ?? data?.data?.id ?? null;
+      const res = await createMarketplaceDraftMutation.mutateAsync(payload);
+      const data = toRecord(unwrapApiData(res));
+      const id = typeof data.id === 'string' ? data.id : null;
       if (id) setDraftAdId(id);
       return id;
     } catch (err: unknown) {
-      if (axios.isAxiosError(err) && err.response?.status === 400) {
-        const detail = err.response?.data as { message?: string | string[]; error?: string } | undefined;
-        const msg = detail?.message != null
-          ? (Array.isArray(detail.message) ? detail.message.join(', ') : detail.message)
-          : detail?.error ?? (err instanceof Error ? err.message : 'Failed to save draft');
-        toast.error(String(msg));
+      if (isApiError(err) && err.status === 400) {
+        toast.error(err.message || 'Failed to save draft');
       } else {
         toast.error(err instanceof Error ? err.message : 'Failed to save draft');
       }
       return null;
     }
-  }, [formData, draftAdId]);
+  }, [
+    formData,
+    draftAdId,
+    updateMarketplaceDraftMutation,
+    createMarketplaceDraftMutation,
+  ]);
 
   const handleCategoryNext = (data: { category: string; subcategory: string; postType?: 'LOOKING_FOR' | 'OFFERING' }) => {
     setFormData((prev: FormData) => ({ ...prev, ...data }));

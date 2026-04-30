@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import { useRouter } from "next/navigation";
 import { io, type Socket } from "socket.io-client";
+import { getAuthToken, getUserId } from "@/lib/authSession";
 import { toast } from "react-toastify";
 import messagesService from "@/services/messagesService";
 import escrowService from "@/services/escrowService";
@@ -22,6 +23,7 @@ import type {
   MessageReaction,
   MessageThread,
 } from "@/types/messages";
+import { useSessionStore } from "@/lib/sessionStore";
 
 function toRecord(v: unknown): Record<string, unknown> | null {
   return v && typeof v === "object" ? (v as Record<string, unknown>) : null;
@@ -118,6 +120,8 @@ export default function MarketplaceMessages({
   initialProfileUserId?: string | null;
 }) {
   const router = useRouter();
+  const setActiveConversationId = useSessionStore((s) => s.setActiveConversationId);
+  const sessionUserId = useSessionStore((s) => s.userId);
   const [threads, setThreads] = useState<MessageThread[]>([]);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(
     initialThreadId ?? null,
@@ -146,11 +150,10 @@ export default function MarketplaceMessages({
     process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.ctomarketplace.com";
 
   const currentUserId = useMemo(() => {
-    if (typeof window === "undefined") return null;
-    const raw = localStorage.getItem("cto_user_id");
+    const raw = sessionUserId ?? getUserId();
     const n = raw ? Number(raw) : NaN;
     return Number.isFinite(n) ? n : null;
-  }, []);
+  }, [sessionUserId]);
 
   const selectedProfileUserId = useMemo(() => {
     if (!initialProfileUserId) return null;
@@ -318,6 +321,13 @@ export default function MarketplaceMessages({
   }, [activeThreadId, loadActiveThread]);
 
   useEffect(() => {
+    setActiveConversationId(activeThreadId);
+    return () => {
+      setActiveConversationId(null);
+    };
+  }, [activeThreadId, setActiveConversationId]);
+
+  useEffect(() => {
     const t = setInterval(() => {
       setPolling(true);
       loadThreads()
@@ -328,7 +338,7 @@ export default function MarketplaceMessages({
   }, [loadThreads]);
 
   useEffect(() => {
-    const token = localStorage.getItem("cto_auth_token");
+    const token = getAuthToken();
     if (!token) return;
 
     const socket: Socket = io(`${backendUrl}/ws`, {
@@ -512,60 +522,22 @@ export default function MarketplaceMessages({
     }
   };
 
-  const uploadAttachmentViaPresign = async (file: File) => {
-    const token = localStorage.getItem("cto_auth_token");
-    const uid = currentUserId ?? 0;
-    const response = await fetch(`${backendUrl}/api/v1/images/presign`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({
-        type: "generic",
-        userId: String(uid || ""),
-        filename: file.name,
-        mimeType: file.type || "application/octet-stream",
-        size: file.size,
-      }),
-    });
-    if (!response.ok) {
-      throw new Error("Failed to request upload URL");
-    }
-    const payload: unknown = await response.json();
-    const payloadObj = toRecord(payload);
-    const dataLayer = payloadObj?.data ? toRecord(payloadObj.data) : null;
-    const data = (dataLayer?.data ? toRecord(dataLayer.data) : null) ??
-      dataLayer ??
-      payloadObj;
-    const uploadUrl = data?.uploadUrl;
-    const key = data?.key;
-    if (typeof uploadUrl !== "string" || typeof key !== "string") {
-      throw new Error("Invalid upload response");
-    }
-    const putRes = await fetch(uploadUrl, {
-      method: "PUT",
-      headers: {
-        "Content-Type": file.type || "application/octet-stream",
-      },
-      body: file,
-    });
-    if (!putRes.ok) {
-      throw new Error(`Upload failed with status ${putRes.status}`);
-    }
-    return `${backendUrl}/api/v1/images/view/${key}`;
-  };
-
   const handleAttachmentUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const files = Array.from(event.target.files || []);
     event.target.value = "";
-    if (!activeThreadId || files.length === 0) return;
+    if (!activeThreadId || files.length === 0 || currentUserId == null) return;
     try {
       setUploadingAttachment(true);
-      for (const file of files) {
-        const viewUrl = await uploadAttachmentViaPresign(file);
+      const viewUrls = await Promise.all(
+        files.map((file) =>
+          messagesService.uploadAttachmentViaPresign(file, currentUserId),
+        ),
+      );
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const viewUrl = viewUrls[i];
         const body = `Attachment: ${file.name}\n${viewUrl}`;
         const resUnknown = await messagesService.sendMessage(
           activeThreadId,

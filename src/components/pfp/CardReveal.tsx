@@ -9,7 +9,9 @@ import { pfpService } from '@/services/pfpService';
 import { toast } from 'react-toastify';
 import { usePrivy } from '@privy-io/react-auth';
 import { getMascotImageUrl } from '@/lib/image-url-helper';
+import { getAuthToken } from '@/lib/authSession';
 import { useRouter } from 'next/navigation';
+import { useSessionStore } from '@/lib/sessionStore';
 
 interface CardRevealProps {
   selectedCardId: number | null;
@@ -112,6 +114,7 @@ const compositeMascotImage = async (
 };
 
 export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageSaved }) => {
+  const sessionUserId = useSessionStore((s) => s.userId);
   const [isSaving, setIsSaving] = useState(false);
   const [isAutoSaved, setIsAutoSaved] = useState(false);
   const [imagesLoaded, setImagesLoaded] = useState({ base: false, stage: false, trait: false });
@@ -130,21 +133,15 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageS
   // Track if all images are loaded
   const allImagesLoaded = imagesLoaded.base && imagesLoaded.stage && imagesLoaded.trait;
 
-  // Get user ID from localStorage only (matching main branch exactly)
-  const getUserId = useCallback((): string | null => {
-    if (typeof window !== 'undefined') {
-      const storedUserId = localStorage.getItem('cto_user_id');
-      if (storedUserId) {
-        return storedUserId;
-      }
-    }
-    return null;
-  }, []);
+  const resolveUserId = useCallback((): string | null => {
+    if (sessionUserId) return sessionUserId;
+    return user?.id ?? null;
+  }, [sessionUserId, user?.id]);
 
   // Check if authentication token exists (memoized for useEffect dependency)
   const hasAuthToken = useCallback((): boolean => {
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('cto_auth_token');
+      const token = getAuthToken();
       return !!token;
     }
     return false;
@@ -190,14 +187,14 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageS
         setCompositeFile(file); // Store for reuse in manual save
 
         // Get user ID from localStorage only
-        const userId = getUserId();
-        if (!userId) {
+        const resolvedUserId = resolveUserId() ?? undefined;
+        if (!resolvedUserId) {
           console.warn('User ID not found, skipping auto-save. Please ensure you are logged in.');
           return;
         }
 
         // Upload and save the PFP automatically (silently, without setting isSaving)
-        const result = await pfpService.savePFP(file, userId);
+        const result = await pfpService.savePFP(file, resolvedUserId);
 
         if (result.success) {
           setIsAutoSaved(true);
@@ -219,7 +216,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageS
     if (selectedCardId && allImagesLoaded) {
       autoSavePFP();
     }
-  }, [selectedCardId, allImagesLoaded, isAutoSaved, isSaving, baseSkinPath, traitPath, compositeMascotImageMemo, getUserId, hasAuthToken]);
+  }, [selectedCardId, allImagesLoaded, isAutoSaved, isSaving, baseSkinPath, traitPath, compositeMascotImageMemo, resolveUserId, hasAuthToken]);
 
   const handleSavePFP = async () => {
     if (!selectedCardId) return;
@@ -242,7 +239,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageS
       }
 
       // Get user ID from localStorage only
-      const userId = getUserId();
+      const userId = resolveUserId() ?? undefined;
       if (!userId) {
         throw new Error('User ID not found. Please ensure you are logged in and try again.');
       }

@@ -1,14 +1,17 @@
 "use client";
 
 import React, { useState } from 'react'
+import {
+  useCreateUserListingMutation,
+  useUpdateUserListingMutation,
+} from '@/hooks/mutations/useUserListingMutations';
 import { Plus } from 'lucide-react'
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import PaymentDialog from './PaymentDialog';
-import { userListingsService, ScanResult } from '@/services/userListingsService';
+import type { ScanResult } from '@/services/userListingsService';
 import { SocialLinks } from './Step2';
 import { toast } from 'react-toastify';
-import axios, { AxiosError } from 'axios';
 
 interface Step3Props {
   draftId: string | null;
@@ -37,6 +40,8 @@ export default function Step3({
   bio,
   links,
 }: Step3Props) {
+  const updateListingMutation = useUpdateUserListingMutation();
+  const createListingMutation = useCreateUserListingMutation();
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -83,9 +88,12 @@ export default function Step3({
 
     try {
       if (draftId) {
-        await userListingsService.update(draftId, {
-          title: title.trim(),
-          description: description.trim(),
+        await updateListingMutation.mutateAsync({
+          id: draftId,
+          payload: {
+            title: title.trim(),
+            description: description.trim(),
+          },
         });
         setListingId(draftId);
         setPaymentDialogOpen(true);
@@ -113,8 +121,8 @@ export default function Step3({
           },
         };
 
-        const result = await userListingsService.create(payload);
-        const listingData = result?.data || result;
+        const result = await createListingMutation.mutateAsync(payload);
+        const listingData = result as { id?: string; listingId?: string } | undefined;
         const createdListingId = listingData?.id || listingData?.listingId;
 
         if (!createdListingId) {
@@ -126,13 +134,13 @@ export default function Step3({
         toast.success('Listing created! Proceed to payment.');
       }
     } catch (error) {
-      let errorMsg = 'Failed to save listing';
-      if (error instanceof Error) {
-        errorMsg = error.message || errorMsg;
-      } else if (axios.isAxiosError(error)) {
-        errorMsg = (error.response?.data as { message?: string })?.message || error.message || errorMsg;
+      if (
+        error instanceof Error &&
+        error.message === 'Listing created but no ID returned'
+      ) {
+        toast.error(error.message);
       }
-      toast.error(errorMsg);
+      /* Other failures: create/update mutations already toast via onError */
     } finally {
       setIsCreatingListing(false);
     }

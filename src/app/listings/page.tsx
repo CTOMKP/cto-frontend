@@ -1,57 +1,42 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Highlights from "@/app/listings/features/Highlights";
 import Listing from "@/app/listings/features/Listing";
 import { ApiCoinItem } from "@/types/api";
-
-type ApiListingResponse = {
-  page: number;
-  limit: number;
-  total: number;
-  items: ApiCoinItem[];
-};
+import { listingKeys } from "@/lib/queryKeys";
+import { fetchListingHighlights } from "@/services/listingPublicService";
 
 export default function Listings() {
-  const [apiData, setApiData] = useState<ApiCoinItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const backendConfigured = !!process.env.NEXT_PUBLIC_BACKEND_URL;
 
-  useEffect(() => {
-    const base = process.env.NEXT_PUBLIC_BACKEND_URL;
-    if (!base) {
-      setIsLoading(false);
-      return;
-    }
-    const controller = new AbortController();
-    const signal = controller.signal;
+  const highlightsQuery = useQuery({
+    queryKey: listingKeys.highlights(),
+    queryFn: ({ signal }) => fetchListingHighlights(signal),
+    enabled: backendConfigured,
+    staleTime: 60_000,
+  });
 
-    const fetchListings = async () => {
-      setIsLoading(true);
-      const url = `${base}/api/v1/listing/listings?category=MEME&sort=updatedAt%3Adesc&limit=10000`;
-      try {
-        const res = await fetch(url, { signal });
-        if (signal.aborted) return;
-        if (!res.ok) {
-          setIsLoading(false);
-          return;
-        }
-        const response = await res.json();
-        if (signal.aborted) return;
-        const data: ApiListingResponse = response.data || response;
-        setApiData(data.items || []);
-      } catch (e) {
-        if (signal.aborted) return;
-        console.log(e);
-      } finally {
-        if (!signal.aborted) setIsLoading(false);
-      }
-    };
-    fetchListings();
-    return () => controller.abort();
-  }, []);
+  const apiData: ApiCoinItem[] = highlightsQuery.data ?? [];
+  const isLoading = backendConfigured && highlightsQuery.isPending;
 
   return (
     <div>
+      {highlightsQuery.isError && (
+        <div
+          className="mx-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200/90"
+          role="alert"
+        >
+          <span>Highlights could not be loaded. The table below may still work.</span>
+          <button
+            type="button"
+            className="shrink-0 rounded-md border border-amber-400/40 px-2 py-1 text-xs font-medium text-amber-100 hover:bg-amber-500/20"
+            onClick={() => highlightsQuery.refetch()}
+          >
+            Retry
+          </button>
+        </div>
+      )}
       <Highlights apiData={apiData} isLoading={isLoading} />
       <Listing />
     </div>

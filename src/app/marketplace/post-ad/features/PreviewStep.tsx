@@ -160,7 +160,7 @@ export default function PreviewStep({
 
           {/* Upload Images */}
           <div>
-            <h3 className="text-white mb-2 block">Upload Images</h3>
+            <h3 className="text-white mb-2 block">Uploaded Images</h3>
             <div className="flex gap-3 flex-wrap">
               {[0, 1, 2].map((index) => {
                 const src = formData.imagePreviews?.[index];
@@ -181,10 +181,10 @@ export default function PreviewStep({
           </div>
 
           {/* Project Description */}
-          <div>
+          <div className="w-full">
             <h3 className="text-white mb-2 block">Project Description</h3>
             <div>
-              <p className="text-white text-sm whitespace-pre-wrap">
+              <p className="text-white text-sm whitespace-pre-wrap break-words">
                 {formData.projectDescription || 'N/A'}
               </p>
             </div>

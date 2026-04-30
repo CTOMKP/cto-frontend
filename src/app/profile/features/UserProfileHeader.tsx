@@ -8,8 +8,9 @@ import { Edit, LogOut, Check } from 'lucide-react';
 import { X } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { toast } from "react-toastify";
-import { authService } from "@/services/authService";
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
+import { useUpdateUserMutation } from "@/hooks/useUpdateUserMutation";
+import { useSessionStore } from "@/lib/sessionStore";
 
 interface UserProfileHeaderProps {
   avatarUrl: string | null;
@@ -34,49 +35,44 @@ export default function UserProfileHeader({
 }: UserProfileHeaderProps) {
   const [nameEditOpen, setNameEditOpen] = useState(false);
   const [tempName, setTempName] = useState<string>("");
-  const [isSavingName, setIsSavingName] = useState(false);
 
   const fallbackName = email?.includes("@") ? email.split("@")[0] : email;
 
   const { userData, setUserData } = usePrivyAuth();
+  const sessionUserId = useSessionStore((s) => s.userId);
+  const sessionEmail = useSessionStore((s) => s.email);
+  const updateUserMutation = useUpdateUserMutation();
 
-const displayName = userData?.name ||fallbackName || "User";
+  const displayName = userData?.name || fallbackName || "User";
 
   useEffect(() => {
     if (!nameEditOpen) return;
     setTempName(displayName);
   }, [nameEditOpen, displayName]);
 
-  const handleSaveName = async () => {
+  const handleSaveName = () => {
     const nextName = tempName.trim();
     if (nextName.length < 2) {
       toast.error("Name must be at least 2 characters.");
       return;
     }
 
-    setIsSavingName(true);
-    try {
-      const userId =
-        localStorage.getItem("cto_user_id") ||
-        localStorage.getItem("cto_user_email") ||
-        email;
+    const userId = sessionUserId || sessionEmail || email;
 
-      const updated = await authService.updateUser(userId, { name: nextName });
-      const finalName = updated?.name ?? nextName;
-      localStorage.setItem("cto_user_name", finalName);
-      setUserData((prev) => ({
-        ...prev,
-        name: finalName,
-      }));
-      setNameEditOpen(false);
-      toast.success("Name updated.");
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to update name.";
-      toast.error(message);
-    } finally {
-      setIsSavingName(false);
-    }
+    updateUserMutation.mutate(
+      { userId, updates: { name: nextName } },
+      {
+        onSuccess: (updated) => {
+          const finalName = updated?.name ?? nextName;
+          setUserData((prev) => ({
+            ...prev,
+            name: finalName,
+          }));
+          setNameEditOpen(false);
+          toast.success("Name updated.");
+        },
+      },
+    );
   };
 
   return (
@@ -133,7 +129,7 @@ const displayName = userData?.name ||fallbackName || "User";
                         value={tempName}
                         onChange={(e) => setTempName(e.target.value)}
                         autoFocus
-                        disabled={isSavingName}
+                        disabled={updateUserMutation.isPending}
                       />
                     </div>
 
@@ -142,7 +138,7 @@ const displayName = userData?.name ||fallbackName || "User";
                         type="button"
                         variant="outline"
                         className="border-white/20 text-white/70 hover:bg-white/10"
-                        disabled={isSavingName}
+                        disabled={updateUserMutation.isPending}
                         onClick={() => setNameEditOpen(false)}
                       >
                         Cancel
@@ -150,10 +146,10 @@ const displayName = userData?.name ||fallbackName || "User";
                       <Button
                         type="button"
                         className="cta-gradient"
-                        disabled={isSavingName}
+                        disabled={updateUserMutation.isPending}
                         onClick={handleSaveName}
                       >
-                        {isSavingName ? "Saving..." : "Save"}
+                        {updateUserMutation.isPending ? "Saving..." : "Save"}
                       </Button>
                     </div>
                   </div>

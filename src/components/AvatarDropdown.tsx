@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,29 +14,24 @@ import { usePrivy } from '@privy-io/react-auth';
 import { Check, MoveDown, MoveUp, SquareArrowOutUpRight } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Link from 'next/link';
-import { BackendWallet } from '@/types/privy';
 import FallbackImage from './FallbackImage';
 import { getCloudFrontUrl } from '@/lib/image-url-helper';
-import { getWalletsFromStorage } from '@/utils/localStorage';
 import { useWalletBalance } from '@/app/profile/features/wallet-balance/useWalletBalance';
 import WalletBalanceContent from '@/app/profile/features/wallet-balance/WalletBalanceContent';
 import { Button } from './ui/button';
 import { useRewardProgress, resetUserRewardProgress } from '@/lib/userRewardProgress';
+import { useResolvedMovementWallet } from '@/hooks/useResolvedMovementWallet';
+import { useSessionStore } from '@/lib/sessionStore';
 
 export default function AvatarDropdown() {
-  // Initialize exactly like profile page - read raw URL from localStorage
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
-    // Initialize from localStorage
-    if (typeof window !== 'undefined') {
-      const raw = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
-      console.log('[AvatarDropdown] 🎯 Initial state - raw from localStorage:', raw);
-      return raw; // Return raw URL, transformation happens in useEffect (like profile page)
-    }
-    return null;
-  });
+  const storedAvatarUrl = useSessionStore((s) => s.avatarUrl);
+  const sessionEmail = useSessionStore((s) => s.email);
+  const sessionUsername = useSessionStore((s) => s.username);
+  const avatarUrl = useMemo(
+    () => (storedAvatarUrl ? getCloudFrontUrl(storedAvatarUrl) : null),
+    [storedAvatarUrl],
+  );
   const [copiedAddress, setCopiedAddress] = useState(false);
-  const [email, setEmail] = useState('');
-  const [username, setUsername] = useState('');
   const {
     rankLevel,
     rankLabel,
@@ -66,134 +61,17 @@ export default function AvatarDropdown() {
     }
   };
 
-  // Set email and username on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const userEmail = user?.email?.address || localStorage.getItem('cto_user_email') || '';
-      setEmail(userEmail);
-      const storedUsername = localStorage.getItem('cto_user_username') || userEmail.split('@')[0] || 'User';
-      setUsername(storedUsername);
-    }
-  }, [user]);
+  const email = user?.email?.address || sessionEmail || '';
+  const username = sessionUsername || email.split('@')[0] || 'User';
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const handleAvatarUpdate = () => {
-      const rawUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
-      if (rawUrl) {
-        const newAvatarUrl = getCloudFrontUrl(rawUrl);
-        if (newAvatarUrl !== avatarUrl) {
-          setAvatarUrl(newAvatarUrl);
-        } else {
-        }
-      } else {
-        console.log('[AvatarDropdown] ⚠️ No raw URL found in localStorage');
-      }
-    };
-
-    // Listen for localStorage changes (cross-tab updates)
-    const handleStorageChange = (e: StorageEvent) => {
-      if ((e.key === 'cto_user_avatar_url' || e.key === 'profile_avatar_url') && e.newValue) {
-        const cloudfrontUrl = getCloudFrontUrl(e.newValue);
-        setAvatarUrl(cloudfrontUrl);
-      }
-    };
-
-    // Check localStorage periodically (same-tab updates)
-    const checkAvatar = () => {
-      const rawUrl = localStorage.getItem('cto_user_avatar_url') || localStorage.getItem('profile_avatar_url');
-      if (rawUrl) {
-        const cloudfrontUrl = getCloudFrontUrl(rawUrl);
-        if (cloudfrontUrl !== avatarUrl) {
-          setAvatarUrl(cloudfrontUrl);
-        }
-      } else if (avatarUrl) {
-        setAvatarUrl(null);
-      }
-    };
-
-    // Transform immediately on mount (like profile page)
-    checkAvatar();
-
-    window.addEventListener('avatarUpdated', handleAvatarUpdate);
-    window.addEventListener('storage', handleStorageChange);
-    const interval = setInterval(checkAvatar, 1000);
-
-    return () => {
-      window.removeEventListener('avatarUpdated', handleAvatarUpdate);
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
-    };
-  }, [avatarUrl]);
-
-  // Get Movement/Aptos wallet address (primary wallet) - matching profile page logic
-  const [movementWalletAddress, setMovementWalletAddress] = React.useState<string | null>(null);
+  const movementWalletQuery = useResolvedMovementWallet({ preferStorage: true });
+  const movementWalletAddress = movementWalletQuery.data?.movementWallet?.address ?? null;
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [isDeposit, setIsDeposit] = useState(false);
   const { walletAssets, selectedAsset, setSelectedAsset, isLoading } = useWalletBalance();
 
   // Calculate wallet balance from selected asset
   const walletBalance = selectedAsset?.value || 0;
-
-  // Check Movement wallet from Privy's linkedAccounts (like profile page)
-  const checkMovementWallet = React.useCallback(() => {
-    if (!user?.linkedAccounts) return;
-
-    const movementWalletAccount = user.linkedAccounts.find((account) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const acc = account as any;
-      return acc.type === 'wallet' && acc.chainType === 'aptos';
-    });
-
-    if (movementWalletAccount) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const acc = movementWalletAccount as any;
-      if (acc.address) {
-        setMovementWalletAddress(acc.address);
-      }
-    }
-  }, [user?.linkedAccounts]);
-
-  // Load wallets and find Movement wallet - matching profile page logic
-  React.useEffect(() => {
-    if (!user) return;
-
-    // First, try to load from localStorage - use user-specific key
-    const userId = localStorage.getItem('cto_user_id');
-    try {
-      const wallets = getWalletsFromStorage(userId);
-      if (wallets) {
-        try {
-          interface WalletWithMovement extends BackendWallet {
-            blockchain?: string;
-            walletClient?: string;
-          }
-          const typedWallets = wallets as WalletWithMovement[];
-
-          // Find Movement wallet from localStorage wallets
-          const movementWallet = typedWallets.find((w: WalletWithMovement) =>
-            w.blockchain === 'MOVEMENT' ||
-            w.blockchain === 'APTOS' ||
-            w.chainType === 'aptos' ||
-            w.walletClient === 'APTOS_EMBEDDED'
-          );
-
-          if (movementWallet?.address) {
-            setMovementWalletAddress(movementWallet.address);
-            return;
-          }
-        } catch (e) {
-          console.error('Failed to parse wallets:', e);
-        }
-      }
-    } catch (error) {
-      console.warn('Failed to get wallets from storage:', error);
-    }
-
-    // Fallback: check Privy linkedAccounts
-    checkMovementWallet();
-  }, [user, checkMovementWallet]);
 
   // Primary wallet address is Movement wallet address (matching profile page)
   const primaryWalletAddress = movementWalletAddress || '';

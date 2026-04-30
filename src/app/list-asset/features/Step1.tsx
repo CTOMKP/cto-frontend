@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Check, Ellipsis, Search, X, Zap } from 'lucide-react'
 import { usePrivyAuth } from '@/hooks/usePrivyAuth'
 import { toast } from 'react-toastify'
-import axios from 'axios'
+import { isApiError } from '@/lib/apiError';
 import {
     Select,
     SelectContent,
@@ -25,6 +25,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Progress } from "@/components/ui/progress"
+import { clearSessionStorage } from '@/lib/authSession';
 import { userListingsService, ScanResult } from '@/services/userListingsService';
 import PaymentDialog from './PaymentDialog';
 
@@ -335,14 +336,11 @@ export default function Step1({
 
     } catch (error) {
       // On 401, clear session and redirect (match cto-test-frontend)
-      const is401 = axios.isAxiosError(error) && error.response?.status === 401;
+      const is401 = isApiError(error) && error.status === 401;
       const isUnauthorized = error instanceof Error && error.message === 'Unauthorized';
       if (is401 || isUnauthorized) {
         if (typeof window !== 'undefined') {
-          localStorage.removeItem('cto_user_email');
-          localStorage.removeItem('cto_user_created');
-          localStorage.removeItem('cto_wallet_id');
-          localStorage.removeItem('cto_auth_token');
+          clearSessionStorage();
         }
         toast.error('Session expired. Please sign in again.');
         router.push('/');

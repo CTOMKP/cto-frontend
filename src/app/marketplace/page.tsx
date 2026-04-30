@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { useMarketplaceFeedQuery } from "@/hooks/useMarketplaceFeedQuery";
 import { Button } from "@/components/ui/button";
 import { BadgeCheck, Clock, EllipsisVertical, ListFilter, MoreHorizontal, Plus, Search } from "lucide-react";
 import Image from "next/image";
 import MarketplaceTrendingFilter, { type Category } from "./features/MarketplaceTrendingFilter";
 import { Input } from "@/components/ui/input";
-import marketplaceService from "@/services/marketplaceService";
 import { getCloudFrontUrl } from "@/utils/helper/image-url-helper";
 
 const MARKETPLACE_ASSET_BASE = '/marketplace';
@@ -120,8 +120,6 @@ const getDaysAgo = (dateStr?: string | null) => {
 
 export default function MarketplacePage() {
   const [category, setCategory] = useState<Category>("trending");
-  const [publicAds, setPublicAds] = useState<MarketplaceAd[]>([]);
-  const [publicAdsLoading, setPublicAdsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [marketTab, setMarketTab] = useState<'forYou' | 'new' | 'trending'>('trending');
   const [roleFilter, setRoleFilter] = useState<string>('');
@@ -141,52 +139,8 @@ export default function MarketplacePage() {
 
   const [now, setNow] = useState(() => Date.now());
 
-  useEffect(() => {
-    let mounted = true;
-    setPublicAdsLoading(true);
-    const load = async () => {
-      try {
-        if (marketTab === 'trending') {
-          try {
-            const items = await marketplaceService.listTrending({ page: 1, limit: 24 });
-            if (mounted) setPublicAds(Array.isArray(items) ? (items as MarketplaceAd[]) : []);
-          } catch (err) {
-            if (mounted) setPublicAds([]);
-          }
-          return;
-        }
-        if (marketTab === 'forYou') {
-          try {
-            const items = await marketplaceService.listForYou({ page: 1, limit: 24 });
-            if (mounted) setPublicAds(Array.isArray(items) ? (items as MarketplaceAd[]) : []);
-          } catch (err) {
-            try {
-              const items = await marketplaceService.listPublic({ page: 1, limit: 24 });
-              if (mounted) setPublicAds(Array.isArray(items) ? (items as MarketplaceAd[]) : []);
-            } catch (fallbackErr) {
-              if (mounted) setPublicAds([]);
-            }
-          }
-          return;
-        }
-        // new
-        try {
-          const items = await marketplaceService.listPublic({ page: 1, limit: 24 });
-          if (mounted) setPublicAds(Array.isArray(items) ? items : []);
-        } catch (err) {
-          if (mounted) setPublicAds([]);
-        }
-      } catch (err) {
-        if (mounted) setPublicAds([]);
-      } finally {
-        if (mounted) setPublicAdsLoading(false);
-      }
-    };
-    load();
-    return () => {
-      mounted = false;
-    };
-  }, [marketTab]);
+  const feedQuery = useMarketplaceFeedQuery(marketTab);
+  const publicAds = (feedQuery.data ?? []) as MarketplaceAd[];
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -266,6 +220,26 @@ export default function MarketplacePage() {
       </section>
 
       <section className="md:mx-25 mx-5">
+        {feedQuery.isError && (
+          <div
+            className="mt-4 mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-red-500/35 bg-red-500/10 px-3 py-2 text-sm text-red-200/90"
+            role="alert"
+          >
+            <span>Marketplace ads could not be loaded.</span>
+            <button
+              type="button"
+              className="shrink-0 rounded-md border border-red-400/40 px-2 py-1 text-xs font-medium hover:bg-red-500/20"
+              onClick={() => feedQuery.refetch()}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+        {feedQuery.isPending && feedQuery.data === undefined && !feedQuery.isError && (
+          <p className="mt-4 text-sm text-white/60" aria-live="polite">
+            Loading ads…
+          </p>
+        )}
         <div className="flex items-center justify-between mt-4 mb-8">
           <MarketplaceTrendingFilter
             selected={category}

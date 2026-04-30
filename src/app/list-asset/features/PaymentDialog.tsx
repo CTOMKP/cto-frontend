@@ -15,11 +15,11 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { movementPaymentService } from '@/services/movementPaymentService';
 import { movementWalletService } from '@/services/movementWalletService';
-import { getMovementWallet, sendMovementTransaction } from '@/lib/movement-wallet';
-import { getWalletsFromStorage } from '@/utils/localStorage';
+import { sendMovementTransaction } from '@/lib/movement-wallet';
+import { getAuthToken } from '@/lib/authSession';
 import { toast } from 'react-toastify';
-import axios from 'axios';
-import type { BackendWallet } from '@/types/privy';
+import { useResolvedMovementWallet } from '@/hooks/useResolvedMovementWallet';
+import { isApiError } from '@/lib/apiError';
 
 interface PaymentDialogProps {
   open: boolean;
@@ -49,6 +49,7 @@ export default function PaymentDialog({
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [adsId] = useState('#456789'); // This should come from backend after listing creation
   const [isProcessing, setIsProcessing] = useState(false);
+  const movementWalletQuery = useResolvedMovementWallet({ preferStorage: true });
 
   const totalAmount = listingFee + 9; // Listing fee + ad boost (example)
 
@@ -70,30 +71,12 @@ export default function PaymentDialog({
 
     setIsLoadingBalance(true);
     try {
-      // Get Movement wallet from Privy
-      let movementWallet = getMovementWallet(user);
-
-      // If not found in Privy, check backend
-      if (!movementWallet) {
-        try {
-          const { privyService } = await import('@/services/privyService');
-          const walletResult = await privyService.getUserWallets();
-          const wallets = (walletResult?.data?.wallets || walletResult?.wallets || []) as BackendWallet[];
-          const dbWallet = wallets.find((w: BackendWallet) => 
-            w.blockchain?.toUpperCase() === 'MOVEMENT' || 
-            w.blockchain?.toUpperCase() === 'APTOS'
-          );
-          
-          if (dbWallet) {
-            movementWallet = {
-              address: dbWallet.address,
-              publicKey: dbWallet.publicKey || dbWallet.address,
-              chainType: 'aptos'
-            };
-          }
-        } catch (e) {
-          console.warn('Backend wallet check failed', e);
-        }
+      let movementWallet = movementWalletQuery.data?.movementWallet ?? null;
+      let walletId = movementWalletQuery.data?.walletId ?? null;
+      if (!movementWallet || !walletId) {
+        const fresh = await movementWalletQuery.refetch();
+        movementWallet = fresh.data?.movementWallet ?? null;
+        walletId = fresh.data?.walletId ?? null;
       }
 
       if (!movementWallet) {
@@ -106,56 +89,6 @@ export default function PaymentDialog({
 
       // Store wallet address
       setWalletAddress(movementWallet.address);
-
-      // Get wallet ID from backend
-      let walletId: string | null = null;
-      
-      // Try to get wallets from localStorage first
-      const userId = localStorage.getItem('cto_user_id');
-      let backendWallets: BackendWallet[] = [];
-      try {
-        const storedWallets = getWalletsFromStorage(userId);
-        if (storedWallets) {
-          backendWallets = storedWallets as BackendWallet[];
-        }
-      } catch (error) {
-        console.warn('Failed to get wallets from storage:', error);
-      }
-
-      // If not in localStorage, fetch from backend
-      if (backendWallets.length === 0) {
-        try {
-          const token = localStorage.getItem('cto_auth_token');
-          if (token) {
-            const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-            const response = await axios.get(
-              `${backendUrl}/api/v1/auth/privy/wallets`,
-              {
-                headers: {
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json',
-                },
-              }
-            );
-            if (response.data?.success && response.data?.wallets) {
-              backendWallets = response.data.wallets;
-            }
-          }
-        } catch (error) {
-          console.error('Failed to fetch wallets from backend:', error);
-        }
-      }
-
-      // Find Movement wallet in backend wallets by address
-      const backendWallet = backendWallets.find((w: BackendWallet) => 
-        w.address?.toLowerCase() === movementWallet.address.toLowerCase() &&
-        (w.blockchain === 'MOVEMENT' || w.blockchain === 'APTOS' || 
-         w.chainType?.toLowerCase() === 'aptos' || w.chainType?.toLowerCase() === 'movement')
-      );
-
-      if (backendWallet?.id) {
-        walletId = backendWallet.id;
-      }
 
       if (!walletId) {
         console.warn('Movement wallet ID not found, cannot fetch balance');
@@ -220,7 +153,7 @@ export default function PaymentDialog({
     const actualListingId = listingId.replace('#', '');
 
     // Check both Privy authentication and localStorage token
-    const token = localStorage.getItem('cto_auth_token');
+    const token = getAuthToken();
     if (!authenticated || !user || !token) {
       console.error('❌ Payment blocked - Auth check failed:', {
         authenticated,
@@ -243,33 +176,10 @@ export default function PaymentDialog({
 
     try {
       // Check if user has Movement wallet
-      let movementWallet = getMovementWallet(user);
-
-      // --- RESILIENCE: If frontend doesn't see it, check the backend/DB ---
+      let movementWallet = movementWalletQuery.data?.movementWallet ?? null;
       if (!movementWallet) {
-        console.log('🔍 Wallet not in Privy object, checking backend DB...');
-        try {
-          // Import privyService dynamically to avoid circular dependencies
-          const { privyService } = await import('@/services/privyService');
-          const walletResult = await privyService.getUserWallets();
-          const wallets = (walletResult?.data?.wallets || walletResult?.wallets || []) as BackendWallet[];
-          const dbWallet = wallets.find((w: BackendWallet) => 
-            w.blockchain?.toUpperCase() === 'MOVEMENT' || 
-            w.blockchain?.toUpperCase() === 'APTOS'
-          );
-          
-          if (dbWallet) {
-            console.log('✅ Found wallet in DB:', dbWallet.address);
-            // Use the DB wallet details as a fallback
-            movementWallet = {
-              address: dbWallet.address,
-              publicKey: dbWallet.publicKey || dbWallet.address, // Fallback if pubkey missing
-              chainType: 'aptos'
-            };
-          }
-        } catch (e) {
-          console.warn('Backend wallet check failed', e);
-        }
+        const fresh = await movementWalletQuery.refetch();
+        movementWallet = fresh.data?.movementWallet ?? null;
       }
 
       if (!movementWallet) {
@@ -294,8 +204,8 @@ export default function PaymentDialog({
         let errorMsg = 'Failed to create payment';
         if (createError instanceof Error) {
           errorMsg = createError.message || errorMsg;
-        } else if (axios.isAxiosError(createError)) {
-          errorMsg = (createError.response?.data as { message?: string })?.message || createError.message || errorMsg;
+        } else if (isApiError(createError)) {
+          errorMsg = createError.message || errorMsg;
         }
         toast.error(errorMsg);
         setIsProcessing(false);
@@ -303,10 +213,10 @@ export default function PaymentDialog({
       }
       
       // Handle wrapped response
-      const paymentData = paymentResult?.data || paymentResult;
+      const paymentData = ((paymentResult as { data?: unknown } | undefined)?.data ?? paymentResult) as Record<string, unknown>;
 
       if (!paymentData?.success) {
-        toast.error(paymentData?.message || 'Failed to create payment');
+        toast.error(String(paymentData?.message || 'Failed to create payment'));
         setIsProcessing(false);
         return;
       }
@@ -322,7 +232,12 @@ export default function PaymentDialog({
       }
 
       // Send Movement transaction
-      const transactionData = paymentData.transactionData;
+      const transactionData = paymentData.transactionData as {
+        type: string;
+        function: string;
+        type_arguments: string[];
+        arguments: string[];
+      };
       
       try {
         const txHash = await sendMovementTransaction(
@@ -341,14 +256,14 @@ export default function PaymentDialog({
         // Verify payment with backend
         try {
           const verifyResult = await movementPaymentService.verifyPayment(
-            paymentData.paymentId,
+            String(paymentData.paymentId),
             txHash
           );
 
           // Handle wrapped response
-          const verifyData = verifyResult?.data || verifyResult;
+          const verifyData = ((verifyResult as { data?: unknown })?.data ?? verifyResult) as Record<string, unknown>;
 
-          if (verifyData?.success && verifyData?.payment?.status === 'COMPLETED') {
+          if (verifyData?.success && (verifyData?.payment as { status?: string } | undefined)?.status === 'COMPLETED') {
             toast.success('Payment verified!');
             setIsProcessing(false);
             // Move to step 3 (Success)
@@ -361,8 +276,8 @@ export default function PaymentDialog({
           let errorMsg = 'Payment verification failed. Please try again.';
           if (verifyError instanceof Error) {
             errorMsg = verifyError.message || errorMsg;
-          } else if (axios.isAxiosError(verifyError)) {
-            errorMsg = (verifyError.response?.data as { message?: string })?.message || verifyError.message || errorMsg;
+          } else if (isApiError(verifyError)) {
+            errorMsg = verifyError.message || errorMsg;
           }
           toast.error(errorMsg);
           setIsProcessing(false);
@@ -381,8 +296,8 @@ export default function PaymentDialog({
       let errorMsg = 'Payment failed';
       if (error instanceof Error) {
         errorMsg = error.message || errorMsg;
-      } else if (axios.isAxiosError(error)) {
-        errorMsg = (error.response?.data as { message?: string })?.message || error.message || errorMsg;
+      } else if (isApiError(error)) {
+        errorMsg = error.message || errorMsg;
       }
       toast.error(errorMsg);
       setIsProcessing(false);

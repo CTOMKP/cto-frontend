@@ -2,6 +2,7 @@
  * Utility functions for consistent localStorage access across the application
  */
 
+import { USER_ID_KEY } from "@/lib/authSession";
 import { BackendWallet } from "@/types/privy";
 
 /**
@@ -11,7 +12,7 @@ import { BackendWallet } from "@/types/privy";
  */
 export function getWalletsKey(userId?: string | null): string {
   if (!userId) {
-    userId = localStorage.getItem('cto_user_id');
+    userId = localStorage.getItem(USER_ID_KEY);
   }
   if (!userId) {
     throw new Error('User ID is required for wallet storage');

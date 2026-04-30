@@ -1,32 +1,34 @@
-const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com'; 
+import { getAuthToken } from "@/lib/authSession";
+import { apiGet, apiPost } from "@/lib/apiClient";
+import { toRecord, unwrapApiData } from "@/lib/apiResponse";
+
+function normalizeNotificationItems(payload: unknown): unknown[] {
+  if (payload == null) return [];
+  if (Array.isArray(payload)) return payload;
+  const o = toRecord(unwrapApiData(payload));
+  if (Array.isArray(o.items)) return o.items;
+  return [];
+}
 
 const notificationsService = {
-  async list(unreadOnly?: boolean) {
-    const token = localStorage.getItem('cto_auth_token');
-    const query = unreadOnly ? '?unread=1' : '';
-    const res = await fetch(`${backendUrl}/api/v1/notifications${query}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    });
-    if (!res.ok) throw new Error('Failed to load notifications');
-    const payload = await res.json();
-    const items = payload?.data?.items ?? payload?.items ?? payload?.data ?? payload ?? [];
+  /**
+   * @param unreadOnly - when true, requests `?unread=1`
+   * @param signal - passed through for TanStack Query cancellation
+   */
+  async list(unreadOnly?: boolean, signal?: AbortSignal) {
+    if (!getAuthToken()) {
+      return { items: [] as unknown[] };
+    }
+    const query = unreadOnly ? "?unread=1" : "";
+    const json = await apiGet<unknown>(`/api/v1/notifications${query}`, { signal });
+    const items = normalizeNotificationItems(json);
     return { items };
   },
 
   async markRead(id: string) {
-    const token = localStorage.getItem('cto_auth_token');
-    const res = await fetch(`${backendUrl}/api/v1/notifications/${id}/read`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
+    return apiPost<unknown>(`/api/v1/notifications/${id}/read`, undefined, {
+      clearSessionOn401: true,
     });
-    if (!res.ok) throw new Error('Failed to mark notification read');
-    return res.json();
   },
 };
 

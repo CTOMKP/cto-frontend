@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { X, Check, Copy } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useSignRawHash } from '@privy-io/react-auth/extended-chains';
@@ -14,12 +15,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { movementWalletService } from '@/services/movementWalletService';
-import { getMovementWallet, sendMovementTransaction } from '@/lib/movement-wallet';
-import { getWalletsFromStorage } from '@/utils/localStorage';
+import { sendMovementTransaction } from '@/lib/movement-wallet';
 import { toast } from 'react-toastify';
-import axios from 'axios';
-import type { BackendWallet } from '@/types/privy';
 import marketplaceService from '@/services/marketplaceService';
+import { invalidateMarketplaceQueries } from '@/lib/queryInvalidation';
+import { useResolvedMovementWallet } from '@/hooks/useResolvedMovementWallet';
+import { isApiError } from '@/lib/apiError';
 
 interface AdPaymentDialogProps {
   open: boolean;
@@ -41,6 +42,7 @@ export default function AdPaymentDialog({
   breakdown,
   onPaymentSuccess,
 }: AdPaymentDialogProps) {
+  const queryClient = useQueryClient();
   const { user, authenticated } = usePrivy();
   const { signRawHash } = useSignRawHash();
   const [currentStep, setCurrentStep] = useState(1);
@@ -51,6 +53,7 @@ export default function AdPaymentDialog({
   const [copiedAddress, setCopiedAddress] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const movementWalletQuery = useResolvedMovementWallet({ preferStorage: true });
 
   const totalAmount = breakdown && breakdown.length > 0
     ? breakdown.reduce((sum, item) => sum + item.price, 0)
@@ -70,27 +73,12 @@ export default function AdPaymentDialog({
 
     setIsLoadingBalance(true);
     try {
-      let movementWallet = getMovementWallet(user);
-
-      if (!movementWallet) {
-        try {
-          const { privyService } = await import('@/services/privyService');
-          const walletResult = await privyService.getUserWallets();
-          const wallets = (walletResult?.data?.wallets || walletResult?.wallets || []) as BackendWallet[];
-          const dbWallet = wallets.find((w: BackendWallet) =>
-            w.blockchain?.toUpperCase() === 'MOVEMENT' ||
-            w.blockchain?.toUpperCase() === 'APTOS'
-          );
-          if (dbWallet) {
-            movementWallet = {
-              address: dbWallet.address,
-              publicKey: dbWallet.publicKey || dbWallet.address,
-              chainType: 'aptos'
-            };
-          }
-        } catch (e) {
-          // backend wallet check failed, continue without
-        }
+      let movementWallet = movementWalletQuery.data?.movementWallet ?? null;
+      let walletId = movementWalletQuery.data?.walletId ?? null;
+      if (!movementWallet || !walletId) {
+        const fresh = await movementWalletQuery.refetch();
+        movementWallet = fresh.data?.movementWallet ?? null;
+        walletId = fresh.data?.walletId ?? null;
       }
 
       if (!movementWallet) {
@@ -101,45 +89,6 @@ export default function AdPaymentDialog({
       }
 
       setWalletAddress(movementWallet.address);
-
-      let walletId: string | null = null;
-      const userId = localStorage.getItem('cto_user_id');
-      let backendWallets: BackendWallet[] = [];
-      try {
-        const storedWallets = getWalletsFromStorage(userId);
-        if (storedWallets) backendWallets = storedWallets as BackendWallet[];
-      } catch (_) {}
-
-      if (backendWallets.length === 0) {
-        try {
-          const token = localStorage.getItem('cto_auth_token');
-          if (token) {
-            const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-            const response = await axios.get(
-              `${backendUrl}/api/v1/auth/privy/wallets`,
-              {
-                headers: {
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json',
-                },
-              }
-            );
-            if (response.data?.success && response.data?.wallets) {
-              backendWallets = response.data.wallets;
-            }
-          }
-        } catch (error) {
-          // failed to fetch wallets from backend
-        }
-      }
-
-      const backendWallet = backendWallets.find((w: BackendWallet) =>
-        w.address?.toLowerCase() === movementWallet!.address.toLowerCase() &&
-        (w.blockchain === 'MOVEMENT' || w.blockchain === 'APTOS' ||
-          w.chainType?.toLowerCase() === 'aptos' || w.chainType?.toLowerCase() === 'movement')
-      );
-
-      if (backendWallet?.id) walletId = backendWallet.id;
 
       if (!walletId) {
         setWalletBalance(0);
@@ -193,23 +142,10 @@ export default function AdPaymentDialog({
       return;
     }
 
-    let movementWallet = getMovementWallet(user);
+    let movementWallet = movementWalletQuery.data?.movementWallet ?? null;
     if (!movementWallet) {
-      try {
-        const { privyService } = await import('@/services/privyService');
-        const walletResult = await privyService.getUserWallets();
-        const wallets = (walletResult?.data?.wallets || walletResult?.wallets || []) as BackendWallet[];
-        const dbWallet = wallets.find((w: BackendWallet) =>
-          w.blockchain?.toUpperCase() === 'MOVEMENT' || w.blockchain?.toUpperCase() === 'APTOS'
-        );
-        if (dbWallet) {
-          movementWallet = {
-            address: dbWallet.address,
-            publicKey: dbWallet.publicKey || dbWallet.address,
-            chainType: 'aptos'
-          };
-        }
-      } catch (_) {}
+      const fresh = await movementWalletQuery.refetch();
+      movementWallet = fresh.data?.movementWallet ?? null;
     }
 
     if (!movementWallet?.address || !(movementWallet.publicKey || movementWallet.public_key)) {
@@ -227,6 +163,7 @@ export default function AdPaymentDialog({
         payment?.id;
 
       if (paymentResponse?.message && String(paymentResponse.message).includes('No payment required')) {
+        await invalidateMarketplaceQueries(queryClient);
         setCurrentStep(3);
         return;
       }
@@ -253,11 +190,12 @@ export default function AdPaymentDialog({
       }
 
       toast.success('Payment verified!');
+      await invalidateMarketplaceQueries(queryClient);
       setCurrentStep(3);
     } catch (error: unknown) {
       const msg =
         error instanceof Error ? error.message :
-        axios.isAxiosError(error) ? (error.response?.data as { message?: string })?.message || error.message :
+        isApiError(error) ? error.message :
         'Payment failed';
       const friendlyMsg = /already initiated|pending payment|complete the pending|pending transaction/i.test(String(msg))
         ? 'This ad already has a pending payment. Complete the transaction in your wallet, or try again later.'
