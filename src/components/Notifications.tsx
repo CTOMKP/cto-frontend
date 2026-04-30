@@ -150,32 +150,29 @@ export default function Notifications() {
       const message = isApiError(err) ? err.message : "Could not mark notification read.";
       toast.error(message);
     },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: notificationKeys.list() });
+    },
   });
 
   const markAllReadMutation = useMutation({
     mutationFn: async () => {
       const snapshot = queryClient.getQueryData<NotificationsListData>(notificationKeys.list());
       const unread = (snapshot?.items ?? []).filter((n) => !n.readAt);
-      await Promise.all(unread.map((n) => notificationsService.markRead(n.id)));
-    },
-    onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: notificationKeys.list() });
-      const previous = queryClient.getQueryData<NotificationsListData>(notificationKeys.list());
-      const now = new Date().toISOString();
-      queryClient.setQueryData<NotificationsListData>(notificationKeys.list(), (old) => {
-        const list = old?.items ?? [];
-        return {
-          items: list.map((item) => ({ ...item, readAt: item.readAt ?? now })),
-        };
-      });
-      return { previous };
-    },
-    onError: (err, _vars, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(notificationKeys.list(), context.previous);
+      const results = await Promise.allSettled(
+        unread.map((n) => notificationsService.markRead(n.id)),
+      );
+      const failed = results.filter((r) => r.status === "rejected").length;
+      if (failed > 0) {
+        throw new Error(`${failed} notification(s) could not be marked as read.`);
       }
+    },
+    onError: (err) => {
       const message = isApiError(err) ? err.message : "Could not mark all as read.";
       toast.error(message);
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: notificationKeys.list() });
     },
   });
 
