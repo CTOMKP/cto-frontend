@@ -10,6 +10,7 @@ import { createMovementWallet, getMovementWallet } from '@/lib/movement-wallet';
 import { authService } from '@/services/authService';
 import { getAuthToken, getUserId } from '@/lib/authSession';
 import { profileKeys } from '@/lib/queryKeys';
+import { bindSessionStoreListeners, useSessionStore } from '@/lib/sessionStore';
 
 // Module-level Set to track processing user IDs across ALL hook instances
 // This prevents multiple parallel runs even if hook is instantiated multiple times
@@ -39,11 +40,16 @@ export function usePrivyAuth() {
   } | null>(null);
 
   useEffect(() => {
+    bindSessionStoreListeners();
+  }, []);
+
+  useEffect(() => {
     if (ready && !authenticated) {
       const token = getAuthToken();
       if (!token) {
         setIsAuthenticated(false);
         setIsLoading(false);
+        useSessionStore.getState().clear();
       }
     }
   }, [ready, authenticated]);
@@ -238,7 +244,10 @@ export function usePrivyAuth() {
           name: profile.name,
           walletId: profile.walletId,
         });
+        useSessionStore.getState().setUserId(String(profile.id));
+        useSessionStore.getState().setHasAvatar(!!profile.avatarUrl);
       }
+      useSessionStore.getState().setToken(getAuthToken());
   
       return backendSyncResult;
     } catch (error) {
@@ -275,6 +284,7 @@ export function usePrivyAuth() {
       
       // Reset state
       setIsAuthenticated(false);
+      useSessionStore.getState().clear();
       
       // Force page reload to clear all UI state (like test frontend)
       window.location.href = '/listings';
@@ -287,6 +297,7 @@ export function usePrivyAuth() {
         processingUserIds.delete(user.id);
       }
       setIsAuthenticated(false);
+      useSessionStore.getState().clear();
       router.push('/listings');
       throw error;
     }

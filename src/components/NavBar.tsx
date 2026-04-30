@@ -24,9 +24,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import NavDropdownMenu from "./DropdownMenu";
-import { getStoredAvatarUrl } from "@/lib/authSession";
 import { usePathname } from "next/navigation";
 import NavBarChats from "./NavBarChats";
+import { useSessionStore } from "@/lib/sessionStore";
 
 const ExploreCategoryLinks = [
   { name: "Animals", href: "#" },
@@ -43,34 +43,15 @@ const ExploreCategoryLinks = [
 export default function NavBar() {
   const { isAuthenticated, ready, isLoading: authLoading } = usePrivyAuth();
   const [isDropdownOpen, setDropdownOpen] = useState(false);
-  const [hasAvatar, setHasAvatar] = useState(false);
+  const hasAvatar = useSessionStore((s) => s.hasAvatar);
   const pathname = usePathname();
 
   // Single "auth resolved" signal: only show auth-dependent UI when we know the real state
   const authResolved = !authLoading;
 
-  // Check if user has avatar and listen for changes (only when authenticated)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const checkAvatar = () => {
-        if (authResolved && isAuthenticated) {
-          const avatarUrl = getStoredAvatarUrl();
-          setHasAvatar(!!avatarUrl);
-        } else {
-          setHasAvatar(false);
-        }
-      };
-
-      checkAvatar();
-      const interval = setInterval(checkAvatar, 500);
-      window.addEventListener('storage', checkAvatar);
-      window.addEventListener('avatarUpdated', checkAvatar);
-
-      return () => {
-        clearInterval(interval);
-        window.removeEventListener('storage', checkAvatar);
-        window.removeEventListener('avatarUpdated', checkAvatar);
-      };
+    if (!authResolved || !isAuthenticated) {
+      useSessionStore.getState().setHasAvatar(false);
     }
   }, [authResolved, isAuthenticated]);
 

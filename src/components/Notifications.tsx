@@ -14,10 +14,10 @@ import { toast } from "react-toastify";
 import { Button } from "./ui/button";
 import Image from "next/image";
 import { io, type Socket } from "socket.io-client";
-import { AUTH_TOKEN_KEY, getAuthToken } from "@/lib/authSession";
 import { isApiError } from "@/lib/apiError";
 import { notificationKeys } from "@/lib/queryKeys";
 import notificationsService from "@/services/notificationsService";
+import { useSessionStore } from "@/lib/sessionStore";
 
 export type Filter = "all" | "unread";
 
@@ -39,7 +39,7 @@ export default function Notifications() {
   const queryClient = useQueryClient();
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<Filter>("all");
-  const [token, setToken] = useState<string | null>(() => getAuthToken());
+  const token = useSessionStore((s) => s.token);
 
   const filters: Filter[] = ["all", "unread"];
 
@@ -177,24 +177,8 @@ export default function Notifications() {
   });
 
   useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === AUTH_TOKEN_KEY) setToken(e.newValue);
-    };
-    const onSessionCleared = () => {
-      setToken(null);
-      queryClient.removeQueries({ queryKey: notificationKeys.list() });
-    };
-    window.addEventListener("storage", onStorage);
-    window.addEventListener("cto-session-cleared", onSessionCleared);
-    const interval = setInterval(() => {
-      const next = getAuthToken();
-      if (next !== token) setToken(next);
-    }, 1000);
-    return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("cto-session-cleared", onSessionCleared);
-      clearInterval(interval);
-    };
+    if (token) return;
+    queryClient.removeQueries({ queryKey: notificationKeys.list() });
   }, [token, queryClient]);
 
   useEffect(() => {
