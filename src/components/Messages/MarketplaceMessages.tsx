@@ -683,7 +683,8 @@ export default function MarketplaceMessages({
         <div className="text-amber-400 text-center text-xs px-1">{error}</div>
       ) : null}
       <div className="flex gap-4 flex-1">
-          <MessagesSidebar
+        <div className="h-screen overflow-auto hover-scrollbar">
+        <MessagesSidebar
             threads={threads}
             activeThreadId={activeThreadId}
             currentUserId={currentUserId}
@@ -691,6 +692,7 @@ export default function MarketplaceMessages({
             polling={polling}
             onSelectThread={onSelectThread}
           />
+        </div>
         <div className="flex-1 h-screen min-w-0 overflow-auto hover-scrollbar">
           <MessagesChatPanel
             headerTitle={headerTitle}
