@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
-import axios from 'axios';
 import { BackendWallet, PrivyWalletAccount, PrivyUser } from '@/types/privy';
 
 // Helper interface for wallet with Movement/Aptos support
@@ -13,9 +12,9 @@ interface WalletWithMovement extends BackendWallet {
   walletClient?: string;
 }
 
-import { getAuthToken, getStoredAvatarUrl, getUserId } from '@/lib/authSession';
+import { getStoredAvatarUrl, getUserId } from '@/lib/authSession';
 import { useProfileQuery } from '@/hooks/useProfileQuery';
-import { getWalletsKey } from '@/utils/localStorage';
+import walletsService from '@/services/walletsService';
 import UserProfileHeader from './features/UserProfileHeader';
 import LevelXPProgress from './features/LevelXPProgress';
 import ReferralSection from './features/ReferralSection';
@@ -67,85 +66,28 @@ export default function ProfilePage() {
 
   const loadWallets = React.useCallback(async () => {
     try {
-      // First, try to load from localStorage (faster and more reliable)
-      const userId = getUserId();
-      let walletsJson: string | null = null;
+      const wallets = await walletsService.listPrivyWallets({
+        userId: getUserId() || user?.id || null,
+        preferStorage: true,
+      });
+      if (!wallets.length) return;
 
-      // Only use user-specific key format, no fallback to generic key
-      if (userId) {
-        try {
-          walletsJson = localStorage.getItem(getWalletsKey(userId));
-        } catch {
-          walletsJson = null;
-        }
-      }
-      if (walletsJson) {
-        try {
-          const wallets = JSON.parse(walletsJson);
-          
-          // Find Movement wallet from wallets (Movement wallet is already included in the data)
-          const movementWallet = wallets.find((w: WalletWithMovement) => 
-            w.blockchain === 'MOVEMENT' ||
-            w.blockchain === 'APTOS' ||
-            w.chainType === 'aptos' ||
-            w.walletClient === 'APTOS_EMBEDDED'
-          );
-          if (movementWallet?.address) {
-            setMovementWalletAddress(movementWallet.address);
-          }
-
-          setAllWallets(wallets);
-          return;
-        } catch (parseError) {
-          console.error('Failed to parse wallets from localStorage:', parseError);
-        }
-      }
-      
-      // Fallback: Fetch from backend if localStorage is empty or invalid
-      const token = getAuthToken();
-      
-      if (!token || !userId) {
-        // No token or user ID, can't fetch from backend
-        return;
-      }
-
-      console.log('🔄 Fetching wallets from backend...');
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-      const response = await axios.get(
-        `${backendUrl}/api/v1/auth/privy/wallets`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
+      // Find Movement wallet from wallets (Movement wallet is already included in the data)
+      const movementWallet = wallets.find((w: WalletWithMovement) => 
+        w.blockchain === 'MOVEMENT' ||
+        w.blockchain === 'APTOS' ||
+        w.chainType === 'aptos' ||
+        w.walletClient === 'APTOS_EMBEDDED'
       );
-
-      if (response.data.success && response.data.wallets) {
-        const wallets = response.data.wallets;
-        
-        // Find Movement wallet from backend wallets (Movement wallet is already included)
-        const movementWallet = wallets.find((w: WalletWithMovement) => 
-          w.blockchain === 'MOVEMENT' ||
-          w.blockchain === 'APTOS' ||
-          w.chainType === 'aptos' ||
-          w.walletClient === 'APTOS_EMBEDDED'
-        );
-        if (movementWallet?.address) {
-          setMovementWalletAddress(movementWallet.address);
-        }
-
-        setAllWallets(wallets);
-        
-        // Update localStorage with fresh data
-        if (userId) {
-          localStorage.setItem(`cto_user_wallets_${userId}`, JSON.stringify(wallets));
-        }
+      if (movementWallet?.address) {
+        setMovementWalletAddress(movementWallet.address);
       }
+
+      setAllWallets(wallets);
     } catch (error) {
       console.error('Failed to load wallets:', error);
     }
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     if (authenticated && user && ready) {

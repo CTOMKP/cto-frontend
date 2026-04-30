@@ -21,6 +21,7 @@ import { getWalletsFromStorage } from '@/utils/localStorage';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import type { BackendWallet } from '@/types/privy';
+import walletsService from '@/services/walletsService';
 
 interface PaymentDialogProps {
   open: boolean;
@@ -126,22 +127,10 @@ export default function PaymentDialog({
       // If not in localStorage, fetch from backend
       if (backendWallets.length === 0) {
         try {
-          const token = getAuthToken();
-          if (token) {
-            const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-            const response = await axios.get(
-              `${backendUrl}/api/v1/auth/privy/wallets`,
-              {
-                headers: {
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json',
-                },
-              }
-            );
-            if (response.data?.success && response.data?.wallets) {
-              backendWallets = response.data.wallets;
-            }
-          }
+          backendWallets = await walletsService.listPrivyWallets({
+            userId,
+            preferStorage: false,
+          });
         } catch (error) {
           console.error('Failed to fetch wallets from backend:', error);
         }

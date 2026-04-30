@@ -6,12 +6,12 @@ import { movementWalletService, type WalletTransaction } from '@/services/moveme
 import { usePrivy } from '@privy-io/react-auth';
 import { getMovementWallet } from '@/lib/movement-wallet';
 import { BackendWallet } from '@/types/privy';
-import axios from 'axios';
 import { toast } from 'react-toastify';
-import { getAuthToken, getUserId, WALLET_ID_KEY } from '@/lib/authSession';
+import { getUserId, WALLET_ID_KEY } from '@/lib/authSession';
 import UserListings from './UserListings';
 import TxHistoryTab from './TxHistoryTab';
 import MyAdsTab from './MyAdsTab';
+import walletsService from '@/services/walletsService';
 
 export default function TransactionHistory() {
   const { user } = usePrivy();
@@ -24,7 +24,6 @@ export default function TransactionHistory() {
   useEffect(() => {
     const findAndSetWallet = async () => {
       const userId = getUserId() || user?.id;
-      const token = getAuthToken();
 
       // GUARD: Don't run if already recovering or if we already have an active wallet
       if (!userId) {
@@ -32,20 +31,10 @@ export default function TransactionHistory() {
       }
 
       try {
-        const API_BASE =
-          process.env.NEXT_PUBLIC_BACKEND_URL ||
-          "https://api.ctomarketplace.com";
-
-        const response = await axios.get(
-          `${API_BASE}/api/v1/auth/privy/wallets`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
-        // Handle nested response from TransformInterceptor
-        const walletsData =
-          response.data?.data?.wallets || response.data?.wallets || [];
+        const walletsData = await walletsService.listPrivyWallets({
+          userId,
+          preferStorage: true,
+        });
 
         // STRATEGIC FIX: Prioritize wallet that matches current Privy account
         const privyMoveWallet = getMovementWallet(user);
@@ -67,9 +56,9 @@ export default function TransactionHistory() {
           );
         }
 
-        if (moveWallet) {
+        if (moveWallet?.id) {
           localStorage.setItem(WALLET_ID_KEY, moveWallet.id);
-          return moveWallet.id; 
+          return moveWallet.id;
         }
       } catch (err) {
         toast.error("Failed to set wallet ID");
