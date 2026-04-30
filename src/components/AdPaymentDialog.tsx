@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { X, Check, Copy } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useSignRawHash } from '@privy-io/react-auth/extended-chains';
@@ -21,6 +22,7 @@ import { toast } from 'react-toastify';
 import axios from 'axios';
 import type { BackendWallet } from '@/types/privy';
 import marketplaceService from '@/services/marketplaceService';
+import { invalidateMarketplaceQueries } from '@/lib/queryInvalidation';
 
 interface AdPaymentDialogProps {
   open: boolean;
@@ -42,6 +44,7 @@ export default function AdPaymentDialog({
   breakdown,
   onPaymentSuccess,
 }: AdPaymentDialogProps) {
+  const queryClient = useQueryClient();
   const { user, authenticated } = usePrivy();
   const { signRawHash } = useSignRawHash();
   const [currentStep, setCurrentStep] = useState(1);
@@ -228,6 +231,7 @@ export default function AdPaymentDialog({
         payment?.id;
 
       if (paymentResponse?.message && String(paymentResponse.message).includes('No payment required')) {
+        await invalidateMarketplaceQueries(queryClient);
         setCurrentStep(3);
         return;
       }
@@ -254,6 +258,7 @@ export default function AdPaymentDialog({
       }
 
       toast.success('Payment verified!');
+      await invalidateMarketplaceQueries(queryClient);
       setCurrentStep(3);
     } catch (error: unknown) {
       const msg =

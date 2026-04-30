@@ -23,9 +23,19 @@ export default function Listings() {
   return (
     <div>
       {highlightsQuery.isError && (
-        <p className="px-4 py-2 text-sm text-amber-200/90" role="status">
-          Highlights could not be loaded. The table below may still work.
-        </p>
+        <div
+          className="mx-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200/90"
+          role="alert"
+        >
+          <span>Highlights could not be loaded. The table below may still work.</span>
+          <button
+            type="button"
+            className="shrink-0 rounded-md border border-amber-400/40 px-2 py-1 text-xs font-medium text-amber-100 hover:bg-amber-500/20"
+            onClick={() => highlightsQuery.refetch()}
+          >
+            Retry
+          </button>
+        </div>
       )}
       <Highlights apiData={apiData} isLoading={isLoading} />
       <Listing />

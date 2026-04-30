@@ -1,16 +1,17 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { listingKeys } from '@/lib/queryKeys';
+import {
+  useCreateMarketplaceDraftMutation,
+  useUpdateMarketplaceDraftMutation,
+} from '@/hooks/mutations/useMarketplaceDraftMutations';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import CategorySelectionStep from './features/CategorySelectionStep';
 import ProjectDetailsStep, { ProjectDetailsData } from './features/ProjectDetailsStep';
 import PreviewStep from './features/PreviewStep';
 import { getUserId } from '@/lib/authSession';
-import marketplaceService from '@/services/marketplaceService';
 import { pfpService } from '@/services/pfpService';
 
 type Step = 'category' | 'details' | 'preview';
@@ -84,7 +85,8 @@ function buildDraftPayload(formData: FormData, imageUrls: string[]): Record<stri
 }
 
 export default function PostAdPage() {
-  const queryClient = useQueryClient();
+  const updateMarketplaceDraftMutation = useUpdateMarketplaceDraftMutation();
+  const createMarketplaceDraftMutation = useCreateMarketplaceDraftMutation();
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState<Step>('category');
   const [formData, setFormData] = useState<FormData>({});
@@ -144,15 +146,16 @@ export default function PostAdPage() {
       }
       const payload = buildDraftPayload(formData, imageUrls);
       if (draftAdId) {
-        await marketplaceService.updateDraft(draftAdId, payload);
-        void queryClient.invalidateQueries({ queryKey: listingKeys.all });
+        await updateMarketplaceDraftMutation.mutateAsync({
+          id: draftAdId,
+          payload,
+        });
         return draftAdId;
       }
-      const res = await marketplaceService.createDraft(payload);
+      const res = await createMarketplaceDraftMutation.mutateAsync(payload);
       const data = res as { id?: string; data?: { id?: string } };
       const id = data?.id ?? data?.data?.id ?? null;
       if (id) setDraftAdId(id);
-      void queryClient.invalidateQueries({ queryKey: listingKeys.all });
       return id;
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response?.status === 400) {
@@ -166,7 +169,12 @@ export default function PostAdPage() {
       }
       return null;
     }
-  }, [formData, draftAdId, queryClient]);
+  }, [
+    formData,
+    draftAdId,
+    updateMarketplaceDraftMutation,
+    createMarketplaceDraftMutation,
+  ]);
 
   const handleCategoryNext = (data: { category: string; subcategory: string; postType?: 'LOOKING_FOR' | 'OFFERING' }) => {
     setFormData((prev: FormData) => ({ ...prev, ...data }));
