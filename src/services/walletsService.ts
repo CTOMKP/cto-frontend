@@ -1,21 +1,13 @@
 import { apiGet } from "@/lib/apiClient";
 import { getUserId } from "@/lib/authSession";
+import { toRecord, unwrapApiData } from "@/lib/apiResponse";
 import { getMovementWallet } from "@/lib/movement-wallet";
 import { getWalletsFromStorage, saveWalletsToStorage } from "@/utils/localStorage";
 import type { BackendWallet } from "@/types/privy";
 
 function normalizeWalletsPayload(payload: unknown): BackendWallet[] {
-  if (!payload || typeof payload !== "object") return [];
-  const root = payload as Record<string, unknown>;
-
+  const root = toRecord(unwrapApiData(payload));
   if (Array.isArray(root.wallets)) return root.wallets as BackendWallet[];
-
-  const data = root.data;
-  if (data && typeof data === "object") {
-    const inner = data as Record<string, unknown>;
-    if (Array.isArray(inner.wallets)) return inner.wallets as BackendWallet[];
-  }
-
   return [];
 }
 

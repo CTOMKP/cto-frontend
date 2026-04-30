@@ -1,8 +1,33 @@
 import { ApiError } from '@/lib/apiError';
 import { apiPost } from '@/lib/apiClient';
+import { unwrapApiData } from '@/lib/apiResponse';
 import { getAuthToken } from '@/lib/authSession';
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
+
+function ensureAuthTokenOrThrow(): void {
+  const token = getAuthToken();
+  if (!token) {
+    console.error('❌ No auth token found in localStorage');
+    throw new Error('Authentication required. Please login first.');
+  }
+}
+
+function throwMovementPaymentError(error: unknown, fallbackMessage: string): never {
+  if (error instanceof ApiError) {
+    const status = error.status;
+    const body = error.body as { message?: string } | undefined;
+    const message = body?.message || error.message;
+    if (status === 401) {
+      throw new Error('Authentication failed. Please login again.');
+    }
+    if (status === 403) {
+      throw new Error('Access denied. Please check your permissions.');
+    }
+    throw new Error(message || fallbackMessage);
+  }
+  throw error;
+}
 
 /**
  * Movement Payment Service
@@ -15,11 +40,7 @@ export const movementPaymentService = {
    * @returns Payment data including transaction data for Privy signing
    */
   async createListingPayment(listingId: string) {
-    const token = getAuthToken();
-    if (!token) {
-      console.error('❌ No auth token found in localStorage');
-      throw new Error('Authentication required. Please login first.');
-    }
+    ensureAuthTokenOrThrow();
 
     if (!API_BASE) {
       console.error('❌ API_BASE is not defined');
@@ -29,8 +50,7 @@ export const movementPaymentService = {
     console.log('💳 Creating Movement payment:', {
       listingId,
       apiBase: API_BASE,
-      hasToken: !!token,
-      tokenLength: token.length,
+      hasToken: true,
     });
 
     try {
@@ -40,25 +60,12 @@ export const movementPaymentService = {
       );
 
       // Handle wrapped response from TransformInterceptor
-      const responseData = (response as { data?: unknown })?.data || response;
+      const responseData = unwrapApiData(response);
       console.log('✅ Payment created successfully:', responseData);
       return responseData;
     } catch (error) {
       console.error('❌ Payment creation failed:', error);
-      if (error instanceof ApiError) {
-        const status = error.status;
-        const body = error.body as { message?: string } | undefined;
-        const message = body?.message || error.message;
-        
-        if (status === 401) {
-          throw new Error('Authentication failed. Please login again.');
-        } else if (status === 403) {
-          throw new Error('Access denied. Please check your permissions.');
-        } else {
-          throw new Error(message || 'Failed to create payment');
-        }
-      }
-      throw error;
+      throwMovementPaymentError(error, 'Failed to create payment');
     }
   },
 
@@ -68,18 +75,14 @@ export const movementPaymentService = {
    * @returns Payment data including transaction data for Privy signing
    */
   async createAdPayment(adId: string) {
-    const token = getAuthToken();
-    if (!token) {
-      console.error('❌ No auth token found in localStorage');
-      throw new Error('Authentication required. Please login first.');
-    }
+    ensureAuthTokenOrThrow();
 
     if (!API_BASE) {
       console.error('❌ API_BASE is not defined');
       throw new Error('Backend URL not configured');
     }
 
-    console.log('💳 Creating Movement payment for ad:', { adId, apiBase: API_BASE, hasToken: !!token });
+    console.log('💳 Creating Movement payment for ad:', { adId, apiBase: API_BASE, hasToken: true });
 
     try {
       const response = await apiPost<unknown>(
@@ -87,24 +90,12 @@ export const movementPaymentService = {
         {},
       );
 
-      const responseData = (response as { data?: unknown })?.data || response;
+      const responseData = unwrapApiData(response);
       console.log('✅ Ad payment created successfully:', responseData);
       return responseData;
     } catch (error) {
       console.error('❌ Ad payment creation failed:', error);
-      if (error instanceof ApiError) {
-        const status = error.status;
-        const body = error.body as { message?: string } | undefined;
-        const message = body?.message || error.message;
-        if (status === 401) {
-          throw new Error('Authentication failed. Please login again.');
-        } else if (status === 403) {
-          throw new Error('Access denied. Please check your permissions.');
-        } else {
-          throw new Error(message || 'Failed to create ad payment');
-        }
-      }
-      throw error;
+      throwMovementPaymentError(error, 'Failed to create ad payment');
     }
   },
 
@@ -115,11 +106,7 @@ export const movementPaymentService = {
    * @returns Verification result
    */
   async verifyPayment(paymentId: string, txHash: string) {
-    const token = getAuthToken();
-    if (!token) {
-      console.error('❌ No auth token found in localStorage');
-      throw new Error('Authentication required. Please login first.');
-    }
+    ensureAuthTokenOrThrow();
 
     if (!API_BASE) {
       console.error('❌ API_BASE is not defined');
@@ -130,7 +117,7 @@ export const movementPaymentService = {
       paymentId,
       txHash,
       apiBase: API_BASE,
-      hasToken: !!token,
+      hasToken: true,
     });
 
     try {
@@ -140,25 +127,12 @@ export const movementPaymentService = {
       );
 
       // Handle wrapped response from TransformInterceptor
-      const responseData = (response as { data?: unknown })?.data || response;
+      const responseData = unwrapApiData(response);
       console.log('✅ Payment verified successfully:', responseData);
       return responseData;
     } catch (error) {
       console.error('❌ Payment verification failed:', error);
-      if (error instanceof ApiError) {
-        const status = error.status;
-        const body = error.body as { message?: string } | undefined;
-        const message = body?.message || error.message;
-        
-        if (status === 401) {
-          throw new Error('Authentication failed. Please login again.');
-        } else if (status === 403) {
-          throw new Error('Access denied. Please check your permissions.');
-        } else {
-          throw new Error(message || 'Failed to verify payment');
-        }
-      }
-      throw error;
+      throwMovementPaymentError(error, 'Failed to verify payment');
     }
   },
 };

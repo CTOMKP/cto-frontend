@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,33 +15,23 @@ import { Check, MoveDown, MoveUp, SquareArrowOutUpRight } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Link from 'next/link';
 import FallbackImage from './FallbackImage';
-import {
-  getStoredAvatarUrl,
-  getUserEmail,
-  PROFILE_AVATAR_URL_KEY,
-  USER_AVATAR_URL_KEY,
-  USER_USERNAME_KEY,
-} from '@/lib/authSession';
 import { getCloudFrontUrl } from '@/lib/image-url-helper';
 import { useWalletBalance } from '@/app/profile/features/wallet-balance/useWalletBalance';
 import WalletBalanceContent from '@/app/profile/features/wallet-balance/WalletBalanceContent';
 import { Button } from './ui/button';
 import { useRewardProgress, resetUserRewardProgress } from '@/lib/userRewardProgress';
 import { useResolvedMovementWallet } from '@/hooks/useResolvedMovementWallet';
+import { useSessionStore } from '@/lib/sessionStore';
 
 export default function AvatarDropdown() {
-  // Initialize exactly like profile page - read raw URL from localStorage
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      const raw = getStoredAvatarUrl();
-      console.log('[AvatarDropdown] 🎯 Initial state - raw from localStorage:', raw);
-      return raw;
-    }
-    return null;
-  });
+  const storedAvatarUrl = useSessionStore((s) => s.avatarUrl);
+  const sessionEmail = useSessionStore((s) => s.email);
+  const sessionUsername = useSessionStore((s) => s.username);
+  const avatarUrl = useMemo(
+    () => (storedAvatarUrl ? getCloudFrontUrl(storedAvatarUrl) : null),
+    [storedAvatarUrl],
+  );
   const [copiedAddress, setCopiedAddress] = useState(false);
-  const [email, setEmail] = useState('');
-  const [username, setUsername] = useState('');
   const {
     rankLevel,
     rankLabel,
@@ -71,66 +61,8 @@ export default function AvatarDropdown() {
     }
   };
 
-  // Set email and username on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const userEmail = user?.email?.address || getUserEmail() || '';
-      setEmail(userEmail);
-      const storedUsername = localStorage.getItem(USER_USERNAME_KEY) || userEmail.split('@')[0] || 'User';
-      setUsername(storedUsername);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const handleAvatarUpdate = () => {
-      const rawUrl = getStoredAvatarUrl();
-      if (rawUrl) {
-        const newAvatarUrl = getCloudFrontUrl(rawUrl);
-        if (newAvatarUrl !== avatarUrl) {
-          setAvatarUrl(newAvatarUrl);
-        } else {
-        }
-      } else {
-        console.log('[AvatarDropdown] ⚠️ No raw URL found in localStorage');
-      }
-    };
-
-    // Listen for localStorage changes (cross-tab updates)
-    const handleStorageChange = (e: StorageEvent) => {
-      if ((e.key === USER_AVATAR_URL_KEY || e.key === PROFILE_AVATAR_URL_KEY) && e.newValue) {
-        const cloudfrontUrl = getCloudFrontUrl(e.newValue);
-        setAvatarUrl(cloudfrontUrl);
-      }
-    };
-
-    // Check localStorage periodically (same-tab updates)
-    const checkAvatar = () => {
-      const rawUrl = getStoredAvatarUrl();
-      if (rawUrl) {
-        const cloudfrontUrl = getCloudFrontUrl(rawUrl);
-        if (cloudfrontUrl !== avatarUrl) {
-          setAvatarUrl(cloudfrontUrl);
-        }
-      } else if (avatarUrl) {
-        setAvatarUrl(null);
-      }
-    };
-
-    // Transform immediately on mount (like profile page)
-    checkAvatar();
-
-    window.addEventListener('avatarUpdated', handleAvatarUpdate);
-    window.addEventListener('storage', handleStorageChange);
-    const interval = setInterval(checkAvatar, 1000);
-
-    return () => {
-      window.removeEventListener('avatarUpdated', handleAvatarUpdate);
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
-    };
-  }, [avatarUrl]);
+  const email = user?.email?.address || sessionEmail || '';
+  const username = sessionUsername || email.split('@')[0] || 'User';
 
   const movementWalletQuery = useResolvedMovementWallet({ preferStorage: true });
   const movementWalletAddress = movementWalletQuery.data?.movementWallet?.address ?? null;

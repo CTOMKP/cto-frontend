@@ -1,4 +1,5 @@
 import { apiGet } from "@/lib/apiClient";
+import { toRecord, unwrapApiData } from "@/lib/apiResponse";
 import { normalizeRewardData } from "@/lib/rewardStorage";
 import type { RewardProgress } from "@/types/auth.types";
 
@@ -24,10 +25,7 @@ export type XpMeResponse = {
 };
 
 function parseXpMeResponse(res: unknown): XpMeResponse {
-  const outer = res && typeof res === "object" ? (res as { data?: unknown }) : {};
-  const data = (outer.data as { data?: unknown })?.data ?? outer.data;
-  const record =
-    data && typeof data === "object" ? (data as Record<string, unknown>) : {};
+  const record = toRecord(unwrapApiData(res));
   const balance = Number(record.balance ?? 0);
   const rewardPatch = normalizeRewardData({
     ...record,

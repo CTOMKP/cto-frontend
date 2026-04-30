@@ -1,14 +1,11 @@
 import { getAuthToken } from '@/lib/authSession';
 import { ApiError } from '@/lib/apiError';
 import { apiDelete, apiGet, apiPatch, apiPost, getBackendBaseUrl } from '@/lib/apiClient';
+import { unwrapApiData } from '@/lib/apiResponse';
 import {
   normalizePresignPayload,
   putFileToPresignedUrl,
 } from '@/lib/presignedUpload';
-
-function unwrapData<T = unknown>(res: unknown): T {
-  return ((res as { data?: unknown })?.data ?? res) as T;
-}
 
 export interface ScanMetadata {
   token_symbol?: string;
@@ -123,7 +120,7 @@ export const userListingsService = {
   async scan(contractAddr: string, chain: string): Promise<ScanResult> {
     try {
       const raw = await apiPost<unknown>(`/api/v1/user-listings/scan`, { contractAddr, chain });
-      const responseData = unwrapData<Record<string, unknown>>(raw);
+      const responseData = unwrapApiData<Record<string, unknown>>(raw);
       // Normalize response to match our interface
       return {
         success: true,
@@ -143,7 +140,7 @@ export const userListingsService = {
         if (error.status === 401) {
           throw new Error('Unauthorized');
         }
-        const responseData = unwrapData<Record<string, unknown>>(error.body);
+        const responseData = unwrapApiData<Record<string, unknown>>(error.body);
         // For structured backend errors (HttpException with metadata), preserve details
         if (responseData && (responseData.metadata || typeof responseData.risk_score !== 'undefined')) {
           return {
@@ -191,10 +188,10 @@ export const userListingsService = {
   async create(payload: CreateUserListingPayload) {
     try {
       const res = await apiPost<unknown>(`/api/v1/user-listings`, payload);
-      return unwrapData(res);
+      return unwrapApiData(res);
     } catch (error) {
       if (error instanceof ApiError) {
-        const errData = unwrapData<Record<string, unknown>>(error.body);
+        const errData = unwrapApiData<Record<string, unknown>>(error.body);
         const message = errData?.message || `Request failed with status ${error.status}`;
         const err = new Error(String(message)) as Error & { response?: { data?: unknown }; status?: number };
         err.response = { data: error.body };
@@ -206,37 +203,37 @@ export const userListingsService = {
   },
   async update(id: string, payload: Partial<CreateUserListingPayload>) {
     const res = await apiPatch<unknown>(`/api/v1/user-listings/${id}`, payload);
-    return unwrapData(res);
+    return unwrapApiData(res);
   },
   async publish(id: string) {
     const res = await apiPost<unknown>(`/api/v1/user-listings/${id}/publish`, {});
-    return unwrapData(res);
+    return unwrapApiData(res);
   },
   async mine(signal?: AbortSignal) {
     // Standard path for all user listings
     const res = await apiGet<unknown>(`/api/v1/user-listings/mine/all`, { signal });
-    return unwrapData(res);
+    return unwrapApiData(res);
   },
   async listPublic(page = 1, limit = 20) {
     const params = new URLSearchParams({ page: String(page), limit: String(limit) });
     const res = await apiGet<unknown>(`/api/v1/user-listings?${params.toString()}`);
-    return unwrapData(res);
+    return unwrapApiData(res);
   },
   async addAd(id: string, payload: { type: string; durationDays: number; startDate?: string }) {
     const res = await apiPost<unknown>(`/api/v1/user-listings/${id}/ads`, payload);
-    return unwrapData(res);
+    return unwrapApiData(res);
   },
   async delete(id: string) {
     const res = await apiDelete<unknown>(`/api/v1/user-listings/${id}`);
-    return unwrapData(res);
+    return unwrapApiData(res);
   },
   async getMyListing(id: string, signal?: AbortSignal) {
     const res = await apiGet<unknown>(`/api/v1/user-listings/mine/${id}`, { signal });
-    return unwrapData(res);
+    return unwrapApiData(res);
   },
   async getPublicListing(id: string, signal?: AbortSignal) {
     const res = await apiGet<unknown>(`/api/v1/user-listings/${id}`, { signal });
-    return unwrapData(res);
+    return unwrapApiData(res);
   },
 
   /** Same as detail pages: mine when token + success, else public. */

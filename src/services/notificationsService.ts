@@ -1,18 +1,12 @@
 import { getAuthToken } from "@/lib/authSession";
 import { apiGet, apiPost } from "@/lib/apiClient";
+import { toRecord, unwrapApiData } from "@/lib/apiResponse";
 
 function normalizeNotificationItems(payload: unknown): unknown[] {
   if (payload == null) return [];
   if (Array.isArray(payload)) return payload;
-  if (typeof payload !== "object") return [];
-  const o = payload as Record<string, unknown>;
+  const o = toRecord(unwrapApiData(payload));
   if (Array.isArray(o.items)) return o.items;
-  const data = o.data;
-  if (Array.isArray(data)) return data;
-  if (data && typeof data === "object") {
-    const inner = data as Record<string, unknown>;
-    if (Array.isArray(inner.items)) return inner.items;
-  }
   return [];
 }
 

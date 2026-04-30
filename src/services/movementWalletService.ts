@@ -1,4 +1,5 @@
 import { apiGet, apiPost } from '@/lib/apiClient';
+import { toRecord, unwrapApiData } from '@/lib/apiResponse';
 
 export interface WalletBalance {
   id: string;
@@ -31,8 +32,8 @@ export const movementWalletService = {
    */
   async getBalance(walletId: string): Promise<WalletBalance[]> {
     const response = await apiGet<unknown>(`/api/v1/wallet/movement/balance/${walletId}`);
-    const data = (response as { data?: { balances?: WalletBalance[] }; balances?: WalletBalance[] });
-    return data?.data?.balances || data?.balances || [];
+    const data = toRecord(unwrapApiData(response));
+    return (data.balances as WalletBalance[] | undefined) ?? [];
   },
 
   /**
@@ -43,8 +44,8 @@ export const movementWalletService = {
       `/api/v1/wallet/movement/sync/${walletId}`,
       { testnet },
     );
-    const data = (response as { data?: { balance?: WalletBalance }; balance?: WalletBalance });
-    return (data?.data?.balance || data?.balance) as WalletBalance;
+    const data = toRecord(unwrapApiData(response));
+    return data.balance as WalletBalance;
   },
 
   /**
@@ -52,8 +53,8 @@ export const movementWalletService = {
    */
   async getTransactions(walletId: string, limit: number = 10): Promise<WalletTransaction[]> {
     const response = await apiGet<unknown>(`/api/v1/wallet/movement/transactions/${walletId}?limit=${limit}`);
-    const data = (response as { data?: { transactions?: WalletTransaction[] }; transactions?: WalletTransaction[] });
-    return data?.data?.transactions || data?.transactions || [];
+    const data = toRecord(unwrapApiData(response));
+    return (data.transactions as WalletTransaction[] | undefined) ?? [];
   },
 
   /**
@@ -64,7 +65,7 @@ export const movementWalletService = {
       `/api/v1/wallet/movement/poll/${walletId}`,
       { testnet },
     );
-    const data = (response as { data?: { transactions?: WalletTransaction[] }; transactions?: WalletTransaction[] });
-    return data?.data?.transactions || data?.transactions || [];
+    const data = toRecord(unwrapApiData(response));
+    return (data.transactions as WalletTransaction[] | undefined) ?? [];
   }
 };

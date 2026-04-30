@@ -1,5 +1,6 @@
 import { ApiError } from '@/lib/apiError';
 import { apiGet, apiPost, apiPut } from '@/lib/apiClient';
+import { toRecord, unwrapApiData } from '@/lib/apiResponse';
 import { LoginCredentials, SignUpCredentials, AuthResponse, User } from '../types/auth.types';
 import { API_ENDPOINTS } from '../utils/constants';
 import { handleApiError } from '../utils/helpers';
@@ -56,20 +57,12 @@ class AuthService {
   }
 
   private parseUpdatedUserFromResponse(body: unknown): User | null {
-    if (!body || typeof body !== "object") return null;
-    const o = body as Record<string, unknown>;
-    if ("user" in o && o.user && typeof o.user === "object") {
-      return o.user as User;
+    const normalized = toRecord(unwrapApiData(body));
+    if (normalized.user && typeof normalized.user === "object") {
+      return normalized.user as User;
     }
-    const nested = o.data;
-    if (nested && typeof nested === "object") {
-      const inner = nested as Record<string, unknown>;
-      if ("user" in inner && inner.user && typeof inner.user === "object") {
-        return inner.user as User;
-      }
-      if ("email" in inner && typeof inner.email === "string") {
-        return nested as User;
-      }
+    if (typeof normalized.email === "string") {
+      return normalized as unknown as User;
     }
     return null;
   }
@@ -100,11 +93,11 @@ class AuthService {
    * Throws on HTTP failure (e.g. `ApiError` from `apiClient`) or invalid payload so TanStack Query can surface errors.
    */
   async fetchProfile(signal?: AbortSignal): Promise<User> {
-    const body = await apiGet<{ data?: User }>(`/api/v1/auth/profile`, {
+    const body = await apiGet<unknown>(`/api/v1/auth/profile`, {
       signal,
       clearSessionOn401: true,
     });
-    const profile = body?.data;
+    const profile = unwrapApiData<User>(body);
     if (!profile?.email) {
       throw new Error("Profile response is missing user email.");
     }

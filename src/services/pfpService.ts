@@ -1,5 +1,6 @@
 import { ApiError } from '@/lib/apiError';
 import { apiGet, apiPost } from '@/lib/apiClient';
+import { toRecord, unwrapApiData } from '@/lib/apiResponse';
 import {
   getAuthToken,
   getUserId,
@@ -9,10 +10,6 @@ import {
 import { getCloudFrontUrl } from '@/lib/image-url-helper';
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
-
-function toRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
-}
 
 export interface PFPCard {
   id: number;
@@ -38,9 +35,11 @@ class PFPService {
       const response = await apiGet<{ success?: boolean; cards?: PFPCard[] }>(
         `${API_BASE}/api/v1/pfp/cards`,
       );
+      const responseData = toRecord(unwrapApiData(response));
+      const cards = Array.isArray(responseData.cards) ? (responseData.cards as PFPCard[]) : [];
 
-      if (response.success && response.cards && response.cards.length > 0) {
-        return response.cards;
+      if (cards.length > 0) {
+        return cards;
       }
 
       // Fallback to default cards if API fails or returns empty
@@ -85,8 +84,7 @@ class PFPService {
         },
       );
 
-      // Handle nested response structure (NestJS wraps in {data: {...}, statusCode, timestamp})
-      const presignData = toRecord((presignRes as { data?: unknown })?.data || presignRes);
+      const presignData = toRecord(unwrapApiData(presignRes));
       const uploadUrl = typeof presignData.uploadUrl === "string" ? presignData.uploadUrl : "";
       const key = typeof presignData.key === "string" ? presignData.key : "";
       
@@ -141,11 +139,8 @@ class PFPService {
         }
       } else {
         console.error('❌ No uploadUrl or key in presign response:', {
-          hasData: !!presignRes,
-          hasNestedData: !!(presignRes as { data?: unknown })?.data,
-          dataKeys: presignRes ? Object.keys(presignRes as object) : [],
-          nestedDataKeys: (presignRes as { data?: unknown })?.data && typeof (presignRes as { data?: unknown }).data === "object" ? Object.keys((presignRes as { data: object }).data) : [],
-          fullResponse: presignRes,
+          dataKeys: Object.keys(presignData),
+          fullResponse: presignData,
         });
         throw new Error('Presign response missing uploadUrl or key');
       }
@@ -154,19 +149,6 @@ class PFPService {
       // Don't fallback to base64 for PFP saves - this creates huge URLs that cause backend errors
       throw new Error(`Failed to upload image: ${presignError instanceof Error ? presignError.message : 'Unknown error'}`);
     }
-
-    // Fallback: Convert to base64 data URL
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        resolve({ viewUrl: base64String });
-      };
-      reader.onerror = () => {
-        reject(new Error('Failed to read file'));
-      };
-      reader.readAsDataURL(file);
-    });
   }
 
   /**
@@ -227,17 +209,13 @@ class PFPService {
         { imageUrl },
       );
 
-      // Handle nested response structure (NestJS wraps in {data: {...}, statusCode, timestamp})
-      const saveData = toRecord((response as { data?: unknown })?.data || response);
+      const saveData = toRecord(unwrapApiData(response));
       console.log('📦 Backend save response:', {
-        hasData: !!response,
-        hasNestedData: !!(response as { data?: unknown })?.data,
-        dataKeys: response && typeof response === "object" ? Object.keys(response) : [],
-        nestedDataKeys: (response as { data?: unknown })?.data && typeof (response as { data?: unknown }).data === "object" ? Object.keys((response as { data: object }).data) : [],
+        dataKeys: Object.keys(saveData),
         success: saveData?.success,
         message: saveData?.message,
         avatarUrl: saveData?.avatarUrl,
-        fullResponse: response,
+        fullResponse: saveData,
       });
 
       if (saveData?.success) {
@@ -281,7 +259,7 @@ class PFPService {
       let message = 'Failed to save PFP';
       if (error instanceof ApiError) {
         const body = error.body as { message?: string; error?: string } | undefined;
-        console.error('❌ Axios error details:', {
+        console.error('❌ API error details:', {
           status: error.status,
           data: error.body,
           message: body?.message,

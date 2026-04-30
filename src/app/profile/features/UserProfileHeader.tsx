@@ -8,9 +8,9 @@ import { Edit, LogOut, Check } from 'lucide-react';
 import { X } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { toast } from "react-toastify";
-import { getUserEmail, getUserId } from "@/lib/authSession";
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
 import { useUpdateUserMutation } from "@/hooks/useUpdateUserMutation";
+import { useSessionStore } from "@/lib/sessionStore";
 
 interface UserProfileHeaderProps {
   avatarUrl: string | null;
@@ -39,6 +39,8 @@ export default function UserProfileHeader({
   const fallbackName = email?.includes("@") ? email.split("@")[0] : email;
 
   const { userData, setUserData } = usePrivyAuth();
+  const sessionUserId = useSessionStore((s) => s.userId);
+  const sessionEmail = useSessionStore((s) => s.email);
   const updateUserMutation = useUpdateUserMutation();
 
   const displayName = userData?.name || fallbackName || "User";
@@ -55,7 +57,7 @@ export default function UserProfileHeader({
       return;
     }
 
-    const userId = getUserId() || getUserEmail() || email;
+    const userId = sessionUserId || sessionEmail || email;
 
     updateUserMutation.mutate(
       { userId, updates: { name: nextName } },

@@ -1,30 +1,26 @@
 import { apiGet, apiPost, apiPut } from '@/lib/apiClient';
-
-function unwrapData(res: unknown): Record<string, unknown> {
-  const out = ((res as { data?: unknown })?.data ?? res) as unknown;
-  return out && typeof out === "object" ? (out as Record<string, unknown>) : {};
-}
+import { toRecord, unwrapApiData } from '@/lib/apiResponse';
 
 export const marketplaceService = {
   async getPricing() {
     const res = await apiGet<unknown>(`/api/v1/marketplace/pricing`);
-    const responseData = unwrapData(res);
+    const responseData = toRecord(unwrapApiData(res));
     return responseData?.items || responseData || [];
   },
 
   async createDraft(payload: Record<string, unknown>) {
     const res = await apiPost<unknown>(`/api/v1/marketplace/ads`, payload);
-    return (res as { data?: unknown })?.data || res;
+    return unwrapApiData(res);
   },
 
   async updateDraft(adId: string, payload: Record<string, unknown>) {
     const res = await apiPut<unknown>(`/api/v1/marketplace/ads/${adId}`, payload);
-    return (res as { data?: unknown })?.data || res;
+    return unwrapApiData(res);
   },
 
   async createPayment(adId: string) {
     const res = await apiPost<unknown>(`/api/v1/marketplace/ads/${adId}/pay`, {});
-    return (res as { data?: unknown })?.data || res;
+    return unwrapApiData(res);
   },
 
   async verifyPayment(paymentId: string, txHash: string) {
@@ -32,12 +28,12 @@ export const marketplaceService = {
       `/api/v1/marketplace/ads/payments/${paymentId}/verify`,
       { txHash },
     );
-    return (res as { data?: unknown })?.data || res;
+    return unwrapApiData(res);
   },
 
   async listMine() {
     const res = await apiGet<unknown>(`/api/v1/marketplace/ads/mine`);
-    const responseData = unwrapData(res);
+    const responseData = toRecord(unwrapApiData(res));
     return responseData?.items || responseData || [];
   },
 
@@ -52,7 +48,7 @@ export const marketplaceService = {
     if (params?.subCategory) search.set('subCategory', params.subCategory);
     const qs = search.toString();
     const res = await apiGet<unknown>(`/api/v1/marketplace/ads${qs ? `?${qs}` : ''}`, { signal });
-    const responseData = unwrapData(res);
+    const responseData = toRecord(unwrapApiData(res));
     return responseData?.items || responseData || [];
   },
 
@@ -62,7 +58,7 @@ export const marketplaceService = {
     if (params?.limit) search.set('limit', String(params.limit));
     const qs = search.toString();
     const res = await apiGet<unknown>(`/api/v1/marketplace/ads/trending${qs ? `?${qs}` : ''}`, { signal });
-    const responseData = unwrapData(res);
+    const responseData = toRecord(unwrapApiData(res));
     return responseData?.items || responseData || [];
   },
 
@@ -72,14 +68,13 @@ export const marketplaceService = {
     if (params?.limit) search.set('limit', String(params.limit));
     const qs = search.toString();
     const res = await apiGet<unknown>(`/api/v1/marketplace/ads/for-you${qs ? `?${qs}` : ''}`, { signal });
-    const responseData = unwrapData(res);
+    const responseData = toRecord(unwrapApiData(res));
     return responseData?.items || responseData || [];
   },
 
   async getPublicAd(id: string, signal?: AbortSignal) {
     const res = await apiGet<unknown>(`/api/v1/marketplace/ads/${id}`, { signal });
-    const responseData = unwrapData(res);
-    return responseData?.data || responseData;
+    return unwrapApiData(res);
   },
 
   /**
@@ -106,7 +101,7 @@ export const marketplaceService = {
 
   async shareAd(id: string) {
     const res = await apiPost<unknown>(`/api/v1/marketplace/ads/${id}/share`, {});
-    return (res as { data?: unknown })?.data || res;
+    return unwrapApiData(res);
   },
 };
 

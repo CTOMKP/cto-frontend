@@ -121,6 +121,7 @@ export default function MarketplaceMessages({
 }) {
   const router = useRouter();
   const setActiveConversationId = useSessionStore((s) => s.setActiveConversationId);
+  const sessionUserId = useSessionStore((s) => s.userId);
   const [threads, setThreads] = useState<MessageThread[]>([]);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(
     initialThreadId ?? null,
@@ -149,11 +150,10 @@ export default function MarketplaceMessages({
     process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.ctomarketplace.com";
 
   const currentUserId = useMemo(() => {
-    if (typeof window === "undefined") return null;
-    const raw = getUserId();
+    const raw = sessionUserId ?? getUserId();
     const n = raw ? Number(raw) : NaN;
     return Number.isFinite(n) ? n : null;
-  }, []);
+  }, [sessionUserId]);
 
   const selectedProfileUserId = useMemo(() => {
     if (!initialProfileUserId) return null;

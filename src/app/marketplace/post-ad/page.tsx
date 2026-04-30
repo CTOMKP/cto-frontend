@@ -13,6 +13,8 @@ import PreviewStep from './features/PreviewStep';
 import { getUserId } from '@/lib/authSession';
 import { pfpService } from '@/services/pfpService';
 import { isApiError } from '@/lib/apiError';
+import { toRecord, unwrapApiData } from '@/lib/apiResponse';
+import { useSessionStore } from '@/lib/sessionStore';
 
 type Step = 'category' | 'details' | 'preview';
 
@@ -23,8 +25,7 @@ interface FormData extends ProjectDetailsData {
 }
 
 /** Upload ad images via presign (same as cto-test-frontend pfpService.uploadProfileImage). Returns view URLs in order. */
-async function uploadAdImages(files: (File | null)[]): Promise<string[]> {
-  const userId = getUserId();
+async function uploadAdImages(files: (File | null)[], userId: string | null): Promise<string[]> {
   if (!userId) return [];
   const viewUrls: string[] = [];
   for (const file of files) {
@@ -85,6 +86,7 @@ function buildDraftPayload(formData: FormData, imageUrls: string[]): Record<stri
 }
 
 export default function PostAdPage() {
+  const sessionUserId = useSessionStore((s) => s.userId);
   const updateMarketplaceDraftMutation = useUpdateMarketplaceDraftMutation();
   const createMarketplaceDraftMutation = useCreateMarketplaceDraftMutation();
   const router = useRouter();
@@ -138,7 +140,7 @@ export default function PostAdPage() {
 
   const ensureDraftSaved = useCallback(async (): Promise<string | null> => {
     try {
-      let imageUrls = await uploadAdImages(formData.images ?? []);
+      let imageUrls = await uploadAdImages(formData.images ?? [], sessionUserId || getUserId());
       if (draftAdId && imageUrls.length === 0 && formData.imagePreviews?.length) {
         imageUrls = formData.imagePreviews.filter(
           (u): u is string => typeof u === 'string' && (u.startsWith('http') || u.startsWith('/'))
@@ -153,8 +155,8 @@ export default function PostAdPage() {
         return draftAdId;
       }
       const res = await createMarketplaceDraftMutation.mutateAsync(payload);
-      const data = res as { id?: string; data?: { id?: string } };
-      const id = data?.id ?? data?.data?.id ?? null;
+      const data = toRecord(unwrapApiData(res));
+      const id = typeof data.id === 'string' ? data.id : null;
       if (id) setDraftAdId(id);
       return id;
     } catch (err: unknown) {

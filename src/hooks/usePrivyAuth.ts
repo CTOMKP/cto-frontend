@@ -246,7 +246,9 @@ export function usePrivyAuth() {
           walletId: profile.walletId,
         });
         useSessionStore.getState().setUserId(String(profile.id));
-        useSessionStore.getState().setHasAvatar(!!profile.avatarUrl);
+        useSessionStore.getState().setEmail(profile.email ?? null);
+        useSessionStore.getState().setUsername(profile.name ?? null);
+        useSessionStore.getState().hydrateFromStorage();
       }
       useSessionStore.getState().setToken(getAuthToken());
   

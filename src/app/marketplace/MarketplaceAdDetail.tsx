@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getUserId } from "@/lib/authSession";
+import { useSessionStore } from "@/lib/sessionStore";
 import { getCloudFrontUrl } from "@/utils/helper/image-url-helper";
 
 const CHAIN_ICON: Record<string, string> = {
@@ -84,6 +84,7 @@ const MOCK_COMMENTS = [
 
 export default function MarketplaceAdDetail({ adId }: { adId: string }) {
   const router = useRouter();
+  const sessionUserId = useSessionStore((s) => s.userId);
   const adQuery = useMarketplaceAdDetailQuery(adId || undefined);
   const ad = (adQuery.data as Record<string, unknown> | null) ?? null;
   const loading = adQuery.isPending && adQuery.data === undefined;
@@ -122,11 +123,10 @@ export default function MarketplaceAdDetail({ adId }: { adId: string }) {
     ? Object.entries(ad?.contactInfo as Record<string, string>).filter(([, v]) => v && typeof v === "string")
     : [];
   const currentUserId = useMemo(() => {
-    if (typeof window === "undefined") return null;
-    const raw = getUserId();
+    const raw = sessionUserId;
     const n = raw ? Number(raw) : NaN;
     return Number.isFinite(n) ? n : null;
-  }, []);
+  }, [sessionUserId]);
   const creatorUserIdRaw =
     (ad?.userId as number | string | undefined) ??
     ((ad?.user as { id?: number | string } | undefined)?.id);

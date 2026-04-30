@@ -1,5 +1,6 @@
 import { ApiError } from '@/lib/apiError';
 import { apiGet, apiPost } from '@/lib/apiClient';
+import { toRecord, unwrapApiData } from '@/lib/apiResponse';
 import { getCloudFrontUrl } from '@/lib/image-url-helper';
 import {
   clearSessionStorage,
@@ -22,6 +23,10 @@ const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
  * Handles Privy authentication and syncs with CTO backend
  */
 class PrivyService {
+  private isSyncSuccessPayload(payload: Record<string, any>): boolean {
+    return (payload?.success === true || (payload?.user && payload?.token)) && !!payload?.user && !!payload?.token;
+  }
+
   /**
    * Sync Privy user with CTO backend
    * @param privyToken - Privy authentication token from frontend
@@ -98,7 +103,7 @@ class PrivyService {
     }
 
     // Log the full response for debugging - CRITICAL for debugging
-    const rawResponse = (response as Record<string, unknown>) || {};
+    const rawResponse = toRecord(unwrapApiData(response));
     const dataKeys = rawResponse ? Object.keys(rawResponse) : [];
     console.log('📦 Backend sync response:', {
       hasData: !!rawResponse,
@@ -111,18 +116,12 @@ class PrivyService {
       fullResponseData: JSON.stringify(rawResponse, null, 2),
     });
 
-    // Extract response data - handle different possible response structures
-    let responseData: Record<string, any> = rawResponse as Record<string, any>;
-    
-    // Check if data is nested (some APIs wrap responses)
-    if (responseData?.data && typeof responseData.data === 'object') {
-      console.log('⚠️ Response data appears to be nested, trying nested structure...');
-      responseData = responseData.data as Record<string, any>;
-        }
+    // Response is already normalized through unwrapApiData.
+    const responseData: Record<string, any> = rawResponse as Record<string, any>;
 
     // Check if response has success flag (backend should return success: true)
     // Also allow response without success flag if it has user and token (more flexible)
-    if ((responseData?.success === true || (responseData?.user && responseData?.token)) && responseData?.user && responseData?.token) {
+    if (this.isSyncSuccessPayload(responseData)) {
       console.log('✅ Backend sync successful:', responseData);
 
       // Store our JWT token and user info (matching test frontend exactly)
@@ -221,7 +220,7 @@ class PrivyService {
         { token },
       );
 
-      return response;
+      return unwrapApiData(response);
     } catch (error) {
       console.error('❌ Token verification error:', error);
       return { valid: false };
@@ -240,7 +239,7 @@ class PrivyService {
       }
 
       const response = await apiGet<unknown>(`${API_BASE}/api/v1/auth/privy/me`);
-      return response;
+      return unwrapApiData(response);
     } catch (error) {
       console.error('❌ Get user error:', error);
       throw error;

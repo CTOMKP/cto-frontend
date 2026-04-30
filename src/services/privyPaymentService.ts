@@ -1,4 +1,5 @@
 import { apiGet, apiPost } from '@/lib/apiClient';
+import { unwrapApiData } from '@/lib/apiResponse';
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
 
@@ -16,7 +17,7 @@ export const privyPaymentService = {
       },
     );
 
-    return response;
+    return unwrapApiData(response);
   },
 
   /**
@@ -28,7 +29,7 @@ export const privyPaymentService = {
       { txHash },
     );
 
-    return response;
+    return unwrapApiData(response);
   },
 
   /**
@@ -36,7 +37,7 @@ export const privyPaymentService = {
    */
   async getPricing() {
     const response = await apiGet<unknown>(`${API_BASE}/api/payment/pricing`);
-    return response;
+    return unwrapApiData(response);
   },
 };
 

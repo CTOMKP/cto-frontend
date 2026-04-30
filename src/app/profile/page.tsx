@@ -6,10 +6,10 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { BackendWallet, PrivyWalletAccount, PrivyUser } from '@/types/privy';
 
-import { getStoredAvatarUrl, getUserId } from '@/lib/authSession';
 import { useProfileQuery } from '@/hooks/useProfileQuery';
 import walletsService from '@/services/walletsService';
 import { useResolvedMovementWallet } from '@/hooks/useResolvedMovementWallet';
+import { useSessionStore } from '@/lib/sessionStore';
 import UserProfileHeader from './features/UserProfileHeader';
 import LevelXPProgress from './features/LevelXPProgress';
 import ReferralSection from './features/ReferralSection';
@@ -22,6 +22,8 @@ import WalletsDialog from './features/WalletsDialog';
 export default function ProfilePage() {
   const router = useRouter();
   const { user, authenticated, ready } = usePrivy();
+  const sessionUserId = useSessionStore((s) => s.userId);
+  const avatarUrl = useSessionStore((s) => s.avatarUrl);
   const profileQuery = useProfileQuery({ enabled: !!(ready && authenticated) });
   // Keep allWallets for potential future use (displaying all wallets)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -42,7 +44,7 @@ export default function ProfilePage() {
   const loadWallets = React.useCallback(async () => {
     try {
       const wallets = await walletsService.listPrivyWallets({
-        userId: getUserId() || user?.id || null,
+        userId: sessionUserId || user?.id || null,
         preferStorage: true,
       });
       if (!wallets.length) return;
@@ -51,7 +53,7 @@ export default function ProfilePage() {
     } catch (error) {
       console.error('Failed to load wallets:', error);
     }
-  }, [user?.id]);
+  }, [sessionUserId, user?.id]);
 
   useEffect(() => {
     if (authenticated && user && ready) {
@@ -104,8 +106,6 @@ export default function ProfilePage() {
   // This matches the test frontend pattern
   const email = user?.email?.address || user?.wallet?.address || 'Privy User';
   
-  const avatarUrl = getStoredAvatarUrl();
-
   // Combine Privy wallets with backend wallets
   // Privy's user.linkedAccounts is LinkedAccountWithMetadata[], so we need to filter and cast
   const privyWallets = user?.linkedAccounts?.filter(

@@ -1,9 +1,6 @@
 import { ApiError } from "@/lib/apiError";
 import { apiGet, apiPost } from "@/lib/apiClient";
-
-function unwrapData<T = unknown>(res: unknown): T {
-  return ((res as { data?: unknown })?.data ?? res) as T;
-}
+import { unwrapApiData } from "@/lib/apiResponse";
 
 /**
  * Escrow API — paths mirror typical Nest `EscrowController` layout.
@@ -13,7 +10,7 @@ export const escrowService = {
   async getLatestByConversation(conversationId: string) {
     try {
       const res = await apiGet<unknown>(`/api/v1/escrow/latest?conversationId=${encodeURIComponent(conversationId)}`);
-      return unwrapData(res);
+      return unwrapApiData(res);
     } catch (error) {
       if (error instanceof ApiError && error.status === 404) return null;
       throw error;
@@ -30,22 +27,22 @@ export const escrowService = {
     milestones: unknown[];
   }) {
     const res = await apiPost<unknown>(`/api/v1/escrow/offers`, body);
-    return unwrapData(res);
+    return unwrapApiData(res);
   },
 
   async fund(escrowId: string) {
     const res = await apiPost<unknown>(`/api/v1/escrow/${escrowId}/fund`, {});
-    return unwrapData(res);
+    return unwrapApiData(res);
   },
 
   async accept(escrowId: string) {
     const res = await apiPost<unknown>(`/api/v1/escrow/${escrowId}/accept`, {});
-    return unwrapData(res);
+    return unwrapApiData(res);
   },
 
   async decline(escrowId: string) {
     const res = await apiPost<unknown>(`/api/v1/escrow/${escrowId}/decline`, {});
-    return unwrapData(res);
+    return unwrapApiData(res);
   },
 };
 

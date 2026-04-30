@@ -1,32 +1,22 @@
 import { apiGet } from "@/lib/apiClient";
+import { unwrapApiData } from "@/lib/apiResponse";
 import type { ListingTableFilters } from "@/lib/queryKeys";
 import type { ApiCoinItem, ApiListingResponse } from "@/types/api";
 
 function extractListingItems(payload: unknown): ApiCoinItem[] {
-  if (!payload || typeof payload !== "object") return [];
-  const root = payload as Record<string, unknown>;
+  const root = unwrapApiData<Record<string, unknown>>(payload);
+  if (!root || typeof root !== "object") return [];
   if (Array.isArray(root.items)) return root.items as ApiCoinItem[];
-  const data = root.data;
-  if (data && typeof data === "object" && Array.isArray((data as { items?: unknown }).items)) {
-    return (data as { items: ApiCoinItem[] }).items;
-  }
   return [];
 }
 
 function normalizeListingResponse(response: unknown): ApiListingResponse {
-  let data: ApiListingResponse;
-  if (response && typeof response === "object") {
-    const r = response as Record<string, unknown>;
-    if ("data" in r && r.data && typeof r.data === "object") {
-      data = r.data as ApiListingResponse;
-    } else if ("items" in r || "total" in r) {
-      data = response as ApiListingResponse;
-    } else {
-      data = { total: 0, items: [], page: 1, limit: 20 };
-    }
-  } else {
-    data = { total: 0, items: [], page: 1, limit: 20 };
-  }
+  const fallback: ApiListingResponse = { total: 0, items: [], page: 1, limit: 20 };
+  const normalized = unwrapApiData<unknown>(response);
+  const data =
+    normalized && typeof normalized === "object"
+      ? (normalized as ApiListingResponse)
+      : fallback;
   return {
     total: data.total || 0,
     items: data.items || [],
@@ -71,8 +61,5 @@ export async function fetchPublicListingCoin(
     `/api/v1/listing/${encodeURIComponent(identifier)}`,
     { signal, auth: false },
   );
-  if (raw && typeof raw === "object" && "data" in raw && (raw as { data?: unknown }).data) {
-    return (raw as { data: ApiCoinItem }).data;
-  }
-  return raw as ApiCoinItem;
+  return unwrapApiData<ApiCoinItem>(raw);
 }
