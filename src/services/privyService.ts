@@ -18,13 +18,39 @@ import walletsService from '@/services/walletsService';
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
 
+type SyncResponseData = {
+  success?: boolean;
+  token?: string;
+  user?: {
+    id?: number | string;
+    email?: string;
+    walletAddress?: string;
+    walletsCount?: number;
+    avatarUrl?: string;
+  };
+  wallets?: BackendWallet[];
+  id?: number | string;
+  userId?: number | string;
+};
+
 /**
  * Privy Authentication Service
  * Handles Privy authentication and syncs with CTO backend
  */
 class PrivyService {
-  private isSyncSuccessPayload(payload: Record<string, any>): boolean {
-    return (payload?.success === true || (payload?.user && payload?.token)) && !!payload?.user && !!payload?.token;
+  private isSyncSuccessPayload(
+    payload: SyncResponseData,
+  ): payload is SyncResponseData & {
+    token: string;
+    user: NonNullable<SyncResponseData['user']> & { id: number | string; email: string };
+  } {
+    return Boolean(
+      (payload?.success === true || (payload?.user && payload?.token)) &&
+      typeof payload?.token === 'string' &&
+      payload?.user &&
+      (typeof payload.user.id === 'number' || typeof payload.user.id === 'string') &&
+      typeof payload.user.email === 'string',
+    );
   }
 
   /**
@@ -117,7 +143,7 @@ class PrivyService {
     });
 
     // Response is already normalized through unwrapApiData.
-    const responseData: Record<string, any> = rawResponse as Record<string, any>;
+    const responseData: SyncResponseData = rawResponse as SyncResponseData;
 
     // Check if response has success flag (backend should return success: true)
     // Also allow response without success flag if it has user and token (more flexible)
