@@ -141,9 +141,14 @@ export function useWalletBalance() {
     });
 
     setWalletAssets(sortedAssets);
-    if (sortedAssets.length > 0) {
-      setSelectedAsset(sortedAssets[0]);
-    }
+    setSelectedAsset((current) => {
+      if (!sortedAssets.length) return null;
+      if (!current) return sortedAssets[0];
+      const refreshedSelected = sortedAssets.find(
+        (asset) => asset.name === current.name,
+      );
+      return refreshedSelected ?? sortedAssets[0];
+    });
     setIsLoading(false);
   } catch {
     setIsLoading(false);
@@ -163,16 +168,18 @@ export function useWalletBalance() {
     return () => window.removeEventListener('online', handleOnline);
   }, [authenticated, user, ready, loadWallets]);
 
-  // Load wallets
+  // Load wallets when auth and resolved wallet context are ready.
+  // Using user+wallet key prevents a stale "loaded once" state where
+  // navbar dropdown mounts before wallet resolution and stays at 0.
   useEffect(() => {
     if (authenticated && user && ready) {
-      const userId = user.id;
-      if (walletsLoadedRef.current !== userId) {
+      const loadKey = `${user.id}:${resolvedWalletId ?? "no-wallet-id"}`;
+      if (walletsLoadedRef.current !== loadKey) {
         loadWallets();
-        walletsLoadedRef.current = userId;
+        walletsLoadedRef.current = loadKey;
       }
     }
-  }, [authenticated, user, ready, loadWallets]);
+  }, [authenticated, user, ready, resolvedWalletId, loadWallets]);
 
   // Periodically update balances
   useEffect(() => {
@@ -256,6 +263,14 @@ export function useWalletBalance() {
       });
 
       setWalletAssets(sortedAssets);
+      setSelectedAsset((current) => {
+        if (!sortedAssets.length) return null;
+        if (!current) return sortedAssets[0];
+        const refreshedSelected = sortedAssets.find(
+          (asset) => asset.name === current.name,
+        );
+        return refreshedSelected ?? sortedAssets[0];
+      });
     } catch {
       // Error handling without console logs
     }

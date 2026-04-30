@@ -27,6 +27,24 @@ interface Step3Props {
   links?: SocialLinks;
 }
 
+function extractListingIdFromCreateResponse(result: unknown): string | undefined {
+  if (!result || typeof result !== 'object') return undefined;
+  const record = result as Record<string, unknown>;
+  const topLevelId = record.id ?? record.listingId;
+  if (typeof topLevelId === 'string' || typeof topLevelId === 'number') {
+    return String(topLevelId);
+  }
+  const data = record.data;
+  if (data && typeof data === 'object') {
+    const nested = data as Record<string, unknown>;
+    const nestedId = nested.id ?? nested.listingId;
+    if (typeof nestedId === 'string' || typeof nestedId === 'number') {
+      return String(nestedId);
+    }
+  }
+  return undefined;
+}
+
 export default function Step3({ 
   draftId,
   onPaymentSuccess,
@@ -122,8 +140,7 @@ export default function Step3({
         };
 
         const result = await createListingMutation.mutateAsync(payload);
-        const listingData = result as { id?: string; listingId?: string } | undefined;
-        const createdListingId = listingData?.id || listingData?.listingId;
+        const createdListingId = extractListingIdFromCreateResponse(result);
 
         if (!createdListingId) {
           throw new Error('Listing created but no ID returned');
