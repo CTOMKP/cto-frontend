@@ -90,6 +90,24 @@ const getStarted = [
 
 const DRAFT_KEY = 'cto_draft_listing_id';
 
+function extractListingIdFromCreateResponse(created: unknown): string | undefined {
+  if (!created || typeof created !== 'object') return undefined;
+  const record = created as Record<string, unknown>;
+  const topLevelId = record.id ?? record.listingId;
+  if (typeof topLevelId === 'string' || typeof topLevelId === 'number') {
+    return String(topLevelId);
+  }
+  const data = record.data;
+  if (data && typeof data === 'object') {
+    const nested = data as Record<string, unknown>;
+    const nestedId = nested.id ?? nested.listingId;
+    if (typeof nestedId === 'string' || typeof nestedId === 'number') {
+      return String(nestedId);
+    }
+  }
+  return undefined;
+}
+
 function getScanRiskScore(scan: ScanResult | null): number {
   if (!scan) return 0;
   const nested = scan.details?.details;
@@ -262,11 +280,10 @@ export default function ListingApplication() {
       };
     }
     const created = await createListingMutation.mutateAsync(createPayload) as {
-      id?: string;
-      listingId?: string;
       message?: string;
+      [key: string]: unknown;
     };
-    const id = created?.id ?? created?.listingId;
+    const id = extractListingIdFromCreateResponse(created);
     const backendMessage = created?.message;
     if (!id) throw new Error(backendMessage || 'Failed to create draft');
     setDraftId(id);

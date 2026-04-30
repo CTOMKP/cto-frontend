@@ -1,6 +1,6 @@
 import { getAuthToken } from '@/lib/authSession';
 import { ApiError } from '@/lib/apiError';
-import { apiDelete, apiGet, apiPatch, apiPost, getBackendBaseUrl } from '@/lib/apiClient';
+import { apiDelete, apiGet, apiPost, apiPut, getBackendBaseUrl } from '@/lib/apiClient';
 import { unwrapApiData } from '@/lib/apiResponse';
 import {
   normalizePresignPayload,
@@ -202,7 +202,7 @@ export const userListingsService = {
     }
   },
   async update(id: string, payload: Partial<CreateUserListingPayload>) {
-    const res = await apiPatch<unknown>(`/api/v1/user-listings/${id}`, payload);
+    const res = await apiPut<unknown>(`/api/v1/user-listings/${id}`, payload);
     return unwrapApiData(res);
   },
   async publish(id: string) {
