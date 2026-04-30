@@ -1,75 +1,43 @@
-import axios from 'axios';
-import { getAuthToken } from '@/lib/authSession';
+import { apiGet, apiPost, apiPut } from '@/lib/apiClient';
 
-const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
-
-function authHeaders() {
-  const token = getAuthToken();
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  return headers;
+function unwrapData(res: unknown): Record<string, unknown> {
+  const out = ((res as { data?: unknown })?.data ?? res) as unknown;
+  return out && typeof out === "object" ? (out as Record<string, unknown>) : {};
 }
 
 export const marketplaceService = {
   async getPricing() {
-    const res = await axios.get(`${backendUrl}/api/v1/marketplace/pricing`);
-    const responseData = res.data?.data || res.data;
+    const res = await apiGet<unknown>(`/api/v1/marketplace/pricing`);
+    const responseData = unwrapData(res);
     return responseData?.items || responseData || [];
   },
 
   async createDraft(payload: Record<string, unknown>) {
-    const url = `${backendUrl}/api/v1/marketplace/ads`;
-    try {
-      const res = await axios.post(url, payload, {
-        headers: authHeaders(),
-      });
-      return res.data?.data || res.data;
-    } catch (err) {
-      if (axios.isAxiosError(err) && err.response?.status === 400) {
-        // validation errors surfaced to caller
-      }
-      throw err;
-    }
+    const res = await apiPost<unknown>(`/api/v1/marketplace/ads`, payload);
+    return (res as { data?: unknown })?.data || res;
   },
 
   async updateDraft(adId: string, payload: Record<string, unknown>) {
-    const url = `${backendUrl}/api/v1/marketplace/ads/${adId}`;
-    try {
-      const res = await axios.put(url, payload, {
-        headers: authHeaders(),
-      });
-      return res.data?.data || res.data;
-    } catch (err) {
-      if (axios.isAxiosError(err) && err.response?.status === 400) {
-        // validation errors surfaced to caller
-      }
-      throw err;
-    }
+    const res = await apiPut<unknown>(`/api/v1/marketplace/ads/${adId}`, payload);
+    return (res as { data?: unknown })?.data || res;
   },
 
   async createPayment(adId: string) {
-    const res = await axios.post(`${backendUrl}/api/v1/marketplace/ads/${adId}/pay`, {}, {
-      headers: authHeaders(),
-    });
-    return res.data?.data || res.data;
+    const res = await apiPost<unknown>(`/api/v1/marketplace/ads/${adId}/pay`, {});
+    return (res as { data?: unknown })?.data || res;
   },
 
   async verifyPayment(paymentId: string, txHash: string) {
-    const res = await axios.post(
-      `${backendUrl}/api/v1/marketplace/ads/payments/${paymentId}/verify`,
+    const res = await apiPost<unknown>(
+      `/api/v1/marketplace/ads/payments/${paymentId}/verify`,
       { txHash },
-      { headers: authHeaders() }
     );
-    return res.data?.data || res.data;
+    return (res as { data?: unknown })?.data || res;
   },
 
   async listMine() {
-    const res = await axios.get(`${backendUrl}/api/v1/marketplace/ads/mine`, {
-      headers: authHeaders(),
-    });
-    const responseData = res.data?.data || res.data;
+    const res = await apiGet<unknown>(`/api/v1/marketplace/ads/mine`);
+    const responseData = unwrapData(res);
     return responseData?.items || responseData || [];
   },
 
@@ -83,8 +51,8 @@ export const marketplaceService = {
     if (params?.category) search.set('category', params.category);
     if (params?.subCategory) search.set('subCategory', params.subCategory);
     const qs = search.toString();
-    const res = await axios.get(`${backendUrl}/api/v1/marketplace/ads${qs ? `?${qs}` : ''}`, { signal });
-    const responseData = res.data?.data || res.data;
+    const res = await apiGet<unknown>(`/api/v1/marketplace/ads${qs ? `?${qs}` : ''}`, { signal });
+    const responseData = unwrapData(res);
     return responseData?.items || responseData || [];
   },
 
@@ -93,10 +61,8 @@ export const marketplaceService = {
     if (params?.page) search.set('page', String(params.page));
     if (params?.limit) search.set('limit', String(params.limit));
     const qs = search.toString();
-    const res = await axios.get(`${backendUrl}/api/v1/marketplace/ads/trending${qs ? `?${qs}` : ''}`, {
-      signal,
-    });
-    const responseData = res.data?.data || res.data;
+    const res = await apiGet<unknown>(`/api/v1/marketplace/ads/trending${qs ? `?${qs}` : ''}`, { signal });
+    const responseData = unwrapData(res);
     return responseData?.items || responseData || [];
   },
 
@@ -105,17 +71,14 @@ export const marketplaceService = {
     if (params?.page) search.set('page', String(params.page));
     if (params?.limit) search.set('limit', String(params.limit));
     const qs = search.toString();
-    const res = await axios.get(`${backendUrl}/api/v1/marketplace/ads/for-you${qs ? `?${qs}` : ''}`, {
-      headers: authHeaders(),
-      signal,
-    });
-    const responseData = res.data?.data || res.data;
+    const res = await apiGet<unknown>(`/api/v1/marketplace/ads/for-you${qs ? `?${qs}` : ''}`, { signal });
+    const responseData = unwrapData(res);
     return responseData?.items || responseData || [];
   },
 
   async getPublicAd(id: string, signal?: AbortSignal) {
-    const res = await axios.get(`${backendUrl}/api/v1/marketplace/ads/${id}`, { signal });
-    const responseData = res.data?.data || res.data;
+    const res = await apiGet<unknown>(`/api/v1/marketplace/ads/${id}`, { signal });
+    const responseData = unwrapData(res);
     return responseData?.data || responseData;
   },
 
@@ -142,10 +105,8 @@ export const marketplaceService = {
   },
 
   async shareAd(id: string) {
-    const res = await axios.post(`${backendUrl}/api/v1/marketplace/ads/${id}/share`, {}, {
-      headers: authHeaders(),
-    });
-    return res.data?.data || res.data;
+    const res = await apiPost<unknown>(`/api/v1/marketplace/ads/${id}/share`, {});
+    return (res as { data?: unknown })?.data || res;
   },
 };
 

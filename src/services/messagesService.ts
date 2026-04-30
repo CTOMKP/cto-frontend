@@ -1,64 +1,47 @@
-import axios from 'axios';
-import { getAuthToken } from '@/lib/authSession';
+import { apiGet, apiPost } from '@/lib/apiClient';
 import { uploadGenericViaPresign } from '@/lib/presignedUpload';
-
-const backendUrl =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.ctomarketplace.com";
-
-function authHeaders() {
-  const token = getAuthToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
 
 export const messagesService = {
   async apply(adId: string, coverLetter: string) {
-    const res = await axios.post(
-      `${backendUrl}/api/v1/messages/apply/${adId}`,
+    const res = await apiPost<unknown>(
+      `/api/v1/messages/apply/${adId}`,
       { coverLetter },
-      { headers: authHeaders() }
     );
-    return res.data?.data || res.data;
+    return (res as { data?: unknown })?.data || res;
   },
 
   async listThreads() {
-    const res = await axios.get(`${backendUrl}/api/v1/messages/threads`, {
-      headers: authHeaders(),
-    });
-    return res.data?.data || res.data;
+    const res = await apiGet<unknown>(`/api/v1/messages/threads`);
+    return (res as { data?: unknown })?.data || res;
   },
 
   async getThread(id: string) {
-    const res = await axios.get(`${backendUrl}/api/v1/messages/threads/${id}`, {
-      headers: authHeaders(),
-    });
-    return res.data?.data || res.data;
+    const res = await apiGet<unknown>(`/api/v1/messages/threads/${id}`);
+    return (res as { data?: unknown })?.data || res;
   },
 
   async sendMessage(threadId: string, body: string) {
-    const res = await axios.post(
-      `${backendUrl}/api/v1/messages/threads/${threadId}/messages`,
+    const res = await apiPost<unknown>(
+      `/api/v1/messages/threads/${threadId}/messages`,
       { body },
-      { headers: authHeaders() }
     );
-    return res.data?.data || res.data;
+    return (res as { data?: unknown })?.data || res;
   },
 
   async markRead(threadId: string) {
-    const res = await axios.post(
-      `${backendUrl}/api/v1/messages/threads/${threadId}/read`,
+    const res = await apiPost<unknown>(
+      `/api/v1/messages/threads/${threadId}/read`,
       {},
-      { headers: authHeaders() }
     );
-    return res.data?.data || res.data;
+    return (res as { data?: unknown })?.data || res;
   },
 
   async toggleReaction(messageId: string, emoji: string) {
-    const res = await axios.post(
-      `${backendUrl}/api/v1/messages/reactions/${messageId}`,
+    const res = await apiPost<unknown>(
+      `/api/v1/messages/reactions/${messageId}`,
       { emoji },
-      { headers: authHeaders() }
     );
-    return res.data?.data || res.data;
+    return (res as { data?: unknown })?.data || res;
   },
 
   /** Presign through apiClient + S3 PUT; returns stable view URL for the message body. */

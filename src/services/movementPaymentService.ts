@@ -1,4 +1,5 @@
-import axios from 'axios';
+import { ApiError } from '@/lib/apiError';
+import { apiPost } from '@/lib/apiClient';
 import { getAuthToken } from '@/lib/authSession';
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
@@ -33,26 +34,21 @@ export const movementPaymentService = {
     });
 
     try {
-      const response = await axios.post(
+      const response = await apiPost<unknown>(
         `${API_BASE}/api/v1/payment/movement/listing/${listingId}`,
         {},
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-        }
       );
 
       // Handle wrapped response from TransformInterceptor
-      const responseData = response.data?.data || response.data;
+      const responseData = (response as { data?: unknown })?.data || response;
       console.log('✅ Payment created successfully:', responseData);
       return responseData;
     } catch (error) {
       console.error('❌ Payment creation failed:', error);
-      if (axios.isAxiosError(error)) {
-        const status = error.response?.status;
-        const message = error.response?.data?.message || error.message;
+      if (error instanceof ApiError) {
+        const status = error.status;
+        const body = error.body as { message?: string } | undefined;
+        const message = body?.message || error.message;
         
         if (status === 401) {
           throw new Error('Authentication failed. Please login again.');
@@ -86,25 +82,20 @@ export const movementPaymentService = {
     console.log('💳 Creating Movement payment for ad:', { adId, apiBase: API_BASE, hasToken: !!token });
 
     try {
-      const response = await axios.post(
+      const response = await apiPost<unknown>(
         `${API_BASE}/api/v1/payment/movement/ad/${adId}`,
         {},
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-        }
       );
 
-      const responseData = response.data?.data || response.data;
+      const responseData = (response as { data?: unknown })?.data || response;
       console.log('✅ Ad payment created successfully:', responseData);
       return responseData;
     } catch (error) {
       console.error('❌ Ad payment creation failed:', error);
-      if (axios.isAxiosError(error)) {
-        const status = error.response?.status;
-        const message = error.response?.data?.message || error.message;
+      if (error instanceof ApiError) {
+        const status = error.status;
+        const body = error.body as { message?: string } | undefined;
+        const message = body?.message || error.message;
         if (status === 401) {
           throw new Error('Authentication failed. Please login again.');
         } else if (status === 403) {
@@ -143,26 +134,21 @@ export const movementPaymentService = {
     });
 
     try {
-      const response = await axios.post(
+      const response = await apiPost<unknown>(
         `${API_BASE}/api/v1/payment/movement/verify/${paymentId}`,
         { txHash },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-        }
       );
 
       // Handle wrapped response from TransformInterceptor
-      const responseData = response.data?.data || response.data;
+      const responseData = (response as { data?: unknown })?.data || response;
       console.log('✅ Payment verified successfully:', responseData);
       return responseData;
     } catch (error) {
       console.error('❌ Payment verification failed:', error);
-      if (axios.isAxiosError(error)) {
-        const status = error.response?.status;
-        const message = error.response?.data?.message || error.message;
+      if (error instanceof ApiError) {
+        const status = error.status;
+        const body = error.body as { message?: string } | undefined;
+        const message = body?.message || error.message;
         
         if (status === 401) {
           throw new Error('Authentication failed. Please login again.');

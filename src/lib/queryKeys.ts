@@ -12,6 +12,12 @@ export const profileKeys = {
   detail: () => [...profileKeys.all, "detail"] as const,
 };
 
+export const walletKeys = {
+  all: ["wallets"] as const,
+  movementContext: (userId: string | null) =>
+    [...walletKeys.all, "movement-context", userId ?? "anonymous"] as const,
+};
+
 /** Serializable filters for the public listings table (pagination + chain). */
 export type ListingTableFilters = {
   page: number;

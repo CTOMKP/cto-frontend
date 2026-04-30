@@ -14,7 +14,7 @@ interface WalletWithMovement extends BackendWallet {
 
 import { getStoredAvatarUrl, getUserId } from '@/lib/authSession';
 import { useProfileQuery } from '@/hooks/useProfileQuery';
-import walletsService from '@/services/walletsService';
+import walletsService, { findMovementWalletInBackend } from '@/services/walletsService';
 import UserProfileHeader from './features/UserProfileHeader';
 import LevelXPProgress from './features/LevelXPProgress';
 import ReferralSection from './features/ReferralSection';
@@ -73,12 +73,9 @@ export default function ProfilePage() {
       if (!wallets.length) return;
 
       // Find Movement wallet from wallets (Movement wallet is already included in the data)
-      const movementWallet = wallets.find((w: WalletWithMovement) => 
-        w.blockchain === 'MOVEMENT' ||
-        w.blockchain === 'APTOS' ||
-        w.chainType === 'aptos' ||
-        w.walletClient === 'APTOS_EMBEDDED'
-      );
+      const movementWallet =
+        findMovementWalletInBackend(wallets) ||
+        wallets.find((w: WalletWithMovement) => w.walletClient === 'APTOS_EMBEDDED');
       if (movementWallet?.address) {
         setMovementWalletAddress(movementWallet.address);
       }

@@ -1,24 +1,13 @@
-import axios from 'axios';
 import { getAuthToken } from '@/lib/authSession';
-import { apiPost, getBackendBaseUrl } from '@/lib/apiClient';
+import { ApiError } from '@/lib/apiError';
+import { apiDelete, apiGet, apiPatch, apiPost, getBackendBaseUrl } from '@/lib/apiClient';
 import {
   normalizePresignPayload,
   putFileToPresignedUrl,
 } from '@/lib/presignedUpload';
 
-const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
-
-function authHeaders() {
-  const token = getAuthToken();
-  if (!token) {
-    return {
-      'Content-Type': 'application/json',
-    };
-  }
-  return {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`,
-  };
+function unwrapData<T = unknown>(res: unknown): T {
+  return ((res as { data?: unknown })?.data ?? res) as T;
 }
 
 export interface ScanMetadata {
@@ -132,25 +121,9 @@ export const userListingsService = {
    * @returns ScanResult with risk score, tier, and metadata
    */
   async scan(contractAddr: string, chain: string): Promise<ScanResult> {
-    // Send request with auth headers if present; let backend return 401 when not authenticated (match cto-test-frontend)
-    const headers = authHeaders();
-
-    // Accept non-2xx statuses (e.g., 400 ineligible) and normalize response so UI can proceed
-    const res = await axios.post(
-      `${backendUrl}/api/v1/user-listings/scan`,
-      { contractAddr, chain },
-      { headers, validateStatus: () => true }
-    );
-    
-    // Handle wrapped response from TransformInterceptor
-    const responseData = res.data?.data || res.data;
-    
-    // Force re-auth if unauthorized
-    if (res.status === 401) {
-      throw new Error('Unauthorized');
-    }
-    
-    if (res.status >= 200 && res.status < 300) {
+    try {
+      const raw = await apiPost<unknown>(`/api/v1/user-listings/scan`, { contractAddr, chain });
+      const responseData = unwrapData<Record<string, unknown>>(raw);
       // Normalize response to match our interface
       return {
         success: true,
@@ -165,46 +138,49 @@ export const userListingsService = {
         vettingTier: responseData?.tier ?? responseData?.vettingTier ?? 'UNQUALIFIED',
         details: responseData,
       } as ScanResult;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        if (error.status === 401) {
+          throw new Error('Unauthorized');
+        }
+        const responseData = unwrapData<Record<string, unknown>>(error.body);
+        // For structured backend errors (HttpException with metadata), preserve details
+        if (responseData && (responseData.metadata || typeof responseData.risk_score !== 'undefined')) {
+          return {
+            success: false,
+            risk_score: responseData?.risk_score ?? 0,
+            tier: responseData?.tier ?? 'UNQUALIFIED',
+            risk_level: responseData?.risk_level,
+            eligible: responseData?.eligible ?? false,
+            summary: responseData?.summary,
+            metadata: responseData?.metadata,
+            vettingScore: responseData?.risk_score ?? 0,
+            vettingTier: responseData?.tier ?? 'UNQUALIFIED',
+            details: responseData,
+          } as ScanResult;
+        }
+        const message = (responseData && (responseData.message || responseData.error)) ||
+          'Token does not meet minimum criteria for any tier';
+        return {
+          success: false,
+          risk_score: Number(responseData?.risk_score ?? 0),
+          tier: String(responseData?.tier ?? 'UNQUALIFIED'),
+          eligible: false,
+          vettingScore: responseData?.risk_score ?? 0,
+          vettingTier: responseData?.tier ?? 'UNQUALIFIED',
+          details: {
+            success: false,
+            risk_score: Number(responseData?.risk_score ?? 0),
+            tier: String(responseData?.tier ?? 'UNQUALIFIED'),
+            eligible: false,
+            message,
+            status: error.status,
+            raw: responseData
+          } as ScanResultDetails,
+        } as ScanResult;
+      }
+      throw error;
     }
-    
-    // For structured backend errors (HttpException with metadata), preserve details
-    if (responseData && (responseData.metadata || typeof responseData.risk_score !== 'undefined')) {
-      return {
-        success: false,
-        risk_score: responseData?.risk_score ?? 0,
-        tier: responseData?.tier ?? 'UNQUALIFIED',
-        risk_level: responseData?.risk_level,
-        eligible: responseData?.eligible ?? false,
-        summary: responseData?.summary,
-        metadata: responseData?.metadata,
-        // Legacy fields
-        vettingScore: responseData?.risk_score ?? 0,
-        vettingTier: responseData?.tier ?? 'UNQUALIFIED',
-        details: responseData,
-      } as ScanResult;
-    }
-    
-    // Fallback normalization
-    const message = (responseData && (responseData.message || responseData.error)) ||
-      'Token does not meet minimum criteria for any tier';
-    return {
-      success: false,
-      risk_score: responseData?.risk_score ?? 0,
-      tier: responseData?.tier ?? 'UNQUALIFIED',
-      eligible: false,
-      // Legacy fields
-      vettingScore: responseData?.risk_score ?? 0,
-      vettingTier: responseData?.tier ?? 'UNQUALIFIED',
-      details: { 
-        success: false,
-        risk_score: responseData?.risk_score ?? 0,
-        tier: responseData?.tier ?? 'UNQUALIFIED',
-        eligible: false,
-        message, 
-        status: res.status, 
-        raw: responseData 
-      } as ScanResultDetails,
-    } as ScanResult;
   },
 
   /**
@@ -213,77 +189,54 @@ export const userListingsService = {
    * @returns Created listing data with ID
    */
   async create(payload: CreateUserListingPayload) {
-    const res = await axios.post(
-      `${backendUrl}/api/v1/user-listings`,
-      payload,
-      { headers: authHeaders(), validateStatus: () => true }
-    );
-    if (res.status >= 200 && res.status < 300) {
-      const responseData = res.data?.data || res.data;
-      return responseData;
+    try {
+      const res = await apiPost<unknown>(`/api/v1/user-listings`, payload);
+      return unwrapData(res);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        const errData = unwrapData<Record<string, unknown>>(error.body);
+        const message = errData?.message || `Request failed with status ${error.status}`;
+        const err = new Error(String(message)) as Error & { response?: { data?: unknown }; status?: number };
+        err.response = { data: error.body };
+        err.status = error.status;
+        throw err;
+      }
+      throw error;
     }
-    const errData = res.data?.data ?? res.data;
-    const message = errData?.message || res.data?.message || `Request failed with status ${res.status}`;
-    const err = new Error(message) as Error & { response?: { data?: unknown }; status?: number };
-    err.response = { data: res.data };
-    err.status = res.status;
-    throw err;
   },
   async update(id: string, payload: Partial<CreateUserListingPayload>) {
-    const res = await axios.put(`${backendUrl}/api/v1/user-listings/${id}`, payload, { headers: authHeaders() });
-    // Handle wrapped response from TransformInterceptor
-    const responseData = res.data?.data || res.data;
-    return responseData;
+    const res = await apiPatch<unknown>(`/api/v1/user-listings/${id}`, payload);
+    return unwrapData(res);
   },
   async publish(id: string) {
-    const res = await axios.post(`${backendUrl}/api/v1/user-listings/${id}/publish`, {}, { headers: authHeaders() });
-    // Handle wrapped response from TransformInterceptor
-    const responseData = res.data?.data || res.data;
-    return responseData;
+    const res = await apiPost<unknown>(`/api/v1/user-listings/${id}/publish`, {});
+    return unwrapData(res);
   },
   async mine(signal?: AbortSignal) {
     // Standard path for all user listings
-    const res = await axios.get(`${backendUrl}/api/v1/user-listings/mine/all`, {
-      headers: authHeaders(),
-      signal,
-    });
-    // Handle wrapped response from TransformInterceptor
-    const responseData = res.data?.data || res.data;
-    return responseData;
+    const res = await apiGet<unknown>(`/api/v1/user-listings/mine/all`, { signal });
+    return unwrapData(res);
   },
   async listPublic(page = 1, limit = 20) {
     const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-    const res = await axios.get(`${backendUrl}/api/v1/user-listings?${params.toString()}`);
-    // Handle wrapped response from TransformInterceptor
-    const responseData = res.data?.data || res.data;
-    return responseData;
+    const res = await apiGet<unknown>(`/api/v1/user-listings?${params.toString()}`);
+    return unwrapData(res);
   },
   async addAd(id: string, payload: { type: string; durationDays: number; startDate?: string }) {
-    const res = await axios.post(`${backendUrl}/api/v1/user-listings/${id}/ads`, payload, { headers: authHeaders() });
-    // Handle wrapped response from TransformInterceptor
-    const responseData = res.data?.data || res.data;
-    return responseData;
+    const res = await apiPost<unknown>(`/api/v1/user-listings/${id}/ads`, payload);
+    return unwrapData(res);
   },
   async delete(id: string) {
-    const res = await axios.delete(`${backendUrl}/api/v1/user-listings/${id}`, { headers: authHeaders() });
-    // Handle wrapped response from TransformInterceptor
-    const responseData = res.data?.data || res.data;
-    return responseData;
+    const res = await apiDelete<unknown>(`/api/v1/user-listings/${id}`);
+    return unwrapData(res);
   },
   async getMyListing(id: string, signal?: AbortSignal) {
-    const res = await axios.get(`${backendUrl}/api/v1/user-listings/mine/${id}`, {
-      headers: authHeaders(),
-      signal,
-    });
-    // Handle wrapped response from TransformInterceptor
-    const responseData = res.data?.data || res.data;
-    return responseData;
+    const res = await apiGet<unknown>(`/api/v1/user-listings/mine/${id}`, { signal });
+    return unwrapData(res);
   },
   async getPublicListing(id: string, signal?: AbortSignal) {
-    const res = await axios.get(`${backendUrl}/api/v1/user-listings/${id}`, { signal });
-    // Handle wrapped response from TransformInterceptor
-    const responseData = res.data?.data || res.data;
-    return responseData;
+    const res = await apiGet<unknown>(`/api/v1/user-listings/${id}`, { signal });
+    return unwrapData(res);
   },
 
   /** Same as detail pages: mine when token + success, else public. */

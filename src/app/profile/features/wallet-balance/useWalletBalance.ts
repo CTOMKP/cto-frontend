@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import axios from "axios";
-import { PrivyUser, BackendWallet } from "@/types/privy";
-import { getAuthToken, getUserId, WALLET_ID_KEY } from "@/lib/authSession";
+import { PrivyUser } from "@/types/privy";
+import { getUserId, WALLET_ID_KEY } from "@/lib/authSession";
 import { getMovementWallet } from "@/lib/movement-wallet";
 import { movementWalletService } from "@/services/movementWalletService";
+import walletsService from "@/services/walletsService";
 import { getTokenLogo } from "./utils";
 import { WalletAsset } from "./types";
 
@@ -52,7 +53,6 @@ export function useWalletBalance() {
 
       const findAndSetWallet = async () => {
         const userId = getUserId() || user?.id;
-        const token = getAuthToken();
 
         // GUARD: Don't run if already recovering or if we already have an active wallet
         if (!userId || isAutoRecovering) {
@@ -60,47 +60,16 @@ export function useWalletBalance() {
         }
 
         try {
-          const API_BASE =
-            process.env.NEXT_PUBLIC_BACKEND_URL ||
-            "https://api.ctomarketplace.com";
-
-          const response = await retryWithBackoff(() =>
-            axios.get(
-              `${API_BASE}/api/v1/auth/privy/wallets`,
-              {
-                headers: { Authorization: `Bearer ${token}` },
-                timeout: 10000,
-              }
-            )
+          const { walletId } = await retryWithBackoff(() =>
+            walletsService.resolveMovementWalletContext({
+              privyUser: user,
+              userId,
+              preferStorage: true,
+            }),
           );
-
-          // Handle nested response from TransformInterceptor
-          const walletsData =
-            response.data?.data?.wallets || response.data?.wallets || [];
-
-          // STRATEGIC FIX: Prioritize wallet that matches current Privy account
-          const privyMoveWallet = getMovementWallet(user);
-          let moveWallet = null;
-
-          if (privyMoveWallet) {
-            moveWallet = walletsData.find(
-              (w: BackendWallet) =>
-                w.address.toLowerCase() ===
-                privyMoveWallet.address.toLowerCase()
-            );
-          }
-
-          // Fallback to any Movement wallet if no match found
-          if (!moveWallet) {
-            moveWallet = walletsData.find(
-              (w: BackendWallet) =>
-                w.blockchain === "MOVEMENT" || w.blockchain === "APTOS"
-            );
-          }
-
-          if (moveWallet) {
-            localStorage.setItem(WALLET_ID_KEY, moveWallet.id);
-            return moveWallet.id; 
+          if (walletId) {
+            localStorage.setItem(WALLET_ID_KEY, walletId);
+            return walletId;
           } else {
             // setIsAutoRecovering(true);
 
@@ -154,7 +123,7 @@ export function useWalletBalance() {
       };
 
     const walletId = await findAndSetWallet();
-    setActiveWalletId(walletId);
+    setActiveWalletId(walletId ?? null);
 
     // Start with empty array - we'll add MOVE and USDC separately
     const assetsWithBalances: WalletAsset[] = [];

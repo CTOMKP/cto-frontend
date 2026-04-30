@@ -1,12 +1,8 @@
-import axios from "axios";
-import { getAuthToken } from "@/lib/authSession";
+import { ApiError } from "@/lib/apiError";
+import { apiGet, apiPost } from "@/lib/apiClient";
 
-const backendUrl =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.ctomarketplace.com";
-
-function authHeaders() {
-  const token = getAuthToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
+function unwrapData<T = unknown>(res: unknown): T {
+  return ((res as { data?: unknown })?.data ?? res) as T;
 }
 
 /**
@@ -15,16 +11,13 @@ function authHeaders() {
  */
 export const escrowService = {
   async getLatestByConversation(conversationId: string) {
-    const res = await axios.get(
-      `${backendUrl}/api/v1/escrow/latest`,
-      {
-        params: { conversationId },
-        headers: authHeaders(),
-        validateStatus: (s) => (s >= 200 && s < 300) || s === 404,
-      },
-    );
-    if (res.status === 404) return null;
-    return res.data?.data ?? res.data;
+    try {
+      const res = await apiGet<unknown>(`/api/v1/escrow/latest?conversationId=${encodeURIComponent(conversationId)}`);
+      return unwrapData(res);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) return null;
+      throw error;
+    }
   },
 
   async createOffer(body: {
@@ -36,39 +29,23 @@ export const escrowService = {
     noDeadline: boolean;
     milestones: unknown[];
   }) {
-    const res = await axios.post(
-      `${backendUrl}/api/v1/escrow/offers`,
-      body,
-      { headers: { ...authHeaders(), "Content-Type": "application/json" } },
-    );
-    return res.data?.data ?? res.data;
+    const res = await apiPost<unknown>(`/api/v1/escrow/offers`, body);
+    return unwrapData(res);
   },
 
   async fund(escrowId: string) {
-    const res = await axios.post(
-      `${backendUrl}/api/v1/escrow/${escrowId}/fund`,
-      {},
-      { headers: authHeaders() },
-    );
-    return res.data?.data ?? res.data;
+    const res = await apiPost<unknown>(`/api/v1/escrow/${escrowId}/fund`, {});
+    return unwrapData(res);
   },
 
   async accept(escrowId: string) {
-    const res = await axios.post(
-      `${backendUrl}/api/v1/escrow/${escrowId}/accept`,
-      {},
-      { headers: authHeaders() },
-    );
-    return res.data?.data ?? res.data;
+    const res = await apiPost<unknown>(`/api/v1/escrow/${escrowId}/accept`, {});
+    return unwrapData(res);
   },
 
   async decline(escrowId: string) {
-    const res = await axios.post(
-      `${backendUrl}/api/v1/escrow/${escrowId}/decline`,
-      {},
-      { headers: authHeaders() },
-    );
-    return res.data?.data ?? res.data;
+    const res = await apiPost<unknown>(`/api/v1/escrow/${escrowId}/decline`, {});
+    return unwrapData(res);
   },
 };
 

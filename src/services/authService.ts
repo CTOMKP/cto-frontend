@@ -1,5 +1,5 @@
-import axios from 'axios';
-import { apiGet, apiPut } from '@/lib/apiClient';
+import { ApiError } from '@/lib/apiError';
+import { apiGet, apiPost, apiPut } from '@/lib/apiClient';
 import { LoginCredentials, SignUpCredentials, AuthResponse, User } from '../types/auth.types';
 import { API_ENDPOINTS } from '../utils/constants';
 import { handleApiError } from '../utils/helpers';
@@ -118,7 +118,7 @@ class AuthService {
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
       
       // Use the simple login endpoint
-      const response = await axios.post(
+      const response = await apiPost<{ success?: boolean; token?: string; user?: User }>(
         `${backendUrl}/api/circle/users/login`,
         {
           userId: credentials.email,
@@ -126,11 +126,11 @@ class AuthService {
         }
       );
       
-      console.log('🔍 Response received:', response.status, response.data);
+      console.log('🔍 Response received:', response);
       
-      if (response.data.success) {
+      if (response.success && response.token) {
         // Login successful, store token and return user info
-        const { token, user } = response.data;
+        const { token, user } = response;
         this.setToken(token);
         let profile: User | null = null;
         try {
@@ -152,15 +152,14 @@ class AuthService {
       console.error('🚨 Login failed:', error);
       console.error('🚨 Error details:', {
         message: error instanceof Error ? error.message : 'Unknown error',
-        isAxiosError: axios.isAxiosError(error),
-        hasResponse: axios.isAxiosError(error) ? !!error.response : false,
-        hasRequest: axios.isAxiosError(error) ? !!error.request : false,
+        isApiError: error instanceof ApiError,
+        status: error instanceof ApiError ? error.status : undefined,
       });
       
       // Handle axios errors with specific status codes
-      if (axios.isAxiosError(error)) {
-        if (error.response) {
-          const { status, data } = error.response;
+      if (error instanceof ApiError) {
+        const status = error.status;
+        const data = error.body as { error?: string } | undefined;
           console.error('🚨 Response error:', { status, data });
           
           switch (status) {
@@ -175,11 +174,6 @@ class AuthService {
             default:
               throw new Error(data?.error || `Login failed with status ${status}`);
           }
-        } else if (error.request) {
-          throw new Error('Unable to connect to server. Please check your internet connection.');
-        } else {
-          throw new Error('Login request failed. Please try again.');
-        }
       }
       
       // Handle other types of errors
@@ -193,7 +187,7 @@ class AuthService {
       // Use our Circle backend for user creation
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
       
-      const response = await axios.post(
+      const response = await apiPost<{ success?: boolean; error?: string }>(
         `${backendUrl}/api/circle/users`,
         {
           userId: credentials.email, // Use email as userId
@@ -202,9 +196,9 @@ class AuthService {
         }
       );
       
-      console.log('🔍 Signup response received:', response.status, response.data);
+      console.log('🔍 Signup response received:', response);
       
-      if (response.data.success) {
+      if (response.success) {
         // Account created successfully, but no token yet (user needs to login)
         // Store user info in localStorage for now
         localStorage.setItem(USER_EMAIL_KEY, credentials.email);
@@ -224,20 +218,18 @@ class AuthService {
           message: 'Account created successfully. Please login to continue.'
         };
       } else {
-        throw new Error(response.data.error || 'Failed to create user');
+        throw new Error(response.error || 'Failed to create user');
       }
     } catch (error) {
       console.error('🚨 Circle API failed:', error);
       console.error('🚨 Signup Error details:', {
         message: error instanceof Error ? error.message : 'Unknown error',
-        isAxiosError: axios.isAxiosError(error),
-        hasResponse: axios.isAxiosError(error) ? !!error.response : false,
-        hasRequest: axios.isAxiosError(error) ? !!error.request : false,
-        code: axios.isAxiosError(error) ? error.code : 'N/A',
+        isApiError: error instanceof ApiError,
+        status: error instanceof ApiError ? error.status : undefined,
       });
       
       // Check if this is a user already exists error (409 Conflict)
-      if (axios.isAxiosError(error) && error.response?.status === 409) {
+      if (error instanceof ApiError && error.status === 409) {
         throw new Error('Account already exists. Please login instead.');
       }
       
@@ -302,7 +294,7 @@ class AuthService {
     try {
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
       
-      const response = await axios.post(
+      const response = await apiPost<{ success?: boolean }>(
         `${backendUrl}/api/circle/users/forgot-password`,
         {
           userId: userId,
@@ -310,7 +302,7 @@ class AuthService {
         }
       );
       
-      if (!response.data.success) {
+      if (!response.success) {
         throw new Error('Failed to reset password');
       }
     } catch (error) {
@@ -329,15 +321,14 @@ class AuthService {
         throw new Error('No token to refresh');
       }
 
-      const response = await axios.post(
+      const response = await apiPost<{ access_token?: string; expires_in?: number }>(
         `${backendUrl}/api/v1/auth/refresh`,
         {},
-        { headers: this.getHeaders() }
       );
 
-      if (response.data.access_token) {
-        this.setToken(response.data.access_token);
-        return response.data;
+      if (response.access_token) {
+        this.setToken(response.access_token);
+        return { access_token: response.access_token, expires_in: response.expires_in ?? 0 };
       } else {
         throw new Error('No access token in refresh response');
       }

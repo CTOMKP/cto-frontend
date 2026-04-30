@@ -1,4 +1,5 @@
-import axios from 'axios';
+import { ApiError } from '@/lib/apiError';
+import { apiGet, apiPost } from '@/lib/apiClient';
 import {
   getAuthToken,
   getUserId,
@@ -8,6 +9,10 @@ import {
 import { getCloudFrontUrl } from '@/lib/image-url-helper';
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+}
 
 export interface PFPCard {
   id: number;
@@ -30,18 +35,12 @@ class PFPService {
         return this.getDefaultCards();
       }
 
-      const response = await axios.get(
+      const response = await apiGet<{ success?: boolean; cards?: PFPCard[] }>(
         `${API_BASE}/api/v1/pfp/cards`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
       );
 
-      if (response.data.success && response.data.cards && response.data.cards.length > 0) {
-        return response.data.cards;
+      if (response.success && response.cards && response.cards.length > 0) {
+        return response.cards;
       }
 
       // Fallback to default cards if API fails or returns empty
@@ -75,7 +74,7 @@ class PFPService {
 
     try {
       // 1) Try presigned upload first (like old project)
-      const presignRes = await axios.post(
+      const presignRes = await apiPost<unknown>(
         `${API_BASE}/api/v1/images/presign`,
         {
           type: 'profile',
@@ -84,17 +83,12 @@ class PFPService {
           mimeType: file.type,
           size: file.size,
         },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
       );
 
       // Handle nested response structure (NestJS wraps in {data: {...}, statusCode, timestamp})
-      const presignData = presignRes.data?.data || presignRes.data;
-      const { uploadUrl, key } = presignData || {};
+      const presignData = toRecord((presignRes as { data?: unknown })?.data || presignRes);
+      const uploadUrl = typeof presignData.uploadUrl === "string" ? presignData.uploadUrl : "";
+      const key = typeof presignData.key === "string" ? presignData.key : "";
       
       if (uploadUrl && key) {
         console.log(`📤 Uploading to S3: ${uploadUrl.substring(0, 100)}...`);
@@ -147,11 +141,11 @@ class PFPService {
         }
       } else {
         console.error('❌ No uploadUrl or key in presign response:', {
-          hasData: !!presignRes.data,
-          hasNestedData: !!presignRes.data?.data,
-          dataKeys: presignRes.data ? Object.keys(presignRes.data) : [],
-          nestedDataKeys: presignRes.data?.data ? Object.keys(presignRes.data.data) : [],
-          fullResponse: presignRes.data,
+          hasData: !!presignRes,
+          hasNestedData: !!(presignRes as { data?: unknown })?.data,
+          dataKeys: presignRes ? Object.keys(presignRes as object) : [],
+          nestedDataKeys: (presignRes as { data?: unknown })?.data && typeof (presignRes as { data?: unknown }).data === "object" ? Object.keys((presignRes as { data: object }).data) : [],
+          fullResponse: presignRes,
         });
         throw new Error('Presign response missing uploadUrl or key');
       }
@@ -228,35 +222,28 @@ class PFPService {
 
       // Save the image URL to user profile
       console.log(`💾 Saving PFP to backend: ${imageUrl.substring(0, 100)}...`);
-      const response = await axios.post(
+      const response = await apiPost<unknown>(
         `${API_BASE}/api/v1/pfp/save`,
         { imageUrl },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
       );
 
       // Handle nested response structure (NestJS wraps in {data: {...}, statusCode, timestamp})
-      const saveData = response.data?.data || response.data;
+      const saveData = toRecord((response as { data?: unknown })?.data || response);
       console.log('📦 Backend save response:', {
-        status: response.status,
-        hasData: !!response.data,
-        hasNestedData: !!response.data?.data,
-        dataKeys: response.data ? Object.keys(response.data) : [],
-        nestedDataKeys: response.data?.data ? Object.keys(response.data.data) : [],
+        hasData: !!response,
+        hasNestedData: !!(response as { data?: unknown })?.data,
+        dataKeys: response && typeof response === "object" ? Object.keys(response) : [],
+        nestedDataKeys: (response as { data?: unknown })?.data && typeof (response as { data?: unknown }).data === "object" ? Object.keys((response as { data: object }).data) : [],
         success: saveData?.success,
         message: saveData?.message,
         avatarUrl: saveData?.avatarUrl,
-        fullResponse: response.data,
+        fullResponse: response,
       });
 
       if (saveData?.success) {
         // Use backend's avatarUrl if provided, otherwise use our constructed imageUrl
         // Backend might return avatarUrl, imageUrl, or url field
-        const backendUrl = saveData?.avatarUrl || saveData?.imageUrl || saveData?.url || imageUrl;
+        const backendUrl = String(saveData?.avatarUrl || saveData?.imageUrl || saveData?.url || imageUrl);
         // Transform to CloudFront URL (same approach as memes)
         const finalAvatarUrl = getCloudFrontUrl(backendUrl);
         
@@ -283,24 +270,24 @@ class PFPService {
         
         return {
           success: true,
-          message: saveData.message || 'PFP saved successfully',
+          message: String(saveData.message || 'PFP saved successfully'),
           imageUrl: finalAvatarUrl,
         };
       }
 
-      throw new Error(saveData?.message || `Failed to save PFP. Response: ${JSON.stringify(saveData)}`);
+      throw new Error(String(saveData?.message || `Failed to save PFP. Response: ${JSON.stringify(saveData)}`));
     } catch (error: unknown) {
       console.error('❌ Failed to save PFP:', error);
       let message = 'Failed to save PFP';
-      if (axios.isAxiosError(error)) {
+      if (error instanceof ApiError) {
+        const body = error.body as { message?: string; error?: string } | undefined;
         console.error('❌ Axios error details:', {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          data: error.response?.data,
-          message: error.response?.data?.message,
+          status: error.status,
+          data: error.body,
+          message: body?.message,
         });
-        message = error.response?.data?.message || error.response?.data?.error || message;
-        if (error.response?.status === 500) {
+        message = body?.message || body?.error || message;
+        if (error.status === 500) {
           message = `Backend error: ${message}. Check backend logs for details.`;
         }
       } else if (error instanceof Error) {

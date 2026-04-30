@@ -14,7 +14,6 @@ import { usePrivy } from '@privy-io/react-auth';
 import { Check, MoveDown, MoveUp, SquareArrowOutUpRight } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Link from 'next/link';
-import { BackendWallet } from '@/types/privy';
 import FallbackImage from './FallbackImage';
 import {
   getStoredAvatarUrl,
@@ -25,7 +24,7 @@ import {
   USER_USERNAME_KEY,
 } from '@/lib/authSession';
 import { getCloudFrontUrl } from '@/lib/image-url-helper';
-import { getWalletsFromStorage } from '@/utils/localStorage';
+import walletsService from '@/services/walletsService';
 import { useWalletBalance } from '@/app/profile/features/wallet-balance/useWalletBalance';
 import WalletBalanceContent from '@/app/profile/features/wallet-balance/WalletBalanceContent';
 import { Button } from './ui/button';
@@ -166,40 +165,21 @@ export default function AvatarDropdown() {
   React.useEffect(() => {
     if (!user) return;
 
-    // First, try to load from localStorage - use user-specific key
-    const userId = getUserId();
-    try {
-      const wallets = getWalletsFromStorage(userId);
-      if (wallets) {
-        try {
-          interface WalletWithMovement extends BackendWallet {
-            blockchain?: string;
-            walletClient?: string;
-          }
-          const typedWallets = wallets as WalletWithMovement[];
-
-          // Find Movement wallet from localStorage wallets
-          const movementWallet = typedWallets.find((w: WalletWithMovement) =>
-            w.blockchain === 'MOVEMENT' ||
-            w.blockchain === 'APTOS' ||
-            w.chainType === 'aptos' ||
-            w.walletClient === 'APTOS_EMBEDDED'
-          );
-
-          if (movementWallet?.address) {
-            setMovementWalletAddress(movementWallet.address);
-            return;
-          }
-        } catch (e) {
-          console.error('Failed to parse wallets:', e);
-        }
+    const loadMovementWallet = async () => {
+      const { movementWallet } = await walletsService.resolveMovementWalletContext({
+        privyUser: user,
+        userId: getUserId() || user.id,
+        preferStorage: true,
+      });
+      if (movementWallet?.address) {
+        setMovementWalletAddress(movementWallet.address);
+        return;
       }
-    } catch (error) {
-      console.warn('Failed to get wallets from storage:', error);
-    }
+      // Fallback: check Privy linkedAccounts
+      checkMovementWallet();
+    };
 
-    // Fallback: check Privy linkedAccounts
-    checkMovementWallet();
+    void loadMovementWallet();
   }, [user, checkMovementWallet]);
 
   // Primary wallet address is Movement wallet address (matching profile page)

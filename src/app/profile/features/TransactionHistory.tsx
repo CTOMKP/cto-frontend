@@ -4,8 +4,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { movementWalletService, type WalletTransaction } from '@/services/movementWalletService';
 import { usePrivy } from '@privy-io/react-auth';
-import { getMovementWallet } from '@/lib/movement-wallet';
-import { BackendWallet } from '@/types/privy';
 import { toast } from 'react-toastify';
 import { getUserId, WALLET_ID_KEY } from '@/lib/authSession';
 import UserListings from './UserListings';
@@ -31,34 +29,14 @@ export default function TransactionHistory() {
       }
 
       try {
-        const walletsData = await walletsService.listPrivyWallets({
+        const { walletId } = await walletsService.resolveMovementWalletContext({
+          privyUser: user,
           userId,
           preferStorage: true,
         });
-
-        // STRATEGIC FIX: Prioritize wallet that matches current Privy account
-        const privyMoveWallet = getMovementWallet(user);
-        let moveWallet = null;
-
-        if (privyMoveWallet) {
-          moveWallet = walletsData.find(
-            (w: BackendWallet) =>
-              w.address?.toLowerCase() ===
-              privyMoveWallet.address.toLowerCase()
-          );
-        }
-
-        // Fallback to any Movement wallet if no match found
-        if (!moveWallet) {
-          moveWallet = walletsData.find(
-            (w: BackendWallet) =>
-              w.blockchain === "MOVEMENT" || w.blockchain === "APTOS"
-          );
-        }
-
-        if (moveWallet?.id) {
-          localStorage.setItem(WALLET_ID_KEY, moveWallet.id);
-          return moveWallet.id;
+        if (walletId) {
+          localStorage.setItem(WALLET_ID_KEY, walletId);
+          return walletId;
         }
       } catch (err) {
         toast.error("Failed to set wallet ID");
