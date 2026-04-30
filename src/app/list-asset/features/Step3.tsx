@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query';
+import { listingKeys } from '@/lib/queryKeys';
 import { Plus } from 'lucide-react'
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -37,6 +39,7 @@ export default function Step3({
   bio,
   links,
 }: Step3Props) {
+  const queryClient = useQueryClient();
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -87,6 +90,7 @@ export default function Step3({
           title: title.trim(),
           description: description.trim(),
         });
+        void queryClient.invalidateQueries({ queryKey: listingKeys.all });
         setListingId(draftId);
         setPaymentDialogOpen(true);
         toast.success('Draft updated. Proceed to payment.');
@@ -122,6 +126,7 @@ export default function Step3({
         }
 
         setListingId(createdListingId);
+        void queryClient.invalidateQueries({ queryKey: listingKeys.all });
         setPaymentDialogOpen(true);
         toast.success('Listing created! Proceed to payment.');
       }

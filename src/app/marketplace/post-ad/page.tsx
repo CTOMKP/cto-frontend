@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+import { listingKeys } from '@/lib/queryKeys';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import CategorySelectionStep from './features/CategorySelectionStep';
@@ -82,6 +84,7 @@ function buildDraftPayload(formData: FormData, imageUrls: string[]): Record<stri
 }
 
 export default function PostAdPage() {
+  const queryClient = useQueryClient();
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState<Step>('category');
   const [formData, setFormData] = useState<FormData>({});
@@ -142,12 +145,14 @@ export default function PostAdPage() {
       const payload = buildDraftPayload(formData, imageUrls);
       if (draftAdId) {
         await marketplaceService.updateDraft(draftAdId, payload);
+        void queryClient.invalidateQueries({ queryKey: listingKeys.all });
         return draftAdId;
       }
       const res = await marketplaceService.createDraft(payload);
       const data = res as { id?: string; data?: { id?: string } };
       const id = data?.id ?? data?.data?.id ?? null;
       if (id) setDraftAdId(id);
+      void queryClient.invalidateQueries({ queryKey: listingKeys.all });
       return id;
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response?.status === 400) {
@@ -161,7 +166,7 @@ export default function PostAdPage() {
       }
       return null;
     }
-  }, [formData, draftAdId]);
+  }, [formData, draftAdId, queryClient]);
 
   const handleCategoryNext = (data: { category: string; subcategory: string; postType?: 'LOOKING_FOR' | 'OFFERING' }) => {
     setFormData((prev: FormData) => ({ ...prev, ...data }));

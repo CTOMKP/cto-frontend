@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { apiGet } from '@/lib/apiClient';
+import { apiGet, apiPut } from '@/lib/apiClient';
 import { LoginCredentials, SignUpCredentials, AuthResponse, User } from '../types/auth.types';
 import { API_ENDPOINTS } from '../utils/constants';
 import { handleApiError } from '../utils/helpers';
@@ -53,6 +53,25 @@ class AuthService {
 
   private removeToken(): void {
     clearAuthToken();
+  }
+
+  private parseUpdatedUserFromResponse(body: unknown): User | null {
+    if (!body || typeof body !== "object") return null;
+    const o = body as Record<string, unknown>;
+    if ("user" in o && o.user && typeof o.user === "object") {
+      return o.user as User;
+    }
+    const nested = o.data;
+    if (nested && typeof nested === "object") {
+      const inner = nested as Record<string, unknown>;
+      if ("user" in inner && inner.user && typeof inner.user === "object") {
+        return inner.user as User;
+      }
+      if ("email" in inner && typeof inner.email === "string") {
+        return nested as User;
+      }
+    }
+    return null;
   }
 
   private applyUserProfileToStorage(profileData: User): void {
@@ -258,30 +277,25 @@ class AuthService {
     };
   }
 
-  async updateUser(userId: string, updates: Partial<User>): Promise<User> {
-    try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
-      const response = await axios.put(
-        `${backendUrl}/api/v1/auth/users/me`,
-        updates,
-        { headers: this.getHeaders() }
-      );
-
-      const updatedUser = response.data.user;
-      if (updatedUser?.name) {
-        localStorage.setItem(USER_NAME_KEY, updatedUser.name);
-      } else if (Object.prototype.hasOwnProperty.call(updatedUser || {}, 'name')) {
-        localStorage.removeItem(USER_NAME_KEY);
-      }
-      if (updatedUser?.avatarUrl) {
-        localStorage.setItem(USER_AVATAR_URL_KEY, updatedUser.avatarUrl);
-        localStorage.setItem(PROFILE_AVATAR_URL_KEY, updatedUser.avatarUrl);
-      }
-      persistRewardData(updatedUser);
-      return updatedUser;
-    } catch (error) {
-      throw new Error(`Failed to update user: ${handleApiError(error)}`);
+  async updateUser(_userId: string, updates: Partial<User>): Promise<User> {
+    const raw = await apiPut<unknown>(`/api/v1/auth/users/me`, updates, {
+      clearSessionOn401: true,
+    });
+    const updatedUser = this.parseUpdatedUserFromResponse(raw);
+    if (!updatedUser) {
+      throw new Error("Invalid update profile response.");
     }
+    if (updatedUser?.name) {
+      localStorage.setItem(USER_NAME_KEY, updatedUser.name);
+    } else if (Object.prototype.hasOwnProperty.call(updatedUser || {}, "name")) {
+      localStorage.removeItem(USER_NAME_KEY);
+    }
+    if (updatedUser?.avatarUrl) {
+      localStorage.setItem(USER_AVATAR_URL_KEY, updatedUser.avatarUrl);
+      localStorage.setItem(PROFILE_AVATAR_URL_KEY, updatedUser.avatarUrl);
+    }
+    persistRewardData(updatedUser);
+    return updatedUser;
   }
 
   async forgotPassword(userId: string, newPassword: string): Promise<void> {

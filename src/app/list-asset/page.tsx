@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { listingKeys } from "@/lib/queryKeys";
 import Image from "next/image";
 import Step1 from "./features/Step1";
 import Step2, { SocialLinks } from "./features/Step2";
@@ -128,6 +130,7 @@ function canProceedWithScan(scan: ScanResult | null): boolean {
 }
 
 export default function ListingApplication() {
+  const queryClient = useQueryClient();
   const [selectedNetwork, setSelectedNetwork] = useState<string>("solana");
 
   // Clear stale draft when starting a new listing flow (match cto-test-frontend)
@@ -208,6 +211,7 @@ export default function ListingApplication() {
       if (Object.keys(updates).length > 0) {
         try {
           await userListingsService.update(existing, updates as Partial<CreateUserListingPayload>);
+          void queryClient.invalidateQueries({ queryKey: listingKeys.all });
         } catch {}
       }
       return existing;
@@ -254,8 +258,9 @@ export default function ListingApplication() {
     if (!id) throw new Error(backendMessage || 'Failed to create draft');
     setDraftId(id);
     if (typeof window !== 'undefined') localStorage.setItem(DRAFT_KEY, id);
+    void queryClient.invalidateQueries({ queryKey: listingKeys.all });
     return id;
-  }, [scanResult, contractAddress, selectedNetwork, bio, logoUrl, bannerUrl, links, getDraftId]);
+  }, [scanResult, contractAddress, selectedNetwork, bio, logoUrl, bannerUrl, links, getDraftId, queryClient]);
 
   const handleProfilePictureChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -274,7 +279,10 @@ export default function ListingApplication() {
       );
       setLogoUrl(viewUrl);
       if (draft) {
-        try { await userListingsService.update(draft, { logoUrl: viewUrl }); } catch {}
+        try {
+          await userListingsService.update(draft, { logoUrl: viewUrl });
+          void queryClient.invalidateQueries({ queryKey: listingKeys.all });
+        } catch {}
       }
       toast.success('Profile picture uploaded');
     } catch (err: unknown) {
@@ -284,7 +292,7 @@ export default function ListingApplication() {
     } finally {
       setLogoUploading(false);
     }
-  }, [ensureDraftExists]);
+  }, [ensureDraftExists, queryClient]);
 
   const handleBannerChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -313,7 +321,7 @@ export default function ListingApplication() {
     } finally {
       setBannerUploading(false);
     }
-  }, [ensureDraftExists]);
+  }, [ensureDraftExists, queryClient]);
 
   const handleStep2Continue = useCallback(async () => {
     try {
@@ -466,6 +474,7 @@ export default function ListingApplication() {
                   if (id) {
                     try {
                       await userListingsService.publish(id);
+                      void queryClient.invalidateQueries({ queryKey: listingKeys.all });
                     } catch {}
                     localStorage.removeItem(DRAFT_KEY);
                     setDraftId(null);

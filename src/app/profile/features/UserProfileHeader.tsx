@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -9,10 +8,9 @@ import { Edit, LogOut, Check } from 'lucide-react';
 import { X } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { toast } from "react-toastify";
-import { authService } from "@/services/authService";
-import { getUserEmail, getUserId, USER_NAME_KEY } from "@/lib/authSession";
+import { getUserEmail, getUserId } from "@/lib/authSession";
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
-import { profileKeys } from "@/lib/queryKeys";
+import { useUpdateUserMutation } from "@/hooks/useUpdateUserMutation";
 
 interface UserProfileHeaderProps {
   avatarUrl: string | null;
@@ -37,12 +35,11 @@ export default function UserProfileHeader({
 }: UserProfileHeaderProps) {
   const [nameEditOpen, setNameEditOpen] = useState(false);
   const [tempName, setTempName] = useState<string>("");
-  const [isSavingName, setIsSavingName] = useState(false);
 
   const fallbackName = email?.includes("@") ? email.split("@")[0] : email;
 
   const { userData, setUserData } = usePrivyAuth();
-  const queryClient = useQueryClient();
+  const updateUserMutation = useUpdateUserMutation();
 
   const displayName = userData?.name || fallbackName || "User";
 
@@ -51,34 +48,29 @@ export default function UserProfileHeader({
     setTempName(displayName);
   }, [nameEditOpen, displayName]);
 
-  const handleSaveName = async () => {
+  const handleSaveName = () => {
     const nextName = tempName.trim();
     if (nextName.length < 2) {
       toast.error("Name must be at least 2 characters.");
       return;
     }
 
-    setIsSavingName(true);
-    try {
-      const userId = getUserId() || getUserEmail() || email;
+    const userId = getUserId() || getUserEmail() || email;
 
-      const updated = await authService.updateUser(userId, { name: nextName });
-      const finalName = updated?.name ?? nextName;
-      localStorage.setItem(USER_NAME_KEY, finalName);
-      await queryClient.invalidateQueries({ queryKey: profileKeys.all });
-      setUserData((prev) => ({
-        ...prev,
-        name: finalName,
-      }));
-      setNameEditOpen(false);
-      toast.success("Name updated.");
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to update name.";
-      toast.error(message);
-    } finally {
-      setIsSavingName(false);
-    }
+    updateUserMutation.mutate(
+      { userId, updates: { name: nextName } },
+      {
+        onSuccess: (updated) => {
+          const finalName = updated?.name ?? nextName;
+          setUserData((prev) => ({
+            ...prev,
+            name: finalName,
+          }));
+          setNameEditOpen(false);
+          toast.success("Name updated.");
+        },
+      },
+    );
   };
 
   return (
@@ -135,7 +127,7 @@ export default function UserProfileHeader({
                         value={tempName}
                         onChange={(e) => setTempName(e.target.value)}
                         autoFocus
-                        disabled={isSavingName}
+                        disabled={updateUserMutation.isPending}
                       />
                     </div>
 
@@ -144,7 +136,7 @@ export default function UserProfileHeader({
                         type="button"
                         variant="outline"
                         className="border-white/20 text-white/70 hover:bg-white/10"
-                        disabled={isSavingName}
+                        disabled={updateUserMutation.isPending}
                         onClick={() => setNameEditOpen(false)}
                       >
                         Cancel
@@ -152,10 +144,10 @@ export default function UserProfileHeader({
                       <Button
                         type="button"
                         className="cta-gradient"
-                        disabled={isSavingName}
+                        disabled={updateUserMutation.isPending}
                         onClick={handleSaveName}
                       >
-                        {isSavingName ? "Saving..." : "Save"}
+                        {updateUserMutation.isPending ? "Saving..." : "Save"}
                       </Button>
                     </div>
                   </div>

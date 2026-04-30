@@ -1,3 +1,6 @@
+import type { ApiCoinItem } from "@/types/api";
+import type { MockLikeCoin } from "../types/listing";
+
 export function formatRelativeAge(date: Date): string {
   const diffMs = Date.now() - date.getTime();
   const seconds = Math.floor(diffMs / 1000);
@@ -109,5 +112,75 @@ export function getChainImage(chain: string): string {
     'osmosis': '/listings-chains/osmosis.jpg',
   };
   return chainMap[chain.toLowerCase()] || '/listings-chains/solana.png';
+}
+
+/** Map API listing rows to table row model (shared by query + client-side filters). */
+export function mapApiCoinItemsToMockLikeCoins(items: ApiCoinItem[]): MockLikeCoin[] {
+  return items.map((it) => {
+    let ageStr: string | null = null;
+    if (it.age && typeof it.age === "string" && it.age.trim() !== "") {
+      ageStr = formatAgeYMD(it.age);
+    } else {
+      const createdAt = it.createdAt ? new Date(it.createdAt) : null;
+      ageStr = createdAt ? formatAgeYMD(createdAt) : null;
+    }
+
+    const holderCount = it.holders ?? it?.metadata?.market?.holders ?? null;
+
+    let tier: string | null = it.tier || null;
+    if (tier) {
+      tier = String(tier).trim().toLowerCase();
+      if (
+        tier === "none" ||
+        tier === "null" ||
+        tier === "undefined" ||
+        tier === "" ||
+        tier === "—" ||
+        tier === "----" ||
+        tier === "------" ||
+        tier.startsWith("---") ||
+        tier === "n/a" ||
+        tier === "na" ||
+        /^[-—]+$/.test(tier)
+      ) {
+        tier = null;
+      }
+    }
+
+    return {
+      name: it.name || it.symbol || "",
+      whale: false,
+      age: ageStr,
+      address: it.contractAddress,
+      x: undefined,
+      website: undefined,
+      image: it.logoUrl || it?.metadata?.market?.logoUrl,
+      chain: it.chain || "solana",
+      category: it.category || "meme",
+      communityScore:
+        typeof it.communityScore === "number"
+          ? it.communityScore
+          : (it?.metadata?.market?.communityScore ?? 0),
+      degenAudit:
+        typeof it.riskScore === "number" ? it.riskScore : (it?.metadata?.market?.riskScore ?? 0),
+      tier,
+      mindshare: undefined,
+      price: {
+        amount: Number(it.priceUsd ?? 0),
+        change: {
+          "1m": 0,
+          "5m": 0,
+          "1h": Number(it.change1h ?? 0),
+          "5h": 0,
+          "24h": Number(it.change24h ?? 0),
+        },
+      },
+      marketCap: Number(it.marketCap ?? it?.metadata?.market?.fdv ?? 0),
+      liquidity: Number(it.liquidityUsd ?? 0),
+      volume: { amount: Number(it.volume24h ?? it?.metadata?.market?.volume?.h24 ?? 0) },
+      holders:
+        holderCount !== null && holderCount !== undefined ? Number(holderCount) : null,
+    } as MockLikeCoin;
+  });
 }
 
