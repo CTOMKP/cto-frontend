@@ -236,9 +236,12 @@ export const userListingsService = {
     const responseData = res.data?.data || res.data;
     return responseData;
   },
-  async mine() {
+  async mine(signal?: AbortSignal) {
     // Standard path for all user listings
-    const res = await axios.get(`${backendUrl}/api/v1/user-listings/mine/all`, { headers: authHeaders() });
+    const res = await axios.get(`${backendUrl}/api/v1/user-listings/mine/all`, {
+      headers: authHeaders(),
+      signal,
+    });
     // Handle wrapped response from TransformInterceptor
     const responseData = res.data?.data || res.data;
     return responseData;
@@ -262,17 +265,34 @@ export const userListingsService = {
     const responseData = res.data?.data || res.data;
     return responseData;
   },
-  async getMyListing(id: string) {
-    const res = await axios.get(`${backendUrl}/api/v1/user-listings/mine/${id}`, { headers: authHeaders() });
+  async getMyListing(id: string, signal?: AbortSignal) {
+    const res = await axios.get(`${backendUrl}/api/v1/user-listings/mine/${id}`, {
+      headers: authHeaders(),
+      signal,
+    });
     // Handle wrapped response from TransformInterceptor
     const responseData = res.data?.data || res.data;
     return responseData;
   },
-  async getPublicListing(id: string) {
-    const res = await axios.get(`${backendUrl}/api/v1/user-listings/${id}`);
+  async getPublicListing(id: string, signal?: AbortSignal) {
+    const res = await axios.get(`${backendUrl}/api/v1/user-listings/${id}`, { signal });
     // Handle wrapped response from TransformInterceptor
     const responseData = res.data?.data || res.data;
     return responseData;
+  },
+
+  /** Same as detail pages: mine when token + success, else public. */
+  async fetchListingForDisplay(id: string, signal?: AbortSignal): Promise<unknown> {
+    const token = getAuthToken();
+    if (token) {
+      try {
+        const mine = await this.getMyListing(id, signal);
+        if (mine != null && typeof mine === "object") return mine;
+      } catch {
+        // fall through to public
+      }
+    }
+    return this.getPublicListing(id, signal);
   },
 
   /**

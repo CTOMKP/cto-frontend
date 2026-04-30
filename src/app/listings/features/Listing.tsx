@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useState, useMemo, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { listingKeys, type ListingTableFilters } from "@/lib/queryKeys";
 import { fetchListingTable } from "@/services/listingPublicService";
@@ -48,10 +48,19 @@ export default function TopListings() {
     [page, limit, selectedNetwork],
   );
 
-  const { data, isFetching } = useQuery({
+  const {
+    data,
+    isFetching,
+    isPending,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: listingKeys.table(tableFilters),
     queryFn: ({ signal }) => fetchListingTable(tableFilters, signal),
     enabled: !!backendUrl,
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
   });
 
   const total = data?.total ?? 0;
@@ -202,6 +211,9 @@ export default function TopListings() {
 
   const filteredData = listings[category];
 
+  const showTableSkeleton =
+    !!backendUrl && !data && (isPending || isFetching);
+
   const handleProjectClick = (projectName: string, projectAddress: string) => {
     const slug = slugify(projectName) || projectAddress;
     router.push(
@@ -219,6 +231,21 @@ export default function TopListings() {
     <div>
       <div className="h-px w-full bg-[#FF007510] mt-7 mb-4.5"></div>
       <div className="w-[87%] mx-auto">
+        {isError && (
+          <div
+            className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-100"
+            role="alert"
+          >
+            <span>Could not load listings. Check your connection and try again.</span>
+            <button
+              type="button"
+              className="shrink-0 rounded-md border border-amber-400/50 px-2 py-1 text-xs font-medium hover:bg-amber-500/20"
+              onClick={() => refetch()}
+            >
+              Retry
+            </button>
+          </div>
+        )}
         <Card className="w-full p-3 border-none border-[#FF007510] text-white">
           <CardHeader className="flex flex-wrap justify-between items-center px-0">
             <CardTitle className="hidden">
@@ -262,7 +289,7 @@ export default function TopListings() {
                   onSort={handleSort}
                 />
                 <tbody>
-                  {isFetching && backendUrl ? (
+                  {showTableSkeleton ? (
                     <ListingTableSkeleton />
                   ) : (
                     (filteredData ?? []).map((coin, index) => (

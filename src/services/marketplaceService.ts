@@ -73,44 +73,72 @@ export const marketplaceService = {
     return responseData?.items || responseData || [];
   },
 
-  async listPublic(params?: { page?: number; limit?: number; category?: string; subCategory?: string }) {
+  async listPublic(
+    params?: { page?: number; limit?: number; category?: string; subCategory?: string },
+    signal?: AbortSignal,
+  ) {
     const search = new URLSearchParams();
     if (params?.page) search.set('page', String(params.page));
     if (params?.limit) search.set('limit', String(params.limit));
     if (params?.category) search.set('category', params.category);
     if (params?.subCategory) search.set('subCategory', params.subCategory);
     const qs = search.toString();
-    const res = await axios.get(`${backendUrl}/api/v1/marketplace/ads${qs ? `?${qs}` : ''}`);
+    const res = await axios.get(`${backendUrl}/api/v1/marketplace/ads${qs ? `?${qs}` : ''}`, { signal });
     const responseData = res.data?.data || res.data;
     return responseData?.items || responseData || [];
   },
 
-  async listTrending(params?: { page?: number; limit?: number }) {
+  async listTrending(params?: { page?: number; limit?: number }, signal?: AbortSignal) {
     const search = new URLSearchParams();
     if (params?.page) search.set('page', String(params.page));
     if (params?.limit) search.set('limit', String(params.limit));
     const qs = search.toString();
-    const res = await axios.get(`${backendUrl}/api/v1/marketplace/ads/trending${qs ? `?${qs}` : ''}`);
+    const res = await axios.get(`${backendUrl}/api/v1/marketplace/ads/trending${qs ? `?${qs}` : ''}`, {
+      signal,
+    });
     const responseData = res.data?.data || res.data;
     return responseData?.items || responseData || [];
   },
 
-  async listForYou(params?: { page?: number; limit?: number }) {
+  async listForYou(params?: { page?: number; limit?: number }, signal?: AbortSignal) {
     const search = new URLSearchParams();
     if (params?.page) search.set('page', String(params.page));
     if (params?.limit) search.set('limit', String(params.limit));
     const qs = search.toString();
     const res = await axios.get(`${backendUrl}/api/v1/marketplace/ads/for-you${qs ? `?${qs}` : ''}`, {
       headers: authHeaders(),
+      signal,
     });
     const responseData = res.data?.data || res.data;
     return responseData?.items || responseData || [];
   },
 
-  async getPublicAd(id: string) {
-    const res = await axios.get(`${backendUrl}/api/v1/marketplace/ads/${id}`);
+  async getPublicAd(id: string, signal?: AbortSignal) {
+    const res = await axios.get(`${backendUrl}/api/v1/marketplace/ads/${id}`, { signal });
     const responseData = res.data?.data || res.data;
     return responseData?.data || responseData;
+  },
+
+  /**
+   * Tabbed marketplace grid: trending / for-you (with public fallback) / new.
+   */
+  async fetchFeed(tab: 'trending' | 'forYou' | 'new', signal?: AbortSignal): Promise<unknown[]> {
+    const norm = (items: unknown) => (Array.isArray(items) ? items : []);
+    if (tab === 'trending') {
+      const items = await this.listTrending({ page: 1, limit: 24 }, signal);
+      return norm(items);
+    }
+    if (tab === 'forYou') {
+      try {
+        const items = await this.listForYou({ page: 1, limit: 24 }, signal);
+        return norm(items);
+      } catch {
+        const items = await this.listPublic({ page: 1, limit: 24 }, signal);
+        return norm(items);
+      }
+    }
+    const items = await this.listPublic({ page: 1, limit: 24 }, signal);
+    return norm(items);
   },
 
   async shareAd(id: string) {

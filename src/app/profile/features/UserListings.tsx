@@ -7,94 +7,84 @@ import { Card, CardContent } from "@/components/ui/card";
 import { TableRow, TableCell } from "@/components/ui/table";
 import { MockLikeCoin, SortField, SortDirection } from "@/app/listings/features/types/listing";
 import { AllUserListings } from "@/types/api";
-// import { convertAgeToRelative, formatRelativeAge } from "@/app/listings/features/utils/listingUtils";
-import { userListingsService } from "@/services/userListingsService";
+import { useUserListingsQuery } from "@/hooks/useUserListingsQuery";
 import UserListingsTableHeader from "./UserListingsTableHeader";
 import UserListingsTableRow from "./UserListingsTableRow";
 import UserListingsTableSkeleton from "./UserListingsTableSkeleton";
 import { slugify } from "@/lib/utils/slugify";
 
+function mapMineItemsToTableRows(items: AllUserListings[]): MockLikeCoin[] {
+  return items.map((it) => {
+    const holderCount = it.scanMetadata?.holder_count ?? null;
+    let tier: string | null = it.vettingTier ?? null;
+    if (tier) {
+      tier = String(tier).trim().toLowerCase();
+      if (
+        tier === "none" ||
+        tier === "null" ||
+        tier === "undefined" ||
+        tier === "" ||
+        tier === "—" ||
+        tier === "----" ||
+        tier === "------" ||
+        tier.startsWith("---") ||
+        tier === "n/a" ||
+        tier === "na" ||
+        /^[-—]+$/.test(tier)
+      ) {
+        tier = null;
+      }
+    }
+
+    const change24h = 0;
+    return {
+      name: it.scanMetadata?.token_name || it.scanMetadata?.token_symbol || "",
+      whale: false,
+      age: it.scanMetadata?.age_display,
+      status: it.status,
+      address: it.contractAddr,
+      x: undefined,
+      website: undefined,
+      image: it.logoUrl ?? undefined,
+      chain: it.chain ?? "solana",
+      category: "meme",
+      communityScore: 50,
+      links: {
+        website: it?.links?.website ?? "#",
+        twitter: it?.links?.twitter ?? "#",
+        telegram: it?.links?.telegram ?? "#",
+        discord: it?.links?.discord ?? "#",
+      },
+      degenAudit: typeof it.scanRiskScore === "number" ? it.scanRiskScore : (it?.scanRiskScore ?? 0),
+      tier,
+      mindshare: undefined,
+      price: {
+        amount: Number(it.scanMetadata?.token_price ?? 0),
+        change: { "1m": 0, "5m": 0, "1h": 0, "5h": 0, "24h": change24h },
+      },
+      marketCap: Number(it.scanMetadata?.market_cap ?? 0),
+      liquidity: Number(it.scanMetadata?.lp_amount_usd ?? 0),
+      volume: { amount: Number(it.scanMetadata?.volume_24h ?? 0) },
+      holders: holderCount != null ? Number(holderCount) : 0,
+    } as MockLikeCoin;
+  });
+}
+
 export default function UserListings() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [tableData, setTableData] = useState<MockLikeCoin[]>([]);
+  const { data: minePayload, isPending, isError } = useUserListingsQuery();
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
 
   useEffect(() => {
-    fetchUserListings();
-  }, []);
+    if (isError) toast.error("Failed to load listings");
+  }, [isError]);
 
-  const fetchUserListings = async () => {
-    try {
-      setLoading(true);
-      const mineData = await userListingsService.mine() as { success?: boolean; items?: AllUserListings[] };
-      const items = mineData?.items ?? [];
-
-      const mapped: MockLikeCoin[] = items.map((it: AllUserListings) => {
-        // let ageStr: string | null = null;
-
-        // const ageDisplay = it.scanMetadata?.age_display;
-        // if (typeof ageDisplay === "string" && ageDisplay.trim() !== "") {
-        //   ageStr = convertAgeToRelative(ageDisplay) || ageDisplay;
-        // } else {
-        //   const created = it.scanMetadata?.creation_date ? new Date(it.scanMetadata.creation_date) : null;
-        //   ageStr = created ? formatRelativeAge(created) : null;
-        // }
-
-        const holderCount = it.scanMetadata?.holder_count ?? null;
-        let tier: string | null = it.vettingTier ?? null;
-        if (tier) {
-          tier = String(tier).trim().toLowerCase();
-          if (
-            tier === "none" || tier === "null" || tier === "undefined" || tier === "" ||
-            tier === "—" || tier === "----" || tier === "------" || tier.startsWith("---") ||
-            tier === "n/a" || tier === "na" || /^[-—]+$/.test(tier)
-          ) {
-            tier = null;
-          }
-        }
-
-        const change24h = 0;
-        return {
-          name: it.scanMetadata?.token_name || it.scanMetadata?.token_symbol || "",
-          whale: false,
-          age: it.scanMetadata.age_display,
-          status: it.status,
-          address: it.contractAddr,
-          x: undefined,
-          website: undefined,
-          image: it.logoUrl ?? undefined,
-          chain: it.chain ?? "solana",
-          category: "meme",
-          communityScore: 50,
-          links: {
-            website: it?.links?.website ?? '#',
-            twitter: it?.links?.twitter ?? '#',
-            telegram: it?.links?.telegram ?? '#',
-            discord: it?.links?.discord ?? "#",
-          },
-          degenAudit: typeof it.scanRiskScore === "number" ? it.scanRiskScore : (it?.scanRiskScore ?? 0),
-          tier,
-          mindshare: undefined,
-          price: {
-            amount: Number(it.scanMetadata?.token_price ?? 0),
-            change: { "1m": 0, "5m": 0, "1h": 0, "5h": 0, "24h": change24h },
-          },
-          marketCap: Number(it.scanMetadata?.market_cap ?? 0),
-          liquidity: Number(it.scanMetadata?.lp_amount_usd ?? 0),
-          volume: { amount: Number(it.scanMetadata?.volume_24h ?? 0) },
-          holders: holderCount != null ? Number(holderCount) : 0,
-        } as MockLikeCoin;
-      });
-
-      setTableData(mapped);
-    } catch (error) {
-      toast.error("Failed to load listings");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const tableData = useMemo(() => {
+    const mineData = minePayload as { success?: boolean; items?: AllUserListings[] } | undefined;
+    const items = mineData?.items ?? [];
+    return mapMineItemsToTableRows(items);
+  }, [minePayload]);
 
   const handleSort = (field: SortField) => {
     let newDirection: SortDirection = "asc";
@@ -190,7 +180,7 @@ export default function UserListings() {
                 onSort={handleSort}
               />
               <tbody>
-                {loading ? (
+                {isPending ? (
                   <UserListingsTableSkeleton />
                 ) : sortedData.length > 0 ? (
                   sortedData.map((coin, index) => (
