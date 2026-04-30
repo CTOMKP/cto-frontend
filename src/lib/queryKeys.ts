@@ -29,6 +29,8 @@ export const listingKeys = {
   mine: () => [...listingKeys.all, "mine"] as const,
   /** Public or mine user-listing detail (`/user-listings/[id]`, live page). */
   detail: (id: string) => [...listingKeys.all, "detail", id] as const,
+  /** Public token/coin by route key or `?address=` (projects/[id]). */
+  coin: (key: string) => [...listingKeys.all, "coin", key] as const,
 };
 
 /** Marketplace ads list + detail (not token MEME listings). */

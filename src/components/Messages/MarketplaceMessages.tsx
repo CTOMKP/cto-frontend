@@ -513,60 +513,22 @@ export default function MarketplaceMessages({
     }
   };
 
-  const uploadAttachmentViaPresign = async (file: File) => {
-    const token = getAuthToken();
-    const uid = currentUserId ?? 0;
-    const response = await fetch(`${backendUrl}/api/v1/images/presign`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({
-        type: "generic",
-        userId: String(uid || ""),
-        filename: file.name,
-        mimeType: file.type || "application/octet-stream",
-        size: file.size,
-      }),
-    });
-    if (!response.ok) {
-      throw new Error("Failed to request upload URL");
-    }
-    const payload: unknown = await response.json();
-    const payloadObj = toRecord(payload);
-    const dataLayer = payloadObj?.data ? toRecord(payloadObj.data) : null;
-    const data = (dataLayer?.data ? toRecord(dataLayer.data) : null) ??
-      dataLayer ??
-      payloadObj;
-    const uploadUrl = data?.uploadUrl;
-    const key = data?.key;
-    if (typeof uploadUrl !== "string" || typeof key !== "string") {
-      throw new Error("Invalid upload response");
-    }
-    const putRes = await fetch(uploadUrl, {
-      method: "PUT",
-      headers: {
-        "Content-Type": file.type || "application/octet-stream",
-      },
-      body: file,
-    });
-    if (!putRes.ok) {
-      throw new Error(`Upload failed with status ${putRes.status}`);
-    }
-    return `${backendUrl}/api/v1/images/view/${key}`;
-  };
-
   const handleAttachmentUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const files = Array.from(event.target.files || []);
     event.target.value = "";
-    if (!activeThreadId || files.length === 0) return;
+    if (!activeThreadId || files.length === 0 || currentUserId == null) return;
     try {
       setUploadingAttachment(true);
-      for (const file of files) {
-        const viewUrl = await uploadAttachmentViaPresign(file);
+      const viewUrls = await Promise.all(
+        files.map((file) =>
+          messagesService.uploadAttachmentViaPresign(file, currentUserId),
+        ),
+      );
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const viewUrl = viewUrls[i];
         const body = `Attachment: ${file.name}\n${viewUrl}`;
         const resUnknown = await messagesService.sendMessage(
           activeThreadId,

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { ApiCoinItem } from "@/types/api";
+import type { ApiCoinItem } from "@/types/api";
 import { Info } from "./features/ProjectProfileInfoTabs";
 import LoadingSkeleton from "./features/LoadingSkeleton";
 import ProjectHeader from "./features/ProjectHeader";
@@ -12,16 +12,24 @@ import CommunityVote from "./features/CommunityVote";
 import SwapWidget from "./features/SwapWidget";
 import ActivitiesSection from "./features/ActivitiesSection";
 import { formatAgeYMD } from "@/app/listings/features/utils/listingUtils";
+import { usePublicListingCoinQuery } from "@/hooks/usePublicListingCoinQuery";
 
 export default function ProjectProfilePage() {
   const [info, setInfo] = useState<Info>("about");
   const { id } = useParams();
   const searchParams = useSearchParams();
   const addressFromQuery = searchParams.get("address");
-  const [projectData, setProjectData] = useState<ApiCoinItem | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
-  // Helper function to format relative age
+  const fetchKey = useMemo(() => {
+    const idParam = Array.isArray(id) ? id[0] : id;
+    const raw = addressFromQuery || idParam || "";
+    return typeof raw === "string" ? raw.trim() : "";
+  }, [id, addressFromQuery]);
+
+  const listingQuery = usePublicListingCoinQuery(fetchKey || undefined);
+  const projectData: ApiCoinItem | null =
+    (listingQuery.data as ApiCoinItem | undefined) ?? null;
+
   function formatRelativeAge(date: Date): string {
     const diffMs = Date.now() - date.getTime();
     const mins = Math.floor(diffMs / 60000);
@@ -34,66 +42,47 @@ export default function ProjectProfilePage() {
     return `${months}mo`;
   }
 
-  // Helper function to format joined date
   function formatJoinedDate(dateString: string): string {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' });
+    return date.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "2-digit" });
   }
 
-  // Helper function to format age from string (e.g., "633 days") to "1y 2mo 3d"
   function formatAge(ageString: string | null): string {
     if (!ageString) return "0d";
     const formatted = formatAgeYMD(ageString);
     return formatted || "0d";
   }
 
-  // Fetch project data from API
-  useEffect(() => {
-    const fetchProjectData = async () => {
-      const idParam = Array.isArray(id) ? id[0] : id;
-      const fetchId = addressFromQuery || idParam;
-      if (!fetchId) return;
-      
-      setIsLoading(true);
-      const base = process.env.NEXT_PUBLIC_BACKEND_URL;
-      if (!base) {
-        setIsLoading(false);
-        return;
-      }
+  if (!fetchKey) {
+    return (
+      <main className="min-h-[40vh] flex items-center justify-center text-white/70">
+        <p>Missing project address or id.</p>
+      </main>
+    );
+  }
 
-      const url = `${base}/api/v1/listing/${fetchId}`;
-      
-      try {
-        const res = await fetch(url);
-        if (!res.ok) {
-          setIsLoading(false);
-          return;
-        }
-        
-        const response = await res.json();
-        // Handle wrapped response from TransformInterceptor
-        const data: ApiCoinItem = response?.data || response;
-        
-        setProjectData(data);
-        setIsLoading(false);
-      } catch (error) {
-        setIsLoading(false);
-      }
-    };
-
-    fetchProjectData();
-  }, [id, addressFromQuery]);
-
-  if (isLoading) {
+  if (listingQuery.isPending) {
     return <LoadingSkeleton />;
+  }
+
+  if (listingQuery.isError) {
+    return (
+      <main className="min-h-[40vh] flex flex-col items-center justify-center gap-3 text-white px-4">
+        <p className="text-white/70 text-center">Could not load this project.</p>
+        <button
+          type="button"
+          className="rounded-md border border-white/30 px-3 py-1.5 text-sm hover:bg-white/10"
+          onClick={() => listingQuery.refetch()}
+        >
+          Retry
+        </button>
+      </main>
+    );
   }
 
   return (
     <main>
-      <ProjectHeader 
-        projectData={projectData} 
-        formatJoinedDate={formatJoinedDate}
-      />
+      <ProjectHeader projectData={projectData} formatJoinedDate={formatJoinedDate} />
 
       <ProjectInfoSection
         info={info}

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getAuthToken } from '@/lib/authSession';
+import { uploadGenericViaPresign } from '@/lib/presignedUpload';
 
 const backendUrl =
   process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.ctomarketplace.com";
@@ -58,6 +59,19 @@ export const messagesService = {
       { headers: authHeaders() }
     );
     return res.data?.data || res.data;
+  },
+
+  /** Presign through apiClient + S3 PUT; returns stable view URL for the message body. */
+  uploadAttachmentViaPresign(
+    file: File,
+    userId: string | number,
+    signal?: AbortSignal,
+  ) {
+    return uploadGenericViaPresign(
+      file,
+      { userId: String(userId ?? "") },
+      signal,
+    );
   },
 };
 

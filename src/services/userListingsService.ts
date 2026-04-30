@@ -1,5 +1,10 @@
 import axios from 'axios';
 import { getAuthToken } from '@/lib/authSession';
+import { apiPost, getBackendBaseUrl } from '@/lib/apiClient';
+import {
+  normalizePresignPayload,
+  putFileToPresignedUrl,
+} from '@/lib/presignedUpload';
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
 
@@ -296,18 +301,16 @@ export const userListingsService = {
   },
 
   /**
-   * Get presigned upload URL for profile/banner images, upload file, return stable view URL.
-   * Same flow as cto-test-frontend: presign → PUT to S3 → use backend view URL.
+   * Presign via fetch (apiPost) + fetch PUT to object storage (shared bucket helper).
    */
   async uploadImageViaPresign(
     kind: 'generic' | 'profile' | 'banner',
     file: File,
-    opts?: { projectId?: string; userId?: string }
+    opts?: { projectId?: string; userId?: string; signal?: AbortSignal },
   ): Promise<{ viewUrl: string; key: string }> {
     if (!file.type.startsWith('image/')) throw new Error('Only image files are allowed');
     if (file.size > 10 * 1024 * 1024) throw new Error('Image must be 10MB or less');
 
-    // Build body with only defined fields to avoid 400 (backend may reject undefined/null)
     const body: Record<string, string | number> = {
       type: kind,
       filename: file.name,
@@ -317,24 +320,16 @@ export const userListingsService = {
     if (opts?.userId != null) body.userId = opts.userId;
     if (opts?.projectId != null) body.projectId = opts.projectId;
 
-    const presignRes = await axios.post(
-      `${backendUrl}/api/v1/images/presign`,
+    const payload = await apiPost<unknown>(
+      '/api/v1/images/presign',
       body,
-      { headers: { ...authHeaders(), 'Content-Type': 'application/json' } }
+      { signal: opts?.signal },
     );
 
-    const presignData = presignRes.data?.data ?? presignRes.data;
-    const { uploadUrl, key } = presignData || {};
-    if (!uploadUrl || !key) throw new Error('Failed to get presigned upload URL');
+    const { uploadUrl, key } = normalizePresignPayload(payload);
+    await putFileToPresignedUrl(uploadUrl, file, opts?.signal, file.type);
 
-    const putRes = await fetch(uploadUrl, {
-      method: 'PUT',
-      headers: { 'Content-Type': file.type },
-      body: file,
-    });
-    if (!putRes.ok) throw new Error(`Upload failed with status ${putRes.status}`);
-
-    const viewUrl = `${backendUrl}/api/v1/images/view/${key}`;
+    const viewUrl = `${getBackendBaseUrl()}/api/v1/images/view/${key}`;
     return { viewUrl, key };
   },
 };

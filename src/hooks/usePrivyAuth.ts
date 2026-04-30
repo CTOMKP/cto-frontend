@@ -2,7 +2,7 @@
 
 import { usePrivy } from '@privy-io/react-auth';
 import { useCreateWallet } from '@privy-io/react-auth/extended-chains';
-import { useCallback, useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { privyService } from '@/services/privyService';
@@ -56,17 +56,13 @@ export function usePrivyAuth() {
 
   // Check auth status - prioritize localStorage like test frontend
   const checkAuthStatus = useCallback(async () => {
-    console.log('🔄 checkAuthStatus called');
-    
     try {
       setIsLoading(true);
       
       // SECOND: If no localStorage token, check Privy state
       if (authenticated && user && ready) {
-        console.log('🔄 No localStorage token, checking Privy state...');
         await syncWithBackend();
       } else {
-        console.log('🔄 No authentication data found');
         setIsAuthenticated(false);
         setIsLoading(false);
       }
@@ -101,7 +97,6 @@ export function usePrivyAuth() {
     
     // CRITICAL: Check module-level Set FIRST to prevent parallel runs
     if (processingUserIds.has(userId)) {
-      console.log('⏭️ User ID already being processed (module-level check), skipping');
       return;
     }
     
@@ -109,7 +104,6 @@ export function usePrivyAuth() {
     const existingToken = getAuthToken();
     const existingUserId = getUserId();
     if (existingToken && existingUserId === userId) {
-      console.log('✅ User already synced, authenticated state already set');
       setIsLoading(false);
       return;
     }
@@ -129,17 +123,14 @@ export function usePrivyAuth() {
     
     for (let i = 0; i < maxRetries; i++) {
       if (user?.linkedAccounts && user.linkedAccounts.length > 0) {
-        console.log(`✅ Privy accounts loaded after ${i + 1} attempt(s)`);
         return true;
       }
       
       if (i < maxRetries - 1) {
-        console.log(`⏳ Waiting for Privy accounts to load... (attempt ${i + 1}/${maxRetries})`);
         await new Promise(resolve => setTimeout(resolve, delayMs));
       }
     }
     
-    console.warn('⚠️ Privy accounts not fully loaded, proceeding anyway...');
     return false;
   };
 
@@ -152,7 +143,6 @@ export function usePrivyAuth() {
         await waitForPrivyAccounts();
         
       // Step 2: Initial Sync with backend FIRST (like test frontend)
-      console.log('🔄 Step 1: Initial sync with backend...');
       const syncResult = await syncWithBackend();
       
       if (!syncResult) {
@@ -169,16 +159,8 @@ export function usePrivyAuth() {
         const privyHasMovementWallet = !!movementWallet;
       const hasMoveWallet = backendHasMovementWallet || privyHasMovementWallet;
 
-      console.log('📊 Movement Wallet Check:', { 
-        backendHasMovementWallet, 
-        privyHasMovementWallet, 
-        hasMoveWallet 
-      });
-
       // Step 4: Create wallet if needed
       if (!hasMoveWallet) {
-        console.log('🔄 Step 2: Creating Movement wallet...');
-          
           try {
           setIsLoading(true);
           
@@ -189,14 +171,12 @@ export function usePrivyAuth() {
             setTimeout(() => reject(new Error('Wallet creation timed out')), 15000)
             );
             
-          await Promise.race([walletCreationPromise, timeoutPromise]);
-          console.log('✅ Movement wallet created');
+            await Promise.race([walletCreationPromise, timeoutPromise]);
             
           // CRITICAL: Give Privy indexing time (matching test frontend strategy)
           await new Promise(resolve => setTimeout(resolve, 1500));
             
           // Step 5: Final Sync to save the new wallet (like test frontend)
-          console.log('🔄 Step 3: Final sync with backend...');
           await syncWithBackend();
           } catch (walletError: unknown) {
             const errorMessage = walletError instanceof Error ? walletError.message : 'Unknown error';
@@ -211,11 +191,9 @@ export function usePrivyAuth() {
           }
           }
         } else {
-        console.log('✅ Movement wallet already exists, skipping creation');
           }
 
       // Step 6: Set authenticated (no redirect - let user stay on current page)
-      console.log('✅ Authentication flow complete');
         setIsAuthenticated(true);
       setIsLoading(false);
         
@@ -229,7 +207,6 @@ export function usePrivyAuth() {
       // Even if sync fails, check if we have a token now
         const token = getAuthToken();
         if (token) {
-        console.log('⚠️ Sync failed but token exists, setting authenticated');
           setIsAuthenticated(true);
         } else {
           setIsAuthenticated(false);
@@ -247,17 +224,13 @@ export function usePrivyAuth() {
         throw new Error('No Privy access token available');
       }
   
-      console.log('🔗 Calling backend sync...');
       const backendSyncResult = await privyService.syncUser(privyToken, getAccessToken);
-      console.log('✅ Backend sync successful');
 
       const profile = await queryClient.fetchQuery({
         queryKey: profileKeys.detail(),
         queryFn: ({ signal }) => authService.fetchProfile(signal),
       });
 
-      console.log('profiles', profile);
-  
       if (profile) {
         setUserData({
           id: String(profile.id),
@@ -276,7 +249,6 @@ export function usePrivyAuth() {
 
   const handleLogin = useCallback(async () => {
     try {
-      console.log('🔄 Starting OAuth login...');
       await login();
       // After login, Privy will update authenticated state, which triggers sync via useEffect
     } catch (error) {
@@ -306,8 +278,6 @@ export function usePrivyAuth() {
       
       // Force page reload to clear all UI state (like test frontend)
       window.location.href = '/listings';
-      
-      console.log('✅ Logout successful');
     } catch (error) {
       console.error('Logout failed:', error);
       queryClient.clear();

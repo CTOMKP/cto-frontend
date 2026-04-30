@@ -61,3 +61,18 @@ export async function fetchListingHighlights(signal?: AbortSignal): Promise<ApiC
     { signal, auth: false },
   ).then(extractListingItems);
 }
+
+/** Single public listing / coin for project profile (`GET /api/v1/listing/:id`). */
+export async function fetchPublicListingCoin(
+  identifier: string,
+  signal?: AbortSignal,
+): Promise<ApiCoinItem> {
+  const raw = await apiGet<unknown>(
+    `/api/v1/listing/${encodeURIComponent(identifier)}`,
+    { signal, auth: false },
+  );
+  if (raw && typeof raw === "object" && "data" in raw && (raw as { data?: unknown }).data) {
+    return (raw as { data: ApiCoinItem }).data;
+  }
+  return raw as ApiCoinItem;
+}
