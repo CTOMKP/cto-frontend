@@ -7,12 +7,12 @@ import {
   useUpdateMarketplaceDraftMutation,
 } from '@/hooks/mutations/useMarketplaceDraftMutations';
 import { toast } from 'react-toastify';
-import axios from 'axios';
 import CategorySelectionStep from './features/CategorySelectionStep';
 import ProjectDetailsStep, { ProjectDetailsData } from './features/ProjectDetailsStep';
 import PreviewStep from './features/PreviewStep';
 import { getUserId } from '@/lib/authSession';
 import { pfpService } from '@/services/pfpService';
+import { isApiError } from '@/lib/apiError';
 
 type Step = 'category' | 'details' | 'preview';
 
@@ -158,12 +158,8 @@ export default function PostAdPage() {
       if (id) setDraftAdId(id);
       return id;
     } catch (err: unknown) {
-      if (axios.isAxiosError(err) && err.response?.status === 400) {
-        const detail = err.response?.data as { message?: string | string[]; error?: string } | undefined;
-        const msg = detail?.message != null
-          ? (Array.isArray(detail.message) ? detail.message.join(', ') : detail.message)
-          : detail?.error ?? (err instanceof Error ? err.message : 'Failed to save draft');
-        toast.error(String(msg));
+      if (isApiError(err) && err.status === 400) {
+        toast.error(err.message || 'Failed to save draft');
       } else {
         toast.error(err instanceof Error ? err.message : 'Failed to save draft');
       }

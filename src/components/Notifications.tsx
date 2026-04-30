@@ -40,6 +40,7 @@ export default function Notifications() {
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<Filter>("all");
   const token = useSessionStore((s) => s.token);
+  const activeConvoId = useSessionStore((s) => s.activeConversationId);
 
   const filters: Filter[] = ["all", "unread"];
 
@@ -201,7 +202,6 @@ export default function Notifications() {
         type?: string;
         data?: { conversationId?: string };
       };
-      const activeConvoId = localStorage.getItem("cto_active_conversation_id");
       const isMessagesPage = window.location.pathname.startsWith("/messages");
       const isSameConvo =
         p?.type === "MESSAGE" &&
@@ -224,7 +224,7 @@ export default function Notifications() {
     return () => {
       socket.disconnect();
     };
-  }, [token, queryClient]);
+  }, [token, activeConvoId, queryClient]);
 
   useEffect(() => {
     const handler = () => {

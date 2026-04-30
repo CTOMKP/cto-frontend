@@ -6,15 +6,10 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { BackendWallet, PrivyWalletAccount, PrivyUser } from '@/types/privy';
 
-// Helper interface for wallet with Movement/Aptos support
-interface WalletWithMovement extends BackendWallet {
-  blockchain?: string;
-  walletClient?: string;
-}
-
 import { getStoredAvatarUrl, getUserId } from '@/lib/authSession';
 import { useProfileQuery } from '@/hooks/useProfileQuery';
-import walletsService, { findMovementWalletInBackend } from '@/services/walletsService';
+import walletsService from '@/services/walletsService';
+import { useResolvedMovementWallet } from '@/hooks/useResolvedMovementWallet';
 import UserProfileHeader from './features/UserProfileHeader';
 import LevelXPProgress from './features/LevelXPProgress';
 import ReferralSection from './features/ReferralSection';
@@ -31,7 +26,8 @@ export default function ProfilePage() {
   // Keep allWallets for potential future use (displaying all wallets)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [allWallets, setAllWallets] = useState<BackendWallet[]>([]);
-  const [movementWalletAddress, setMovementWalletAddress] = useState<string | null>(null);
+  const movementWalletQuery = useResolvedMovementWallet({ preferStorage: true });
+  const movementWalletAddress = movementWalletQuery.data?.movementWallet?.address ?? null;
   const [copiedAddress, setCopiedAddress] = useState(false);
   const [walletsDialogOpen, setWalletsDialogOpen] = useState(false);
 
@@ -43,27 +39,6 @@ export default function ProfilePage() {
 
   const walletsLoadedRef = React.useRef<string | null>(null);
 
-  // Check Movement wallet from Privy's linkedAccounts (like test frontend)
-  // Define this FIRST so it can be used in loadWallets
-  const checkMovementWallet = React.useCallback(() => {
-    if (!user?.linkedAccounts) return;
-
-    const movementWalletAccount = user.linkedAccounts.find((account) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const acc = account as any;
-      return acc.type === 'wallet' && acc.chainType === 'aptos';
-    });
-
-    // Access address property (Privy wallet accounts have address)
-    if (movementWalletAccount) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const acc = movementWalletAccount as any;
-      if (acc.address) {
-        setMovementWalletAddress(acc.address);
-      }
-    }
-  }, [user?.linkedAccounts]);
-
   const loadWallets = React.useCallback(async () => {
     try {
       const wallets = await walletsService.listPrivyWallets({
@@ -71,14 +46,6 @@ export default function ProfilePage() {
         preferStorage: true,
       });
       if (!wallets.length) return;
-
-      // Find Movement wallet from wallets (Movement wallet is already included in the data)
-      const movementWallet =
-        findMovementWalletInBackend(wallets) ||
-        wallets.find((w: WalletWithMovement) => w.walletClient === 'APTOS_EMBEDDED');
-      if (movementWallet?.address) {
-        setMovementWalletAddress(movementWallet.address);
-      }
 
       setAllWallets(wallets);
     } catch (error) {
@@ -90,12 +57,11 @@ export default function ProfilePage() {
     if (authenticated && user && ready) {
       const userId = user.id;
       if (walletsLoadedRef.current !== userId) {
-        checkMovementWallet();
         loadWallets();
         walletsLoadedRef.current = userId;
       }
     }
-  }, [authenticated, user, ready, checkMovementWallet, loadWallets]);
+  }, [authenticated, user, ready, loadWallets]);
 
   // const handleLogout = async () => {
   //   try {

@@ -23,6 +23,7 @@ import type {
   MessageReaction,
   MessageThread,
 } from "@/types/messages";
+import { useSessionStore } from "@/lib/sessionStore";
 
 function toRecord(v: unknown): Record<string, unknown> | null {
   return v && typeof v === "object" ? (v as Record<string, unknown>) : null;
@@ -119,6 +120,7 @@ export default function MarketplaceMessages({
   initialProfileUserId?: string | null;
 }) {
   const router = useRouter();
+  const setActiveConversationId = useSessionStore((s) => s.setActiveConversationId);
   const [threads, setThreads] = useState<MessageThread[]>([]);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(
     initialThreadId ?? null,
@@ -317,6 +319,13 @@ export default function MarketplaceMessages({
       cancelled = true;
     };
   }, [activeThreadId, loadActiveThread]);
+
+  useEffect(() => {
+    setActiveConversationId(activeThreadId);
+    return () => {
+      setActiveConversationId(null);
+    };
+  }, [activeThreadId, setActiveConversationId]);
 
   useEffect(() => {
     const t = setInterval(() => {

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Check, Ellipsis, Search, X, Zap } from 'lucide-react'
 import { usePrivyAuth } from '@/hooks/usePrivyAuth'
 import { toast } from 'react-toastify'
-import axios from 'axios'
+import { isApiError } from '@/lib/apiError';
 import {
     Select,
     SelectContent,
@@ -336,7 +336,7 @@ export default function Step1({
 
     } catch (error) {
       // On 401, clear session and redirect (match cto-test-frontend)
-      const is401 = axios.isAxiosError(error) && error.response?.status === 401;
+      const is401 = isApiError(error) && error.status === 401;
       const isUnauthorized = error instanceof Error && error.message === 'Unauthorized';
       if (is401 || isUnauthorized) {
         if (typeof window !== 'undefined') {

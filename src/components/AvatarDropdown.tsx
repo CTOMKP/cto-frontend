@@ -18,17 +18,16 @@ import FallbackImage from './FallbackImage';
 import {
   getStoredAvatarUrl,
   getUserEmail,
-  getUserId,
   PROFILE_AVATAR_URL_KEY,
   USER_AVATAR_URL_KEY,
   USER_USERNAME_KEY,
 } from '@/lib/authSession';
 import { getCloudFrontUrl } from '@/lib/image-url-helper';
-import walletsService from '@/services/walletsService';
 import { useWalletBalance } from '@/app/profile/features/wallet-balance/useWalletBalance';
 import WalletBalanceContent from '@/app/profile/features/wallet-balance/WalletBalanceContent';
 import { Button } from './ui/button';
 import { useRewardProgress, resetUserRewardProgress } from '@/lib/userRewardProgress';
+import { useResolvedMovementWallet } from '@/hooks/useResolvedMovementWallet';
 
 export default function AvatarDropdown() {
   // Initialize exactly like profile page - read raw URL from localStorage
@@ -133,54 +132,14 @@ export default function AvatarDropdown() {
     };
   }, [avatarUrl]);
 
-  // Get Movement/Aptos wallet address (primary wallet) - matching profile page logic
-  const [movementWalletAddress, setMovementWalletAddress] = React.useState<string | null>(null);
+  const movementWalletQuery = useResolvedMovementWallet({ preferStorage: true });
+  const movementWalletAddress = movementWalletQuery.data?.movementWallet?.address ?? null;
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [isDeposit, setIsDeposit] = useState(false);
   const { walletAssets, selectedAsset, setSelectedAsset, isLoading } = useWalletBalance();
 
   // Calculate wallet balance from selected asset
   const walletBalance = selectedAsset?.value || 0;
-
-  // Check Movement wallet from Privy's linkedAccounts (like profile page)
-  const checkMovementWallet = React.useCallback(() => {
-    if (!user?.linkedAccounts) return;
-
-    const movementWalletAccount = user.linkedAccounts.find((account) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const acc = account as any;
-      return acc.type === 'wallet' && acc.chainType === 'aptos';
-    });
-
-    if (movementWalletAccount) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const acc = movementWalletAccount as any;
-      if (acc.address) {
-        setMovementWalletAddress(acc.address);
-      }
-    }
-  }, [user?.linkedAccounts]);
-
-  // Load wallets and find Movement wallet - matching profile page logic
-  React.useEffect(() => {
-    if (!user) return;
-
-    const loadMovementWallet = async () => {
-      const { movementWallet } = await walletsService.resolveMovementWalletContext({
-        privyUser: user,
-        userId: getUserId() || user.id,
-        preferStorage: true,
-      });
-      if (movementWallet?.address) {
-        setMovementWalletAddress(movementWallet.address);
-        return;
-      }
-      // Fallback: check Privy linkedAccounts
-      checkMovementWallet();
-    };
-
-    void loadMovementWallet();
-  }, [user, checkMovementWallet]);
 
   // Primary wallet address is Movement wallet address (matching profile page)
   const primaryWalletAddress = movementWalletAddress || '';

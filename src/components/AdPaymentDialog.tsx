@@ -17,10 +17,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { movementWalletService } from '@/services/movementWalletService';
 import { sendMovementTransaction } from '@/lib/movement-wallet';
 import { toast } from 'react-toastify';
-import axios from 'axios';
 import marketplaceService from '@/services/marketplaceService';
 import { invalidateMarketplaceQueries } from '@/lib/queryInvalidation';
 import { useResolvedMovementWallet } from '@/hooks/useResolvedMovementWallet';
+import { isApiError } from '@/lib/apiError';
 
 interface AdPaymentDialogProps {
   open: boolean;
@@ -195,7 +195,7 @@ export default function AdPaymentDialog({
     } catch (error: unknown) {
       const msg =
         error instanceof Error ? error.message :
-        axios.isAxiosError(error) ? (error.response?.data as { message?: string })?.message || error.message :
+        isApiError(error) ? error.message :
         'Payment failed';
       const friendlyMsg = /already initiated|pending payment|complete the pending|pending transaction/i.test(String(msg))
         ? 'This ad already has a pending payment. Complete the transaction in your wallet, or try again later.'

@@ -18,8 +18,8 @@ import { movementWalletService } from '@/services/movementWalletService';
 import { sendMovementTransaction } from '@/lib/movement-wallet';
 import { getAuthToken } from '@/lib/authSession';
 import { toast } from 'react-toastify';
-import axios from 'axios';
 import { useResolvedMovementWallet } from '@/hooks/useResolvedMovementWallet';
+import { isApiError } from '@/lib/apiError';
 
 interface PaymentDialogProps {
   open: boolean;
@@ -204,8 +204,8 @@ export default function PaymentDialog({
         let errorMsg = 'Failed to create payment';
         if (createError instanceof Error) {
           errorMsg = createError.message || errorMsg;
-        } else if (axios.isAxiosError(createError)) {
-          errorMsg = (createError.response?.data as { message?: string })?.message || createError.message || errorMsg;
+        } else if (isApiError(createError)) {
+          errorMsg = createError.message || errorMsg;
         }
         toast.error(errorMsg);
         setIsProcessing(false);
@@ -276,8 +276,8 @@ export default function PaymentDialog({
           let errorMsg = 'Payment verification failed. Please try again.';
           if (verifyError instanceof Error) {
             errorMsg = verifyError.message || errorMsg;
-          } else if (axios.isAxiosError(verifyError)) {
-            errorMsg = (verifyError.response?.data as { message?: string })?.message || verifyError.message || errorMsg;
+          } else if (isApiError(verifyError)) {
+            errorMsg = verifyError.message || errorMsg;
           }
           toast.error(errorMsg);
           setIsProcessing(false);
@@ -296,8 +296,8 @@ export default function PaymentDialog({
       let errorMsg = 'Payment failed';
       if (error instanceof Error) {
         errorMsg = error.message || errorMsg;
-      } else if (axios.isAxiosError(error)) {
-        errorMsg = (error.response?.data as { message?: string })?.message || error.message || errorMsg;
+      } else if (isApiError(error)) {
+        errorMsg = error.message || errorMsg;
       }
       toast.error(errorMsg);
       setIsProcessing(false);

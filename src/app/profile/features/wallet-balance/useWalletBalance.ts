@@ -1,21 +1,21 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { usePrivy } from "@privy-io/react-auth";
-import axios from "axios";
-import { PrivyUser } from "@/types/privy";
-import { getUserId, WALLET_ID_KEY } from "@/lib/authSession";
-import { getMovementWallet } from "@/lib/movement-wallet";
+import { WALLET_ID_KEY } from "@/lib/authSession";
 import { movementWalletService } from "@/services/movementWalletService";
-import walletsService from "@/services/walletsService";
 import { getTokenLogo } from "./utils";
 import { WalletAsset } from "./types";
+import { useResolvedMovementWallet } from "@/hooks/useResolvedMovementWallet";
+import { isApiError } from "@/lib/apiError";
 
 export function useWalletBalance() {
   const { user, authenticated, ready } = usePrivy();
+  const movementWalletQuery = useResolvedMovementWallet({ preferStorage: true });
+  const resolvedMovementWallet = movementWalletQuery.data?.movementWallet ?? null;
+  const resolvedWalletId = movementWalletQuery.data?.walletId ?? null;
   const [walletAssets, setWalletAssets] = useState<WalletAsset[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<WalletAsset | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeWalletId, setActiveWalletId] = useState<string | null>(null);
-  const [isAutoRecovering, setIsAutoRecovering] = useState(false);
   const walletsLoadedRef = useRef<string | null>(null);
   const retryCountRef = useRef(0);
   const maxRetries = 3;
@@ -33,11 +33,11 @@ export function useWalletBalance() {
       if (retries === 0) throw error;
       
       // Check if it's a network error
-      const isNetworkError = 
-        axios.isAxiosError(error) && 
-        (!error.response || error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK');
+      const isRetryableApiError =
+        isApiError(error) &&
+        (error.status === 408 || error.status === 429 || error.status >= 500);
       
-      if (isNetworkError) {
+      if (isRetryableApiError) {
         retryCountRef.current++;
         await new Promise(resolve => setTimeout(resolve, delay));
         return retryWithBackoff(fn, retries - 1, delay * 2);
@@ -50,88 +50,17 @@ export function useWalletBalance() {
     try {
       setIsLoading(true);
       retryCountRef.current = 0;
-
-      const findAndSetWallet = async () => {
-        const userId = getUserId() || user?.id;
-
-        // GUARD: Don't run if already recovering or if we already have an active wallet
-        if (!userId || isAutoRecovering) {
-          return null; // Return null to indicate no wallet ID was found
-        }
-
-        try {
-          const { walletId } = await retryWithBackoff(() =>
-            walletsService.resolveMovementWalletContext({
-              privyUser: user,
-              userId,
-              preferStorage: true,
-            }),
-          );
-          if (walletId) {
-            localStorage.setItem(WALLET_ID_KEY, walletId);
-            return walletId;
-          } else {
-            // setIsAutoRecovering(true);
-
-            // try {
-            //   const syncResponse = await axios.post(
-            //     `${API_BASE}/api/v1/auth/privy/sync-wallets`,
-            //     {},
-            //     {
-            //       headers: {
-            //         Authorization: `Bearer ${token}`,
-            //         "Content-Type": "application/json",
-            //       },
-            //     }
-            //   );
-
-            //   // Re-fetch once after sync
-            //   const retryResponse = await axios.get(
-            //     `${API_BASE}/api/v1/auth/privy/wallets`,
-            //     {
-            //       headers: { Authorization: `Bearer ${token}` },
-            //     }
-            //   );
-
-            //   const retryData =
-            //     retryResponse.data?.data?.wallets ||
-            //     retryResponse.data?.wallets ||
-            //     [];
-
-            //   const recoveredWallet = retryData.find(
-            //     (w: any) =>
-            //       w.blockchain === "MOVEMENT" || w.blockchain === "APTOS"
-            //   );
-
-            //   if (recoveredWallet) {
-            //     localStorage.setItem("cto_wallet_id", recoveredWallet.id);
-            //     return recoveredWallet.id; // Return the wallet ID for immediate use
-            //   }
-            //   // Reset recovery state so it can try again later if needed,
-            //   // but dependencies should prevent loop.
-            //   setIsAutoRecovering(false);
-            //   return null; // Return null if no wallet was found
-            // } catch (err) {
-            //   setIsAutoRecovering(false);
-            //   return null; // Return null on error
-            // }
-          }
-        } catch (err) {
-          setIsAutoRecovering(false);
-          return null; // Return null on error
-        }
-      };
-
-    const walletId = await findAndSetWallet();
+    const walletId = resolvedWalletId;
+    if (walletId) {
+      localStorage.setItem(WALLET_ID_KEY, walletId);
+    }
     setActiveWalletId(walletId ?? null);
 
     // Start with empty array - we'll add MOVE and USDC separately
     const assetsWithBalances: WalletAsset[] = [];
 
     // Get Movement wallet for fetching balances (like test frontend)
-    const movementWalletForBalances = user
-      ? getMovementWallet(user as PrivyUser)
-      : null;
+    const movementWalletForBalances = resolvedMovementWallet;
 
     if (!movementWalletForBalances) {
       setIsLoading(false);
@@ -216,10 +145,10 @@ export function useWalletBalance() {
       setSelectedAsset(sortedAssets[0]);
     }
     setIsLoading(false);
-  } catch (error) {
+  } catch {
     setIsLoading(false);
   }
-}, [user, isAutoRecovering]);
+}, [resolvedMovementWallet, resolvedWalletId]);
 
   // Listen for online/offline events and retry when network comes back
   useEffect(() => {
@@ -261,9 +190,7 @@ export function useWalletBalance() {
     if (!activeWalletId) return;
 
     try {
-      const movementWalletForBalances = user
-        ? getMovementWallet(user as PrivyUser)
-        : null;
+      const movementWalletForBalances = resolvedMovementWallet;
 
       if (!movementWalletForBalances) return;
 
@@ -329,10 +256,10 @@ export function useWalletBalance() {
       });
 
       setWalletAssets(sortedAssets);
-    } catch (error) {
+    } catch {
       // Error handling without console logs
     }
-  }, [activeWalletId, user]);
+  }, [activeWalletId, resolvedMovementWallet]);
 
   return {
     walletAssets,

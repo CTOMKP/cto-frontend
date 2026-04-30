@@ -3,58 +3,42 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { movementWalletService, type WalletTransaction } from '@/services/movementWalletService';
-import { usePrivy } from '@privy-io/react-auth';
 import { toast } from 'react-toastify';
-import { getUserId, WALLET_ID_KEY } from '@/lib/authSession';
+import { WALLET_ID_KEY } from '@/lib/authSession';
 import UserListings from './UserListings';
 import TxHistoryTab from './TxHistoryTab';
 import MyAdsTab from './MyAdsTab';
-import walletsService from '@/services/walletsService';
+import { useResolvedMovementWallet } from '@/hooks/useResolvedMovementWallet';
 
 export default function TransactionHistory() {
-  const { user } = usePrivy();
+  const movementWalletQuery = useResolvedMovementWallet({ preferStorage: true });
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeWalletId, setActiveWalletId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
 
-  // Find and set wallet ID using same pattern as useWalletBalance.ts
+  // Use shared movement wallet resolution path.
   useEffect(() => {
-    const findAndSetWallet = async () => {
-      const userId = getUserId() || user?.id;
-
-      // GUARD: Don't run if already recovering or if we already have an active wallet
-      if (!userId) {
-        return null; // Return null to indicate no wallet ID was found
-      }
-
-      try {
-        const { walletId } = await walletsService.resolveMovementWalletContext({
-          privyUser: user,
-          userId,
-          preferStorage: true,
-        });
-        if (walletId) {
-          localStorage.setItem(WALLET_ID_KEY, walletId);
-          return walletId;
-        }
-      } catch (err) {
-        toast.error("Failed to set wallet ID");
-        console.error(err);
-      }
-      
-      return null; // Return null if no wallet was found
-    };
-
-    // Call function and set activeWalletId with the returned value
-    findAndSetWallet().then(walletId => {
-      if (walletId) {
-        setActiveWalletId(walletId);
-      } else {
-        setLoading(false);
-      }
-    });
-  }, [user]);
+    if (movementWalletQuery.isError) {
+      toast.error("Failed to resolve wallet context");
+      setLoading(false);
+      return;
+    }
+    const walletId = movementWalletQuery.data?.walletId ?? null;
+    if (walletId) {
+      localStorage.setItem(WALLET_ID_KEY, walletId);
+      setActiveWalletId(walletId);
+      return;
+    }
+    if (!movementWalletQuery.isPending) {
+      setActiveWalletId(null);
+      setLoading(false);
+    }
+  }, [
+    movementWalletQuery.data?.walletId,
+    movementWalletQuery.isError,
+    movementWalletQuery.isPending,
+  ]);
 
   // Load transactions (EXACTLY like test frontend loadData function)
   const loadTransactions = useCallback(async () => {

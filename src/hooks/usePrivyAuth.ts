@@ -11,6 +11,7 @@ import { authService } from '@/services/authService';
 import { getAuthToken, getUserId } from '@/lib/authSession';
 import { profileKeys } from '@/lib/queryKeys';
 import { bindSessionStoreListeners, useSessionStore } from '@/lib/sessionStore';
+import { findMovementWalletInBackend } from '@/services/walletsService';
 
 // Module-level Set to track processing user IDs across ALL hook instances
 // This prevents multiple parallel runs even if hook is instantiated multiple times
@@ -156,8 +157,8 @@ export function usePrivyAuth() {
         }
         
       // Step 3: Check if user has Movement wallet in backend or Privy
-      const backendHasMovementWallet = syncResult.wallets?.some(
-        (w) => w.blockchain === 'MOVEMENT' || w.blockchain === 'APTOS' || w.chainType === 'aptos' || w.chainType === 'movement'
+      const backendHasMovementWallet = !!findMovementWalletInBackend(
+        Array.isArray(syncResult.wallets) ? syncResult.wallets : [],
       );
       
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

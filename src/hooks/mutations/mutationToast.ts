@@ -1,14 +1,9 @@
-import axios from "axios";
 import { toast } from "react-toastify";
+import { isApiError } from "@/lib/apiError";
 
 export function toastMutationError(error: unknown, fallback: string) {
-  if (axios.isAxiosError(error)) {
-    const data = error.response?.data as { message?: string } | undefined;
-    const msg =
-      typeof data?.message === "string" && data.message.trim()
-        ? data.message
-        : error.message || fallback;
-    toast.error(msg);
+  if (isApiError(error)) {
+    toast.error(error.message || fallback);
     return;
   }
   if (error instanceof Error && error.message) {

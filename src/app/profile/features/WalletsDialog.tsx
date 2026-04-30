@@ -5,7 +5,6 @@ import { BackendWallet, PrivyWalletAccount } from '@/types/privy';
 import { toast } from 'react-toastify';
 import { Copy } from 'lucide-react';
 import { PrivyUser } from '@/types/privy';
-import { getMovementWallet } from '@/lib/movement-wallet';
 
 // Helper function to get wallet chain info
 function getWalletChainInfo(wallet: BackendWallet | PrivyWalletAccount) {
@@ -22,11 +21,9 @@ interface WalletsDialogProps {
 
 export default function WalletsDialog({
   uniqueWallets,
-  user,
+  user: _user,
   primaryWalletAddress,
 }: WalletsDialogProps) {
-  const movementWallet = user ? getMovementWallet(user) : null;
-
   return (
     <div className="mt-6">
       {uniqueWallets.length === 0 ? (
@@ -89,23 +86,6 @@ export default function WalletsDialog({
         </div>
       )}
 
-      {/* Movement Wallet Info - Only show if not already in the list */}
-      {movementWallet && !uniqueWallets.some(w => 
-        w.address.toLowerCase() === movementWallet.address.toLowerCase()
-      ) && (
-        <div className="mt-6 p-4 bg-gradient-to-r from-green-900/20 to-emerald-900/20 border border-green-700 rounded-lg">
-          <h3 className="font-semibold text-green-400 mb-2 flex items-center gap-2">
-            <span className="text-2xl">🅰️</span>
-            <span>Movement Wallet</span>
-          </h3>
-          <p className="text-sm text-green-300 mb-2">
-            ✅ Your Movement wallet is ready!
-          </p>
-          <p className="text-xs text-green-400 font-mono break-all bg-black/50 p-2 rounded">
-            {movementWallet.address}
-          </p>
-        </div>
-      )}
     </div>
   );
 }
