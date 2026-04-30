@@ -228,7 +228,7 @@ export default function MessagesDetailsPanel({
 
   return (
     <aside className="w-[380px] bg-black/40">
-      <div className="h-full overflow-auto hover-scrollbar p-5 pt-25">
+      <div className="h-full min-h-screen overflow-auto hover-scrollbar p-5 pt-25">
         <div className="flex flex-col items-center text-center mb-4">
           <div className="relative size-[115px] rounded-full bg-white/5 overflow-hidden shrink-0 border border-white/10">
             {profileAvatarSrc && !profileAvatarError ? (

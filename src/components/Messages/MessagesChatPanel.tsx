@@ -151,7 +151,7 @@ export default function MessagesChatPanel({
 
   return (
     <main className="flex-1 bg-black">
-      <div className="h-full flex flex-col min-h-[calc(100vh-120px)]">
+      <div className="h-full flex flex-col min-h-screen">
         <div className="flex border-b border-white/10  items-center justify-between px-12 pt-10 pb-5 overflow-auto hover-scrollbar">
         <div className="flex items-center gap-3">
           <button

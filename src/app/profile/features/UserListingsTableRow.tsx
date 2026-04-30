@@ -51,7 +51,7 @@ export default function UserListingsTableRow({
               <FallbackImage
                 src={coin.image && coin.image.trim() !== "" ? coin.image : undefined}
                 alt={coin.name || "token"}
-                className="size-7 min-w-fit rounded-full border-[0.36px] border-white"
+                className="size-7 rounded-full border-[0.36px] border-white"
                 width={28}
                 height={28}
               />
