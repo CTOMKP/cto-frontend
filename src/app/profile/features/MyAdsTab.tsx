@@ -92,7 +92,8 @@ export default function MyAdsTab() {
       .listMine()
       .then((result) => {
         if (cancelled) return;
-        setAds(Array.isArray(result) ? result : []);
+        const list = Array.isArray(result) ? result : [];
+        setAds(list as MyAdItem[]);
       })
       .catch((err) => {
         if (cancelled) return;

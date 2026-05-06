@@ -78,7 +78,7 @@ function PostAdSuccessWithAdContent() {
         const list = Array.isArray(items) ? items : [];
         const match = list.find(
           (item) => item && typeof item === "object" && "id" in item && (item as MarketplaceAd).id === adId,
-        );
+        ) as MarketplaceAd | undefined;
         if (match) {
           setAd(match);
         } else {
@@ -96,8 +96,6 @@ function PostAdSuccessWithAdContent() {
       cancelled = true;
     };
   }, [adId]);
-
-  console.log(ad)
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);

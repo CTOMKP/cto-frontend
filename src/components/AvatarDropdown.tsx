@@ -22,6 +22,10 @@ import { Button } from './ui/button';
 import { useRewardProgress, resetUserRewardProgress } from '@/lib/userRewardProgress';
 import { useResolvedMovementWallet } from '@/hooks/useResolvedMovementWallet';
 import { useSessionStore } from '@/lib/sessionStore';
+import { useWallets } from '@privy-io/react-auth';
+import { useWallets as useSolanaWallets } from '@privy-io/react-auth/solana';
+import { resolvePrivySolanaAddress } from '@/lib/solanaTransaction';
+import type { DepositNetwork } from '@/app/profile/features/wallet-balance/ActionButtons';
 
 export default function AvatarDropdown() {
   const storedAvatarUrl = useSessionStore((s) => s.avatarUrl);
@@ -42,8 +46,18 @@ export default function AvatarDropdown() {
   const router = useRouter();
   const { logout } = usePrivyAuth();
   const { user } = usePrivy();
-  const [showQR, setShowQR] = useState(false);
+  const { wallets: privyMainWallets } = useWallets();
+  const { wallets: solanaScopedWallets } = useSolanaWallets();
+  const solanaWalletAddress = useMemo(
+    () =>
+      resolvePrivySolanaAddress(
+        privyMainWallets as unknown[],
+        solanaScopedWallets as unknown[] | undefined,
+      ),
+    [privyMainWallets, solanaScopedWallets],
+  );
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [depositNetwork, setDepositNetwork] = useState<DepositNetwork | null>(null);
 
   const generateQRCode = async (address: string) => {
     try {
@@ -68,13 +82,42 @@ export default function AvatarDropdown() {
   const movementWalletAddress = movementWalletQuery.data?.movementWallet?.address ?? null;
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [isDeposit, setIsDeposit] = useState(false);
-  const { walletAssets, selectedAsset, setSelectedAsset, isLoading } = useWalletBalance();
+  const { walletAssets, selectedAsset, setSelectedAsset, isLoading, refreshSolanaBalance } =
+    useWalletBalance();
 
   // Calculate wallet balance from selected asset
   const walletBalance = selectedAsset?.value || 0;
 
-  // Primary wallet address is Movement wallet address (matching profile page)
-  const primaryWalletAddress = movementWalletAddress || '';
+  const activeDepositAddress =
+    depositNetwork === 'solana'
+      ? solanaWalletAddress
+      : depositNetwork === 'movement'
+        ? movementWalletAddress
+        : null;
+
+  const resetDepositFlow = () => {
+    setIsDeposit(false);
+    setDepositNetwork(null);
+    setQrCodeUrl(null);
+  };
+
+  const selectDepositNetwork = async (net: DepositNetwork) => {
+    const addr = net === 'solana' ? solanaWalletAddress : movementWalletAddress;
+    if (!addr) {
+      toast.error(
+        net === 'solana' ? 'No Solana wallet linked.' : 'No Movement wallet found.',
+      );
+      return;
+    }
+    setDepositNetwork(net);
+    const qr = await generateQRCode(addr);
+    if (!qr) {
+      toast.error('Failed to generate QR code');
+      setDepositNetwork(null);
+      return;
+    }
+    setQrCodeUrl(qr);
+  };
 
   const copyAddress = (address: string) => {
     navigator.clipboard.writeText(address);
@@ -90,7 +133,11 @@ export default function AvatarDropdown() {
   };
 
   return (
-    <DropdownMenu>
+    <DropdownMenu
+      onOpenChange={(open) => {
+        if (open) void refreshSolanaBalance();
+      }}
+    >
       <DropdownMenuTrigger className='mx-8.5'>
         <div className="relative flex justify-center items-center rounded-lg size-13 border-[0.2px] border-[#FFFFFF20] overflow-hidden">
           {avatarUrl ? (
@@ -180,16 +227,13 @@ export default function AvatarDropdown() {
 
               <div className="mt-5 flex items-center gap-2">
                 <Button
-                onClick={() => {
-                  generateQRCode(primaryWalletAddress as string).then(qrUrl => {
-                    if (qrUrl) {
-                      setIsDeposit(true);
-                      setQrCodeUrl(qrUrl);
-                      setShowQR(true);
-                    }
-                  });
-                }} 
-                className="bg-gradient-to-r from-[#FF0075] via-[#FF4A15] to-[#FFCB45] flex-1 h-12 py-3.5 px-6 rounded-full">
+                  onClick={() => {
+                    setIsDeposit(true);
+                    setDepositNetwork(null);
+                    setQrCodeUrl(null);
+                  }}
+                  className="bg-gradient-to-r from-[#FF0075] via-[#FF4A15] to-[#FFCB45] flex-1 h-12 py-3.5 px-6 rounded-full"
+                >
                   {" "}
                   <MoveDown /> Deposit
                 </Button>
@@ -202,51 +246,93 @@ export default function AvatarDropdown() {
                 </div>
               </div>
             </div>
-          ) : (
-            <>
-              {showQR && qrCodeUrl && (
-                <div>
-                  <div className='bg-white/6 rounded-lg py-3 px-2.5'>
-                  <div className="flex justify-center mb-6">
-                  <img src={qrCodeUrl as string} alt="Wallet QR Code" className="w-48 h-41" />
+          ) : depositNetwork == null ? (
+            <div className="space-y-3">
+              <p className="text-sm text-[#A1A1AA]">
+                Choose which network you are sending on. The address is different for each.
+              </p>
+              <Button
+                type="button"
+                disabled={!solanaWalletAddress}
+                onClick={() => void selectDepositNetwork('solana')}
+                className="w-full h-11 rounded-full bg-gradient-to-r from-[#FF0075]/90 via-[#FF4A15]/90 to-[#FFCB45]/90 text-white font-medium disabled:opacity-40"
+              >
+                Solana
+              </Button>
+              <Button
+                type="button"
+                disabled={!movementWalletAddress}
+                onClick={() => void selectDepositNetwork('movement')}
+                className="w-full h-11 rounded-full border border-white/25 bg-white/5 text-white font-medium hover:bg-white/10 disabled:opacity-40"
+              >
+                Movement
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={resetDepositFlow}
+                className="w-full text-white/60 hover:text-white text-sm"
+              >
+                Cancel
+              </Button>
+            </div>
+          ) : depositNetwork && !qrCodeUrl ? (
+            <div className="py-8 text-center text-sm text-white/50">Preparing address…</div>
+          ) : qrCodeUrl && activeDepositAddress ? (
+            <div>
+              <div className="bg-white/6 rounded-lg py-3 px-2.5">
+                <div className="flex justify-center mb-6">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={qrCodeUrl} alt="Wallet QR Code" className="w-48 h-41" />
                 </div>
 
-                <span className='text-[#A1A1AA] text-sm'>Movement address</span>
-                  <div className="flex items-center gap-2">
-                      <span className="text-white/70 flex-1 truncate font-mono">
-                        {primaryWalletAddress ? (
-                          `${primaryWalletAddress.slice(0, 10)}...${primaryWalletAddress.slice(-8)}`
-                        ) : (
-                          'No wallet connected'
-                        )}
-                      </span>
-                      {primaryWalletAddress && (
-                        <button
-                          onClick={() => copyAddress(primaryWalletAddress)}
-                          className="text-white/70 hover:text-white transition-colors p-1"
-                        >
-                          {copiedAddress ? (
-                            <Check size={14} className="text-[#16C784]" />
-                          ) : (
-                            <Image
-                              src="/copy.svg"
-                              alt="copy"
-                              width={14}
-                              height={14}
-                              loading="lazy"
-                            />
-                          )}
-                        </button>
-                      )}
-                    </div>
+                <span className="text-[#A1A1AA] text-sm">
+                  {depositNetwork === 'solana' ? 'Solana address' : 'Movement address'}
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-white/70 flex-1 truncate font-mono">
+                    {`${activeDepositAddress.slice(0, 10)}...${activeDepositAddress.slice(-8)}`}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => copyAddress(activeDepositAddress)}
+                    className="text-white/70 hover:text-white transition-colors p-1"
+                  >
+                    {copiedAddress ? (
+                      <Check size={14} className="text-[#16C784]" />
+                    ) : (
+                      <Image
+                        src="/copy.svg"
+                        alt="copy"
+                        width={14}
+                        height={14}
+                        loading="lazy"
+                      />
+                    )}
+                  </button>
                 </div>
+              </div>
 
-                <p className='text-xs leading-[100%] text-white my-5'>This address can only receive Coins from the Movement network. Sending tokens from another network will result in loss of funds.</p>
-                <Button onClick={() => setIsDeposit(false)} className='w-full cta-gradient rounded-full py-3.5 px-6'>Done</Button>
-                </div>
-              )}
-            </>
-          )}
+              <p className="text-xs leading-[100%] text-white my-5">
+                {depositNetwork === 'solana'
+                  ? 'This address receives assets on the Solana network only. Sending tokens from other networks can result in permanent loss.'
+                  : 'This address can only receive Coins from the Movement network. Sending tokens from another network will result in loss of funds.'}
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setDepositNetwork(null);
+                  setQrCodeUrl(null);
+                }}
+                className="text-sm text-[#FF9631] hover:underline mb-3 w-full text-center"
+              >
+                Change network
+              </button>
+              <Button onClick={resetDepositFlow} className="w-full cta-gradient rounded-full py-3.5 px-6">
+                Done
+              </Button>
+            </div>
+          ) : null}
         </div>
 
         {/* Navigation Links */}

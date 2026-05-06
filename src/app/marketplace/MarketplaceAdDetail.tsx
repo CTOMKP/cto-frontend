@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useMarketplaceAdDetailQuery } from "@/hooks/useMarketplaceAdDetailQuery";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { MoonLoader } from "react-spinners";
 import {
   ArrowLeft,
   ChevronLeft,
@@ -82,8 +83,18 @@ const MOCK_COMMENTS = [
   { id: "2", username: "Zamani.apt", time: "5 hours ago", text: "We have a similar project on Aptos. DM me.", replies: 0 },
 ];
 
-export default function MarketplaceAdDetail({ adId }: { adId: string }) {
+export default function MarketplaceAdDetail({ adId: adIdFromPage }: { adId: string }) {
   const router = useRouter();
+  const params = useParams();
+  const routeIdRaw = params?.id;
+  const routeId =
+    typeof routeIdRaw === "string"
+      ? routeIdRaw
+      : Array.isArray(routeIdRaw)
+        ? routeIdRaw[0]
+        : "";
+  /** URL segment is source of truth so client navigations always fetch the selected ad. */
+  const adId = (routeId ? decodeURIComponent(routeId) : "") || adIdFromPage || "";
   const sessionUserId = useSessionStore((s) => s.userId);
   const adQuery = useMarketplaceAdDetailQuery(adId || undefined);
   const ad = (adQuery.data as Record<string, unknown> | null) ?? null;
@@ -103,6 +114,10 @@ export default function MarketplaceAdDetail({ adId }: { adId: string }) {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    setCarouselIndex(0);
+  }, [adId]);
 
   const images: string[] = Array.isArray(ad?.images)
     ? (ad.images as string[]).map(toImageUrl).filter(Boolean)
@@ -157,6 +172,7 @@ export default function MarketplaceAdDetail({ adId }: { adId: string }) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
         <p className="text-white/70">Loading ad...</p>
+        <MoonLoader />
       </div>
     );
   }

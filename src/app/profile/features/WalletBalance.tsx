@@ -6,9 +6,11 @@ import WalletBalanceContent from "./wallet-balance/WalletBalanceContent";
 import ActionButtons from "./wallet-balance/ActionButtons";
 
 export default function WalletBalance({
-  primaryWalletAddress,
+  solanaWalletAddress,
+  movementWalletAddress,
 }: {
-  primaryWalletAddress: string;
+  solanaWalletAddress: string | null;
+  movementWalletAddress: string | null;
 }) {
   const [balanceVisible, setBalanceVisible] = useState(true);
   const { walletAssets, selectedAsset, setSelectedAsset, isLoading } =
@@ -30,7 +32,10 @@ export default function WalletBalance({
         balanceTextSize="58px"
       />
 
-      <ActionButtons primaryWalletAddress={primaryWalletAddress} />
+      <ActionButtons
+        solanaWalletAddress={solanaWalletAddress}
+        movementWalletAddress={movementWalletAddress}
+      />
     </div>
   );
 }

@@ -1,5 +1,39 @@
 import { apiGet, apiPost, apiPut } from '@/lib/apiClient';
-import { toRecord, unwrapApiData } from '@/lib/apiResponse';
+import { toRecord, unwrapApiData, unwrapApiJsonBody } from '@/lib/apiResponse';
+
+function asRecord(v: unknown): Record<string, unknown> | null {
+  return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
+}
+
+/** List/detail APIs often expose `adId` or `_id`; routes and links need `id`. */
+function normalizeMarketplaceAdItem(raw: unknown): unknown {
+  const o = asRecord(raw);
+  if (!o) return raw;
+  const idVal = o.id ?? o.adId ?? o._id;
+  if (idVal == null || idVal === "") return raw;
+  const idStr = String(idVal);
+  if (o.id === idStr) return raw;
+  return { ...o, id: idStr };
+}
+
+function normalizeMarketplaceAdList(items: unknown): unknown[] {
+  const arr = Array.isArray(items) ? items : [];
+  return arr.map((item) => normalizeMarketplaceAdItem(item));
+}
+
+function parseMarketplaceAdDetailResponse(res: unknown): unknown {
+  const unwrapped = unwrapApiJsonBody(unwrapApiData(res));
+  const top = asRecord(unwrapped);
+  if (top?.ad && typeof top.ad === "object" && !Array.isArray(top.ad)) {
+    return normalizeMarketplaceAdItem(top.ad);
+  }
+  return normalizeMarketplaceAdItem(unwrapped);
+}
+
+function listItemsFromResponse(responseData: Record<string, unknown>): unknown[] {
+  const raw = responseData?.items ?? responseData ?? [];
+  return normalizeMarketplaceAdList(Array.isArray(raw) ? raw : []);
+}
 
 export const marketplaceService = {
   async getPricing() {
@@ -18,9 +52,14 @@ export const marketplaceService = {
     return unwrapApiData(res);
   },
 
-  async createPayment(adId: string) {
-    const res = await apiPost<unknown>(`/api/v1/marketplace/ads/${adId}/pay`, {});
-    return unwrapApiData(res);
+  /**
+   * cto-test-frontend: `res.data?.data || res.data`. Nest often double-wraps; use
+   * {@link unwrapApiJsonBody} so `payment` / `transactionData` match `MarketDashboard` handlePayment.
+   */
+  async createPayment(adId: string, paymentChain?: "MOVEMENT" | "SOLANA") {
+    const payload = paymentChain ? { paymentChain } : {};
+    const res = await apiPost<unknown>(`/api/v1/marketplace/ads/${adId}/pay`, payload);
+    return unwrapApiJsonBody(res);
   },
 
   async verifyPayment(paymentId: string, txHash: string) {
@@ -28,13 +67,13 @@ export const marketplaceService = {
       `/api/v1/marketplace/ads/payments/${paymentId}/verify`,
       { txHash },
     );
-    return unwrapApiData(res);
+    return unwrapApiJsonBody(res);
   },
 
   async listMine() {
     const res = await apiGet<unknown>(`/api/v1/marketplace/ads/mine`);
     const responseData = toRecord(unwrapApiData(res));
-    return responseData?.items || responseData || [];
+    return listItemsFromResponse(responseData);
   },
 
   async listPublic(
@@ -49,7 +88,7 @@ export const marketplaceService = {
     const qs = search.toString();
     const res = await apiGet<unknown>(`/api/v1/marketplace/ads${qs ? `?${qs}` : ''}`, { signal });
     const responseData = toRecord(unwrapApiData(res));
-    return responseData?.items || responseData || [];
+    return listItemsFromResponse(responseData);
   },
 
   async listTrending(params?: { page?: number; limit?: number }, signal?: AbortSignal) {
@@ -59,7 +98,7 @@ export const marketplaceService = {
     const qs = search.toString();
     const res = await apiGet<unknown>(`/api/v1/marketplace/ads/trending${qs ? `?${qs}` : ''}`, { signal });
     const responseData = toRecord(unwrapApiData(res));
-    return responseData?.items || responseData || [];
+    return listItemsFromResponse(responseData);
   },
 
   async listForYou(params?: { page?: number; limit?: number }, signal?: AbortSignal) {
@@ -69,12 +108,12 @@ export const marketplaceService = {
     const qs = search.toString();
     const res = await apiGet<unknown>(`/api/v1/marketplace/ads/for-you${qs ? `?${qs}` : ''}`, { signal });
     const responseData = toRecord(unwrapApiData(res));
-    return responseData?.items || responseData || [];
+    return listItemsFromResponse(responseData);
   },
 
   async getPublicAd(id: string, signal?: AbortSignal) {
     const res = await apiGet<unknown>(`/api/v1/marketplace/ads/${id}`, { signal });
-    return unwrapApiData(res);
+    return parseMarketplaceAdDetailResponse(res);
   },
 
   /**

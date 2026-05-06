@@ -16,6 +16,8 @@ interface UserProfileHeaderProps {
   avatarUrl: string | null;
   email: string;
   primaryWalletAddress: string;
+  /** e.g. "Solana wallet" when primary is Solana, "Movement wallet" when falling back */
+  primaryWalletLabel: string;
   copiedAddress: boolean;
   onCopyAddress: (address: string) => void;
   walletsDialogOpen: boolean;
@@ -27,6 +29,7 @@ export default function UserProfileHeader({
   avatarUrl,
   email,
   primaryWalletAddress,
+  primaryWalletLabel,
   copiedAddress,
   onCopyAddress,
   walletsDialogOpen,
@@ -36,14 +39,13 @@ export default function UserProfileHeader({
   const [nameEditOpen, setNameEditOpen] = useState(false);
   const [tempName, setTempName] = useState<string>("");
 
-  const fallbackName = email?.includes("@") ? email.split("@")[0] : email;
-
   const { userData, setUserData } = usePrivyAuth();
   const sessionUserId = useSessionStore((s) => s.userId);
   const sessionEmail = useSessionStore((s) => s.email);
   const updateUserMutation = useUpdateUserMutation();
 
-  const displayName = userData?.name || fallbackName || "User";
+  /** Keep username independent from wallet/email fallbacks. */
+  const displayName = (userData?.name || "").trim() || "User";
 
   useEffect(() => {
     if (!nameEditOpen) return;
@@ -100,7 +102,14 @@ export default function UserProfileHeader({
               Username
             </h1>
             <div className="flex items-center gap-1">
-              <h2 className="font-bold text-[32px]">{displayName}</h2>
+              <button
+                type="button"
+                onClick={() => setNameEditOpen(true)}
+                className="font-bold text-[32px] leading-none text-left hover:text-white/85 transition-colors"
+                aria-label="Edit username"
+              >
+                {displayName}
+              </button>
 
               <Dialog open={nameEditOpen} onOpenChange={setNameEditOpen}>
                 <DialogTrigger asChild>
@@ -161,28 +170,35 @@ export default function UserProfileHeader({
               </h2> */}
           </div>
           <div className="flex items-center gap-2 mt-1">
-            <p className="text-white/70 text-sm font-semibold">
-              Movement wallet{" "}
-              <span className="bg-white/20 rounded-[25px] p-1 font-normal">
-                {primaryWalletAddress.slice(0, 8)}...
-                {primaryWalletAddress.slice(-8)}
-              </span>
-            </p>
-            <button
-              onClick={() => onCopyAddress(primaryWalletAddress)}
-              className="text-white/70 hover:text-white transition-colors bg-white/20 rounded-[25px] p-1"
-            >
-              {copiedAddress ? (
-                <Check size={14} className="text-[#16C784]" />
-              ) : (
-                <Image
-                  src="/copy.svg"
-                  alt="copy"
-                  width={14}
-                  height={14}
-                />
-              )}
-            </button>
+            {primaryWalletAddress ? (
+              <>
+                <p className="text-white/70 text-sm font-semibold">
+                  {primaryWalletLabel}{" "}
+                  <span className="bg-white/20 rounded-[25px] p-1 font-normal">
+                    {primaryWalletAddress.slice(0, 8)}...
+                    {primaryWalletAddress.slice(-8)}
+                  </span>
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onCopyAddress(primaryWalletAddress)}
+                  className="text-white/70 hover:text-white transition-colors bg-white/20 rounded-[25px] p-1"
+                >
+                  {copiedAddress ? (
+                    <Check size={14} className="text-[#16C784]" />
+                  ) : (
+                    <Image
+                      src="/copy.svg"
+                      alt="copy"
+                      width={14}
+                      height={14}
+                    />
+                  )}
+                </button>
+              </>
+            ) : (
+              <p className="text-white/50 text-sm">No wallet address to display</p>
+            )}
           </div>
         </div>
       </div>
