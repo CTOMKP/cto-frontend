@@ -1,8 +1,10 @@
 "use client";
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { PrivyProvider as PrivyProviderBase } from '@privy-io/react-auth';
+import { createSolanaRpc, createSolanaRpcSubscriptions } from '@solana/kit';
 import RewardProgressSync from '@/components/RewardProgressSync';
+import { getDefaultSolanaRpcUrl, getDefaultSolanaRpcWsUrl } from '@/lib/solanaRpc';
 
 interface PrivyProviderProps {
   children: React.ReactNode;
@@ -10,6 +12,19 @@ interface PrivyProviderProps {
 
 export default function PrivyProvider({ children }: PrivyProviderProps) {
   const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
+
+  const solanaRpcs = useMemo(() => {
+    const http = getDefaultSolanaRpcUrl();
+    const ws = getDefaultSolanaRpcWsUrl();
+    const bundle = {
+      rpc: createSolanaRpc(http),
+      rpcSubscriptions: createSolanaRpcSubscriptions(ws),
+    };
+    return {
+      'solana:mainnet': bundle,
+      'solana:devnet': bundle,
+    };
+  }, []);
 
   // Add global error handler for Privy (must be called before any early returns)
   React.useEffect(() => {
@@ -47,6 +62,7 @@ export default function PrivyProvider({ children }: PrivyProviderProps) {
     <PrivyProviderBase
       appId={privyAppId}
       config={{
+        solana: { rpcs: solanaRpcs },
         loginMethods: ['email', 'wallet', 'google'],
         appearance: {
           theme: '#010101',

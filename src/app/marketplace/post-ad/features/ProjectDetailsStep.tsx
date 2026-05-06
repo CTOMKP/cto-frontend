@@ -94,7 +94,7 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
   const [deadline, setDeadline] = useState(() => toDateValue(initialData?.deadline || ''));
   const minDate = getTodayLocal();
   const [noFixedDeadline, setNoFixedDeadline] = useState(initialData?.noFixedDeadline || false);
-  const [visibility, setVisibility] = useState(initialData?.visibility || 'free');
+  const [visibility, setVisibility] = useState(initialData?.visibility ?? '');
   const [boostOptions, setBoostOptions] = useState<Record<string, boolean>>(initialData?.boostOptions || {});
   const MAX_IMAGES = 3;
   const [images, setImages] = useState<(File | null)[]>(() => {

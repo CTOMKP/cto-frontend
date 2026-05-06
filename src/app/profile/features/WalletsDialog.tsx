@@ -38,8 +38,9 @@ export default function WalletsDialog({
             const chain = (chainType || blockchain || '').toLowerCase();
             const chainUpper = (chainType || blockchain || '').toUpperCase();
             
-            // Check if this wallet is the primary (Movement/Aptos) wallet
-            const isPrimary = primaryWalletAddress && 
+            // Primary = Solana when linked in Privy, else Movement (matches profile header / copy)
+            const isPrimary =
+              !!primaryWalletAddress &&
               wallet.address.toLowerCase() === primaryWalletAddress.toLowerCase();
             
             return (

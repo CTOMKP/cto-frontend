@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { useWallets as useSolanaWallets } from '@privy-io/react-auth/solana';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { BackendWallet, PrivyWalletAccount, PrivyUser } from '@/types/privy';
@@ -18,10 +19,13 @@ import WalletBalance from './features/WalletBalance';
 import PortfolioSection from './features/PortfolioSection';
 import TransactionHistory from './features/TransactionHistory';
 import WalletsDialog from './features/WalletsDialog';
+import { resolvePrivySolanaAddress } from '@/lib/solanaTransaction';
 
 export default function ProfilePage() {
   const router = useRouter();
   const { user, authenticated, ready } = usePrivy();
+  const { wallets: privyMainWallets } = useWallets();
+  const { wallets: solanaScopedWallets } = useSolanaWallets();
   const sessionUserId = useSessionStore((s) => s.userId);
   const avatarUrl = useSessionStore((s) => s.avatarUrl);
   const profileQuery = useProfileQuery({ enabled: !!(ready && authenticated) });
@@ -30,6 +34,11 @@ export default function ProfilePage() {
   const [allWallets, setAllWallets] = useState<BackendWallet[]>([]);
   const movementWalletQuery = useResolvedMovementWallet({ preferStorage: true });
   const movementWalletAddress = movementWalletQuery.data?.movementWallet?.address ?? null;
+  const solanaWalletAddress = React.useMemo(
+    () =>
+      resolvePrivySolanaAddress(privyMainWallets as unknown[], solanaScopedWallets as unknown[] | undefined),
+    [privyMainWallets, solanaScopedWallets],
+  );
   const [copiedAddress, setCopiedAddress] = useState(false);
   const [walletsDialogOpen, setWalletsDialogOpen] = useState(false);
 
@@ -102,9 +111,8 @@ export default function ProfilePage() {
     );
   }
 
-  // Use movementWalletAddress state (set from backend wallets or Privy linkedAccounts)
-  // This matches the test frontend pattern
-  const email = user?.email?.address || user?.wallet?.address || 'Privy User';
+  // Keep display identity email-only; don't fallback to wallet address.
+  const email = user?.email?.address || 'Privy User';
   
   // Combine Privy wallets with backend wallets
   // Privy's user.linkedAccounts is LinkedAccountWithMetadata[], so we need to filter and cast
@@ -118,27 +126,35 @@ export default function ProfilePage() {
     index === self.findIndex((w) => w.address.toLowerCase() === wallet.address.toLowerCase())
   );
 
-  // Sort wallets to put Movement/Aptos wallet first
   const sortedWallets = [...uniqueWallets].sort((a, b) => {
-    const isMovementWallet = (wallet: BackendWallet | PrivyWalletAccount) => {
+    const chainMeta = (wallet: BackendWallet | PrivyWalletAccount) => {
       const chainType = 'chainType' in wallet ? wallet.chainType : undefined;
       const blockchain = 'blockchain' in wallet ? wallet.blockchain : undefined;
-      const chainUpper = ((chainType || blockchain || '').toUpperCase());
+      return { chainType, blockchain, chainUpper: (chainType || blockchain || '').toUpperCase() };
+    };
+    const isSolanaWallet = (wallet: BackendWallet | PrivyWalletAccount) => {
+      const { chainType, chainUpper } = chainMeta(wallet);
+      return chainUpper === 'SOLANA' || chainType === 'solana';
+    };
+    const isMovementWallet = (wallet: BackendWallet | PrivyWalletAccount) => {
+      const { chainType, chainUpper } = chainMeta(wallet);
       return chainUpper === 'MOVEMENT' || chainUpper === 'APTOS' || chainType === 'aptos';
     };
-    
-    const isMovementA = isMovementWallet(a);
-    const isMovementB = isMovementWallet(b);
-    
-    // Movement/Aptos wallets come first
-    if (isMovementA && !isMovementB) return -1;
-    if (!isMovementA && isMovementB) return 1;
-    return 0; // Keep original order for non-Movement wallets
+    const rank = (w: BackendWallet | PrivyWalletAccount) => {
+      if (isSolanaWallet(w)) return 0;
+      if (isMovementWallet(w)) return 1;
+      return 2;
+    };
+    return rank(a) - rank(b);
   });
 
-  // Primary wallet address for display (Movement wallet only)
-  // Prioritize movementWalletAddress state (from backend or Privy check)
-  const primaryWalletAddress = movementWalletAddress || '';
+  /** Prefer Solana (payments / deposits); fall back to Movement when no Solana wallet in Privy. */
+  const primaryWalletAddress = solanaWalletAddress || movementWalletAddress || '';
+  const primaryWalletLabel = solanaWalletAddress
+    ? 'Solana wallet'
+    : movementWalletAddress
+      ? 'Movement wallet'
+      : 'Wallet';
 
   // Calculate wallet stats
   // const cosmosWallets = uniqueWallets.filter(w => {
@@ -182,6 +198,7 @@ export default function ProfilePage() {
               avatarUrl={avatarUrl}
               email={email}
               primaryWalletAddress={primaryWalletAddress}
+              primaryWalletLabel={primaryWalletLabel}
               copiedAddress={copiedAddress}
               onCopyAddress={copyAddress}
               walletsDialogOpen={walletsDialogOpen}
@@ -190,7 +207,7 @@ export default function ProfilePage() {
                 <WalletsDialog
                   uniqueWallets={sortedWallets}
                   user={user as PrivyUser}
-                  primaryWalletAddress={movementWalletAddress}
+                  primaryWalletAddress={solanaWalletAddress || movementWalletAddress}
                 />
               }
             />
@@ -205,7 +222,10 @@ export default function ProfilePage() {
 
           {/* Right Column - My Assets */}
           <div className='h-full flex flex-col'>
-            <WalletBalance primaryWalletAddress={primaryWalletAddress} />
+            <WalletBalance
+              solanaWalletAddress={solanaWalletAddress}
+              movementWalletAddress={movementWalletAddress}
+            />
 
             <PortfolioSection achievementData={achievementData} />
           </div>

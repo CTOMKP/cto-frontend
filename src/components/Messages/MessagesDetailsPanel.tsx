@@ -227,8 +227,8 @@ export default function MessagesDetailsPanel({
       : null;
 
   return (
-    <aside className="w-[380px] bg-black/40">
-      <div className="h-full min-h-screen overflow-auto hover-scrollbar p-5 pt-25">
+    <aside className="w-[380px] min-w-0 shrink-0 bg-black/40">
+      <div className="h-full min-h-screen min-w-0 max-w-full overflow-auto hover-scrollbar p-5 pt-25">
         <div className="flex flex-col items-center text-center mb-4">
           <div className="relative size-[115px] rounded-full bg-white/5 overflow-hidden shrink-0 border border-white/10">
             {profileAvatarSrc && !profileAvatarError ? (
@@ -290,13 +290,13 @@ export default function MessagesDetailsPanel({
           ) : null}
         </div>
 
-        <div className="border-t-[0.5px] border-white/20 pt-5">
+        <div className="min-w-0 max-w-full border-t-[0.5px] border-white/20 pt-5">
           <div className="text-xs text-white mb-1">Project brief</div>
 
-          <div className="mt-4 text-xs text-white/60">
+          <div className="mt-4 min-w-0 max-w-full text-xs text-white/60">
             {description ? (
               <>
-                <span className="whitespace-pre-wrap">
+                <span className="block min-w-0 max-w-full whitespace-pre-wrap break-words [word-break:break-word]">
                   {descriptionExpanded ||
                   String(description).length <= DESCRIPTION_PREVIEW_LEN
                     ? String(description)

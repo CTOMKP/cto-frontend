@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, Check, Copy } from 'lucide-react';
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { useWallets as useSolanaWallets, useSignTransaction } from '@privy-io/react-auth/solana';
 import { useSignRawHash } from '@privy-io/react-auth/extended-chains';
 import {
   Dialog,
@@ -15,11 +16,22 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { movementPaymentService } from '@/services/movementPaymentService';
 import { movementWalletService } from '@/services/movementWalletService';
+import solanaPaymentService from '@/services/solanaPaymentService';
 import { sendMovementTransaction } from '@/lib/movement-wallet';
 import { getAuthToken } from '@/lib/authSession';
 import { toast } from 'react-toastify';
 import { useResolvedMovementWallet } from '@/hooks/useResolvedMovementWallet';
 import { isApiError } from '@/lib/apiError';
+import solanaWalletService from '@/services/solanaWalletService';
+import {
+  getPrivySolanaPayWallet,
+  resolvePrivySolanaAddress,
+  signAndBroadcastSolanaPayPreferPrivyHook,
+  type PrivySolanaSignTransaction,
+  type SolanaSignerWallet,
+} from '@/lib/solanaTransaction';
+import { getDefaultSolanaRpcUrl } from '@/lib/solanaRpc';
+import { MoonLoader } from 'react-spinners';
 
 interface PaymentDialogProps {
   open: boolean;
@@ -39,104 +51,169 @@ export default function PaymentDialog({
   onPaymentSuccess,
 }: PaymentDialogProps) {
   const { user, authenticated } = usePrivy();
+  const { wallets } = useWallets();
+  const { signTransaction: privySignSolanaTransaction } = useSignTransaction();
   const { signRawHash } = useSignRawHash();
   const [currentStep, setCurrentStep] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState<'USDC' | 'APT' | 'SOL'>('USDC');
-  const [walletBalance, setWalletBalance] = useState<number>(0);
-  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
-  const [walletAddress, setWalletAddress] = useState<string>('');
+  /** Movement = USDC on Movement; SOL = USDC on Solana (native SOL only for fees). */
+  const [paymentMethod, setPaymentMethod] = useState<'USDC' | 'SOL'>('SOL');
+  const [movementUsdc, setMovementUsdc] = useState(0);
+  const [movementAddress, setMovementAddress] = useState('');
+  const [solanaUsdc, setSolanaUsdc] = useState(0);
+  const [solanaAddress, setSolanaAddress] = useState('');
+  const [loadingMovementBalance, setLoadingMovementBalance] = useState(false);
+  const [loadingSolanaBalance, setLoadingSolanaBalance] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [adsId] = useState('#456789'); // This should come from backend after listing creation
   const [isProcessing, setIsProcessing] = useState(false);
   const movementWalletQuery = useResolvedMovementWallet({ preferStorage: true });
+  const { wallets: solanaScopedWallets } = useSolanaWallets();
+  const solanaPayWallet = useMemo(
+    () => getPrivySolanaPayWallet(wallets as unknown[], solanaScopedWallets as unknown[] | undefined),
+    [wallets, solanaScopedWallets],
+  );
+  const solanaDisplayAddress = useMemo(
+    () =>
+      resolvePrivySolanaAddress(wallets as unknown[], solanaScopedWallets as unknown[] | undefined) ??
+      solanaPayWallet?.address ??
+      null,
+    [wallets, solanaScopedWallets, solanaPayWallet?.address],
+  );
+  const solanaAvailable = !!solanaPayWallet;
+  const userPickedPaymentRef = useRef(false);
+
+  /** Default: USDC on Solana when a Solana wallet exists; otherwise Movement. Re-sync when dialog opens or Solana becomes available until the user picks a method. */
+  useEffect(() => {
+    if (!open) {
+      userPickedPaymentRef.current = false;
+      return;
+    }
+    if (userPickedPaymentRef.current) return;
+    setPaymentMethod(solanaAvailable ? 'SOL' : 'USDC');
+  }, [open, solanaAvailable]);
+
+  const movementBalanceKey =
+    movementWalletQuery.data?.walletId != null && String(movementWalletQuery.data.walletId) !== ''
+      ? String(movementWalletQuery.data.walletId)
+      : movementWalletQuery.data?.movementWallet?.address
+        ? String(movementWalletQuery.data.movementWallet.address)
+        : '';
+  const solanaAddrKey = solanaDisplayAddress ?? '';
 
   const totalAmount = listingFee + 9; // Listing fee + ad boost (example)
 
+  const displayUsdcBalance = paymentMethod === 'SOL' ? solanaUsdc : movementUsdc;
+  const displayWalletAddress = paymentMethod === 'SOL' ? solanaAddress : movementAddress;
+  const needsFund = displayUsdcBalance < totalAmount;
+  const isLoadingBalance = paymentMethod === 'SOL' ? loadingSolanaBalance : loadingMovementBalance;
+
   // Copy wallet address to clipboard
   const copyWalletAddress = () => {
-    if (walletAddress) {
-      navigator.clipboard.writeText(walletAddress);
+    if (displayWalletAddress) {
+      navigator.clipboard.writeText(displayWalletAddress);
       setCopiedAddress(true);
       toast.success('Wallet address copied!');
       setTimeout(() => setCopiedAddress(false), 2000);
     }
   };
 
-  // Fetch Movement wallet USDC balance
-  const fetchMovementWalletBalance = useCallback(async () => {
-    if (!authenticated || !user) {
-      return;
-    }
-
-    setIsLoadingBalance(true);
-    try {
-      let movementWallet = movementWalletQuery.data?.movementWallet ?? null;
-      let walletId = movementWalletQuery.data?.walletId ?? null;
-      if (!movementWallet || !walletId) {
-        const fresh = await movementWalletQuery.refetch();
-        movementWallet = fresh.data?.movementWallet ?? null;
-        walletId = fresh.data?.walletId ?? null;
-      }
-
-      if (!movementWallet) {
-        console.warn('No Movement wallet found for balance check');
-        setWalletBalance(0);
-        setWalletAddress('');
-        setIsLoadingBalance(false);
-        return;
-      }
-
-      // Store wallet address
-      setWalletAddress(movementWallet.address);
-
-      if (!walletId) {
-        console.warn('Movement wallet ID not found, cannot fetch balance');
-        setWalletBalance(0);
-        setIsLoadingBalance(false);
-        return;
-      }
-
-      // Sync balance first to ensure it's up to date
-      try {
-        await movementWalletService.syncBalance(walletId, true); // testnet = true
-      } catch (syncError) {
-        console.warn('Failed to sync Movement wallet balance:', syncError);
-        // Continue to getBalance even if sync fails
-      }
-
-      // Get balance from backend
-      const balances = await movementWalletService.getBalance(walletId);
-
-      // Find USDC balance specifically
-      const usdcBalance = balances.find(
-        (b) => b.tokenSymbol?.toUpperCase() === 'USDC' || 
-               b.tokenSymbol?.toUpperCase() === 'USDC.E' ||
-               b.tokenAddress?.toLowerCase() === '0xb89077cfd2a82a0c1450534d49cfd5f2707643155273069bc23a912bcfefdee7'
-      );
-
-      if (usdcBalance) {
-        // Convert from token units to human-readable (divide by 10^decimals)
-        const balanceValue = parseFloat(usdcBalance.balance) / Math.pow(10, usdcBalance.decimals);
-        setWalletBalance(balanceValue);
-      } else {
-        // No USDC balance found
-        setWalletBalance(0);
-      }
-    } catch (error) {
-      console.error('Failed to fetch Movement wallet balance:', error);
-      setWalletBalance(0);
-    } finally {
-      setIsLoadingBalance(false);
-    }
-  }, [authenticated, user]);
-
-  // Fetch balance when dialog opens and user is authenticated
   useEffect(() => {
-    if (open && authenticated && user && currentStep === 2) {
-      fetchMovementWalletBalance();
-    }
-  }, [open, authenticated, user, currentStep, fetchMovementWalletBalance]);
+    if (!open || !authenticated || !user || currentStep !== 2 || paymentMethod !== 'USDC') return;
+    let cancelled = false;
+    setLoadingMovementBalance(true);
+    (async () => {
+      try {
+        let movementWallet = movementWalletQuery.data?.movementWallet ?? null;
+        let walletId = movementWalletQuery.data?.walletId ?? null;
+        if (!movementWallet || !walletId) {
+          const fresh = await movementWalletQuery.refetch();
+          if (cancelled) return;
+          movementWallet = fresh.data?.movementWallet ?? null;
+          walletId = fresh.data?.walletId ?? null;
+        }
+
+        if (!movementWallet) {
+          if (!cancelled) {
+            setMovementUsdc(0);
+            setMovementAddress('');
+          }
+          return;
+        }
+
+        if (!cancelled) setMovementAddress(movementWallet.address);
+
+        if (!walletId) {
+          if (!cancelled) setMovementUsdc(0);
+          return;
+        }
+
+        if (cancelled) return;
+        const balances = await movementWalletService.getBalance(walletId);
+        if (cancelled) return;
+
+        const usdcBalance = balances.find(
+          (b) => b.tokenSymbol?.toUpperCase() === 'USDC' ||
+            b.tokenSymbol?.toUpperCase() === 'USDC.E' ||
+            b.tokenAddress?.toLowerCase() === '0xb89077cfd2a82a0c1450534d49cfd5f2707643155273069bc23a912bcfefdee7'
+        );
+
+        if (usdcBalance) {
+          const balanceValue = parseFloat(usdcBalance.balance) / Math.pow(10, usdcBalance.decimals);
+          if (!cancelled) setMovementUsdc(balanceValue);
+        } else if (!cancelled) {
+          setMovementUsdc(0);
+        }
+      } catch {
+        if (!cancelled) setMovementUsdc(0);
+      } finally {
+        if (!cancelled) setLoadingMovementBalance(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      setLoadingMovementBalance(false);
+    };
+  }, [
+    open,
+    authenticated,
+    user,
+    currentStep,
+    paymentMethod,
+    movementBalanceKey,
+    movementWalletQuery.data,
+    movementWalletQuery.refetch,
+  ]);
+
+  useEffect(() => {
+    if (!open || !authenticated || !user || currentStep !== 2 || paymentMethod !== 'SOL') return;
+    let cancelled = false;
+    setLoadingSolanaBalance(true);
+    (async () => {
+      try {
+        const addr = solanaAddrKey;
+        if (!addr) {
+          if (!cancelled) {
+            setSolanaUsdc(0);
+            setSolanaAddress('');
+          }
+          return;
+        }
+        if (!cancelled) setSolanaAddress(addr);
+        const bal = await solanaWalletService.getBalance(addr);
+        if (!cancelled) {
+          setSolanaUsdc(Number.isFinite(bal.usdc) ? bal.usdc : 0);
+        }
+      } catch {
+        if (!cancelled) setSolanaUsdc(0);
+      } finally {
+        if (!cancelled) setLoadingSolanaBalance(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      setLoadingSolanaBalance(false);
+    };
+  }, [open, authenticated, user, currentStep, paymentMethod, solanaAddrKey]);
 
   const handlePayAndPublish = () => {
     // Move to step 2 (Payment Details)
@@ -149,53 +226,121 @@ export default function PaymentDialog({
       return;
     }
 
-    // Extract actual listing ID (remove # if present)
     const actualListingId = listingId.replace('#', '');
 
-    // Check both Privy authentication and localStorage token
     const token = getAuthToken();
     if (!authenticated || !user || !token) {
-      console.error('❌ Payment blocked - Auth check failed:', {
-        authenticated,
-        hasUser: !!user,
-        hasToken: !!token,
-        tokenLength: token?.length || 0,
-      });
       toast.error('Please login first');
       return;
     }
 
-    console.log('✅ Payment auth check passed:', {
-      authenticated,
-      hasUser: !!user,
-      hasToken: !!token,
-      userId: user?.id,
-    });
+    let movementWallet = movementWalletQuery.data?.movementWallet ?? null;
+    if (!movementWallet) {
+      const fresh = await movementWalletQuery.refetch();
+      movementWallet = fresh.data?.movementWallet ?? null;
+    }
+
+    if (paymentMethod === 'USDC') {
+      if (!movementWallet?.address || !(movementWallet.publicKey || movementWallet.public_key)) {
+        toast.error('Movement wallet not found. Please sync wallets in Profile.');
+        return;
+      }
+    }
 
     setIsProcessing(true);
 
     try {
-      // Check if user has Movement wallet
-      let movementWallet = movementWalletQuery.data?.movementWallet ?? null;
-      if (!movementWallet) {
-        const fresh = await movementWalletQuery.refetch();
-        movementWallet = fresh.data?.movementWallet ?? null;
+      if (paymentMethod === 'SOL') {
+        if (!solanaPayWallet) {
+          console.warn('[memecoin listing][Solana] aborted — no solanaPayWallet (Privy signer not resolved)');
+          throw new Error('No Solana wallet found. Please enable Solana in Privy and connect a Solana wallet.');
+        }
+        const solWalletProbe: SolanaSignerWallet = solanaPayWallet;
+        console.log('[memecoin listing][Solana] pay start', {
+          listingId: actualListingId,
+          walletAddress: solanaPayWallet.address,
+          hasSignTransaction: typeof solWalletProbe.signTransaction === 'function',
+          hasProviderSign: typeof solWalletProbe.provider?.signTransaction === 'function',
+          rpcUrl: getDefaultSolanaRpcUrl(),
+        });
+        const paymentResult = await solanaPaymentService.createListingPayment(actualListingId);
+        console.log('[memecoin listing][Solana] createListingPayment raw', paymentResult);
+        const paymentData = ((paymentResult as { data?: unknown } | undefined)?.data ||
+          paymentResult) as Record<string, unknown>;
+        console.log('[memecoin listing][Solana] paymentData (unwrapped)', {
+          success: paymentData?.success,
+          message: paymentData?.message,
+          paymentId: paymentData?.paymentId,
+          transactionLen: typeof paymentData?.transaction === 'string' ? paymentData.transaction.length : null,
+        });
+        if (!paymentData?.success) {
+          throw new Error(String(paymentData?.message || 'Failed to create payment'));
+        }
+        const txBase64 = paymentData.transaction as string | undefined;
+        if (!txBase64) {
+          throw new Error('Transaction data missing');
+        }
+        toast.success('Signing transaction with Privy Solana wallet...');
+        console.log(
+          '[memecoin listing][Solana] sign+broadcast: Privy useSignTransaction(bytes+chain) first (cto-test SolanaWalletActivity pattern)',
+        );
+        const txHash = await signAndBroadcastSolanaPayPreferPrivyHook({
+          unsignedTxBase64: txBase64,
+          wallet: solanaPayWallet,
+          signTransactionHook: privySignSolanaTransaction as unknown as PrivySolanaSignTransaction,
+          rpcUrl: getDefaultSolanaRpcUrl(),
+        });
+        console.log('[memecoin listing][Solana] tx signed, sent, confirmed', txHash);
+        toast.success('Transaction submitted! Verifying payment...');
+        // Wait before verify so the backend/indexer can see the Solana signature.
+        await new Promise((r) => setTimeout(r, 3000));
+        let verifyData: Record<string, unknown> | null = null;
+        let pay: { status?: string } | undefined;
+        for (let attempt = 0; attempt < 4; attempt += 1) {
+          if (attempt > 0) {
+            await new Promise((r) => setTimeout(r, 2000));
+          }
+          const verifyResult = await solanaPaymentService.verifyPayment(
+            String(paymentData.paymentId),
+            txHash,
+          );
+          console.log('[memecoin listing][Solana] verify raw', verifyResult);
+          verifyData = ((verifyResult as { data?: unknown } | undefined)?.data || verifyResult) as Record<
+            string,
+            unknown
+          >;
+          pay = verifyData.payment as { status?: string } | undefined;
+          const statusUp = String(pay?.status || '').toUpperCase();
+          console.log('[memecoin listing][Solana] verify (unwrapped)', {
+            attempt: attempt + 1,
+            success: verifyData?.success,
+            paymentStatus: pay?.status,
+            message: verifyData?.message,
+          });
+          if (verifyData?.success && statusUp === 'COMPLETED') {
+            break;
+          }
+        }
+        const finalStatus = String(pay?.status || '').toUpperCase();
+        if (verifyData?.success && finalStatus === 'COMPLETED') {
+          toast.success('Payment confirmed! Listing is now published!');
+          console.log('[memecoin listing][Solana] done — success');
+          setIsProcessing(false);
+          handleContinue();
+          return;
+        }
+        toast.error('Payment verification failed. Please try again.');
+        console.warn('[memecoin listing][Solana] verify did not reach COMPLETED after retries');
+        setIsProcessing(false);
+        return;
       }
 
-      if (!movementWallet) {
+      if (!movementWallet?.address || !(movementWallet.publicKey || movementWallet.public_key)) {
         toast.error('No Movement wallet found. Please go to Profile and click "Sync Wallets".');
         setIsProcessing(false);
         return;
       }
 
-      console.log('💼 Using Movement wallet:', {
-        address: movementWallet.address,
-        hasPublicKey: !!movementWallet.publicKey,
-        chainType: movementWallet.chainType
-      });
-
-      // Create payment
-      console.log('💳 Creating Movement payment for listing:', actualListingId);
       
       let paymentResult;
       try {
@@ -266,7 +411,6 @@ export default function PaymentDialog({
           if (verifyData?.success && (verifyData?.payment as { status?: string } | undefined)?.status === 'COMPLETED') {
             toast.success('Payment verified!');
             setIsProcessing(false);
-            // Move to step 3 (Success)
             setCurrentStep(3);
           } else {
             throw new Error('Payment verification failed');
@@ -292,7 +436,10 @@ export default function PaymentDialog({
       }
     } catch (error) {
       // This catch handles any unexpected errors not caught above
-      console.error('Unexpected payment error:', error);
+      console.error(
+        paymentMethod === 'SOL' ? '[memecoin listing][Solana] flow error' : 'Unexpected payment error:',
+        error,
+      );
       let errorMsg = 'Payment failed';
       if (error instanceof Error) {
         errorMsg = error.message || errorMsg;
@@ -341,9 +488,8 @@ export default function PaymentDialog({
             </DialogHeader>
 
             <div>
-              {/* Ads ID */}
               <div className="text-center mb-5">
-                <span className="text-white text-sm">Ads ID: {adsId}</span>
+                <span className="text-white text-sm">Listing ID: {listingId}</span>
               </div>
 
               {/* Listing Fee */}
@@ -447,74 +593,97 @@ export default function PaymentDialog({
               {/* Payment Method */}
               <div>
               <h2 className="text-sm text-white/70 mb-3 block">Payment Method</h2>
-              <div className='flex-col sm:flex-row flex gap-3 justify-between h-fit'>
+              <div className="flex-col sm:flex-row flex gap-3 justify-between h-fit">
                 <div>
-                <label className="text-sm text-white/70 mb-3 hidden">Payment Method</label>
-                <div className="space-y-2 text-nowrap flex flex-col justify-between min-h-full w-fit py-2 px-3 rounded-[6px] bg-[#141414]">
-                  <label className="flex items-center gap-3 cursor-pointer">
+                <div className="space-y-2 text-nowrap flex flex-col justify-between min-h-full  py-2 px-3 rounded-[6px] bg-[#141414]">
+                  <label className={`flex items-center gap-2 ${solanaAvailable ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
                     <input
                       type="radio"
-                      name="paymentMethod"
-                      value="USDC"
-                      checked={paymentMethod === 'USDC'}
-                      onChange={() => setPaymentMethod('USDC')}
-                      className="w-4 h-4"
-                    />
-                    <span className="text-[#8D8D8D]">Fund with USDC</span>
-                  </label>
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="APT"
-                      checked={paymentMethod === 'APT'}
-                      onChange={() => setPaymentMethod('APT')}
-                      className="w-4 h-4"
-                    />
-                    <span className="text-[#8D8D8D]">Fund with APT</span>
-                  </label>
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
+                      name="paymentMethod-listing"
                       value="SOL"
                       checked={paymentMethod === 'SOL'}
-                      onChange={() => setPaymentMethod('SOL')}
-                      className="w-4 h-4"
+                      onChange={() => {
+                        userPickedPaymentRef.current = true;
+                        setPaymentMethod('SOL');
+                      }}
+                      disabled={!solanaAvailable}
+                      className="w-4 h-4 shrink-0"
                     />
-                    <span className="text-[#8D8D8D]">Fund with Sol</span>
+                    <span className="text-[#8D8D8D] text-sm">
+                      USDC on Solana{' '}
+                      {!solanaAvailable ? (
+                        <span className="text-[10px] text-amber-200/80"> · Unavailable</span>
+                      ) : null}
+                    </span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="paymentMethod-listing"
+                      value="USDC"
+                      checked={paymentMethod === 'USDC'}
+                      onChange={() => {
+                        userPickedPaymentRef.current = true;
+                        setPaymentMethod('USDC');
+                      }}
+                      className="w-4 h-4 shrink-0"
+                    />
+                    <span className="text-[#8D8D8D] text-sm">
+                      USDC on Movement
+                    </span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-not-allowed opacity-50">
+                    <input
+                      type="radio"
+                      name="paymentMethod-listing"
+                      value="APT"
+                      disabled
+                      checked={false}
+                      readOnly
+                      className="w-4 h-4 shrink-0"
+                    />
+                    <span className="text-[#8D8D8D] text-sm">
+                      APT <span className="text-[10px] text-white/35">· Coming soon</span>
+                    </span>
                   </label>
                 </div>
                 </div>
 
-                {/* Wallet Balance Box */}
                 <div className="mt-4 w-full sm:mt-0 p-4 py-2 px-3 rounded-[6px] bg-[#141414]">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-[#8D8D8D]">Your Wallet Balance:</span>
+                  <div className="flex flex-col justify-between mb-1 gap-2">
+                    <p className="text-sm text-[#8D8D8D]">Your balance</p>
                     {isLoadingBalance ? (
-                      <span className="text-sm text-[#8D8D8D]">Loading...</span>
+                      // <span className="text-sm text-[#8D8D8D]">Loading...</span>
+                      <MoonLoader size={10} color="#8D8D8D" />
                     ) : (
-                      <span 
-                        className="text-sm font-medium"
-                        style={{ color: walletBalance < listingFee ? '#E23D3D' : '#3DE23D' }}
+                      <span
+                        className="text-sm block font-medium tabular-nums"
+                        style={{ color: displayUsdcBalance < totalAmount ? '#E23D3D' : '#3DE23D' }}
                       >
-                        ${walletBalance.toFixed(2)} USDC
+                        {displayUsdcBalance.toFixed(2)} USDC
                       </span>
                     )}
                   </div>
-                  <div className="flex justify-end">
-                    <button className="text-sm text-[#FF9631] underline">Fund Wallet</button>
-                  </div>
-                  {walletBalance < listingFee && walletAddress ? (
-                    <div className="mt-3">
-                      <div className="text-xs text-[#8D8D8D] mb-2">Wallet Address</div>
+                  {needsFund ? (
+                    <div className="flex justify-end mb-2">
+                      <button type="button" className="text-sm text-[#FF9631] underline">
+                        Fund wallet
+                      </button>
+                    </div>
+                  ) : null}
+                  {needsFund && displayWalletAddress ? (
+                    <div className="mt-1">
+                      <div className="text-xs text-[#8D8D8D] mb-2">
+                        Deposit address ({paymentMethod === 'SOL' ? 'Solana' : 'Movement'})
+                      </div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-white/70 flex-1 truncate font-mono">
-                          {walletAddress.length > 20 
-                            ? `${walletAddress.slice(0, 10)}...${walletAddress.slice(-8)}`
-                            : walletAddress}
+                          {displayWalletAddress.length > 20
+                            ? `${displayWalletAddress.slice(0, 10)}...${displayWalletAddress.slice(-8)}`
+                            : displayWalletAddress}
                         </span>
                         <button
+                          type="button"
                           onClick={copyWalletAddress}
                           className="text-white/70 hover:text-white transition-colors p-1 flex-shrink-0"
                           title="Copy address"
@@ -527,9 +696,14 @@ export default function PaymentDialog({
                         </button>
                       </div>
                     </div>
+                  ) : !needsFund ? (
+                    <p className="text-xs text-[#8D8D8D] mt-2">
+                      Balance covers this payment. By clicking &quot;Pay&quot;, ${totalAmount} USDC will be charged
+                      {paymentMethod === 'SOL' ? ' on Solana' : ' on Movement'}.
+                    </p>
                   ) : (
-                    <p className="text-xs text-[#8D8D8D] mt-3">
-                      By Clicking on &quot;Pay&quot;, the sum of ${listingFee} will be charged from your wallet balance.
+                    <p className="text-xs text-[#8D8D8D] mt-2">
+                      Add USDC to the address above, then pay ${totalAmount}.
                     </p>
                   )}
                 </div>
@@ -538,7 +712,7 @@ export default function PaymentDialog({
 
               {/* Footer Note */}
               <p className="text-[10px] text-[#FF9631]">
-                This app uses USDC as the primary transaction token. Please ensure your wallet is funded.
+                Charges are in USDC. On Solana, keep a small SOL balance for transaction fees.
               </p>
 
               {/* Pay Button */}

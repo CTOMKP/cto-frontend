@@ -20,7 +20,8 @@ export default function BalanceDisplay({
         <div className="flex justify-center gap-2 flex-col items-center">
           <span className={`text-[${balanceTextSize}] font-semibold text-white`}>
             {selectedAsset?.name === "MOVE" ||
-            selectedAsset?.name === "USDC"
+            selectedAsset?.name === "USDC" ||
+            selectedAsset?.name === "SOL"
               ? `${walletBalance.toLocaleString(undefined, {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,

@@ -72,6 +72,10 @@ export function getTokenLogo(tokenName: string): string {
     return "/listings-chains/usdc.png";
   }
 
+  if (token === "SOL") {
+    return "/listings-chains/solana.png";
+  }
+
   // Default fallback to Movement logo
   return "/listings-chains/movement.png";
 }

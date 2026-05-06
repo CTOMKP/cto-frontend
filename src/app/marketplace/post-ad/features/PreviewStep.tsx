@@ -3,7 +3,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import AdPaymentDialog from '@/components/AdPaymentDialog';
+import AdPaymentDialog from '@/app/marketplace/post-ad/features/AdPaymentDialog';
 
 interface PreviewStepProps {
   formData: {
@@ -30,6 +30,8 @@ interface PreviewStepProps {
   onPaymentDialogOpenChange: (open: boolean) => void;
   draftAdId: string | null;
   savingDraft?: boolean;
+  /** Persist draft on server immediately before payment (create or update). */
+  ensureDraftSaved?: () => Promise<string | null>;
 }
 
 export default function PreviewStep({
@@ -41,7 +43,13 @@ export default function PreviewStep({
   onPaymentDialogOpenChange,
   draftAdId,
   savingDraft = false,
+  ensureDraftSaved,
 }: PreviewStepProps) {
+  const visibilityIdForPricing = formData.visibility?.trim();
+  const hasValidVisibility =
+    !!visibilityIdForPricing &&
+    ['free', 'plus', 'premium'].includes(visibilityIdForPricing);
+
   const subtotal = (() => {
     let total = 0;
     
@@ -51,9 +59,9 @@ export default function PreviewStep({
       total += 5; // Category price
     }
     
-    // Visibility pricing
-    if (formData.visibility === 'plus') total += 5;
-    if (formData.visibility === 'premium') total += 15;
+    // Visibility pricing (only when a tier is explicitly selected)
+    if (hasValidVisibility && formData.visibility === 'plus') total += 5;
+    if (hasValidVisibility && formData.visibility === 'premium') total += 15;
     
     // Boost options pricing
     if (formData.boostOptions?.['auto-bump']) total += 7;
@@ -95,15 +103,29 @@ export default function PreviewStep({
     { id: 'multi-chain-tag', description: 'Appear under multiple blockchains', price: '$10' },
   ];
 
+  const visibilityId = visibilityIdForPricing;
+  const selectedVisibility =
+    visibilityId && visibilityOptions.some((o) => o.id === visibilityId)
+      ? visibilityOptions.find((o) => o.id === visibilityId)!
+      : null;
+
+  const selectedBoostOptions = boostOptions.filter((o) => formData.boostOptions?.[o.id] === true);
+
   const paymentBreakdown = (() => {
     const items: { label: string; price: number }[] = [];
     if (formData.category && formData.subcategory) {
       items.push({ label: 'Category', price: 5 });
     }
-    const visId = formData.visibility || 'free';
-    const visLabels: Record<string, string> = { free: 'Visibility: Free', plus: 'Visibility: Plus', premium: 'Visibility: Premium' };
-    const visPrices: Record<string, number> = { free: 0, plus: 5, premium: 15 };
-    items.push({ label: visLabels[visId] ?? 'Visibility', price: visPrices[visId] ?? 0 });
+    if (hasValidVisibility && formData.visibility) {
+      const visId = formData.visibility;
+      const visLabels: Record<string, string> = {
+        free: 'Visibility: Free',
+        plus: 'Visibility: Plus',
+        premium: 'Visibility: Premium',
+      };
+      const visPrices: Record<string, number> = { free: 0, plus: 5, premium: 15 };
+      items.push({ label: visLabels[visId] ?? 'Visibility', price: visPrices[visId] ?? 0 });
+    }
     const boostLabels: Record<string, string> = {
       'auto-bump': 'Auto-Bump (3 days)',
       'homepage-spotlight': 'Homepage Spotlight',
@@ -229,69 +251,57 @@ export default function PreviewStep({
             </div>
           </div>
 
-          {/* Visibility Options Section */}
+          {/* Visibility Options Section — preview: only the chosen tier, or "None selected" */}
           <div>
             <h3 className="text-[18px] text-white mb-4">
               Choose how visible you want this post to be
             </h3>
             <div className="border-t-[0.2px] border-0 border-white/20 mt-5 mb-6"></div>
-            <div className="space-y-3">
-              {visibilityOptions.map((option) => (
-                <div
-                  key={option.id}
-                  className={`rounded-[4px] p-[1px] transition-all ${
-                    formData.visibility === option.id
-                      ? 'bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)]'
-                      : 'bg-transparent'
-                  }`}
-                >
-                  <div
-                    className={`flex items-center justify-between rounded-[4px] py-4 px-5 bg-[#141414] ${
-                      formData.visibility === option.id ? '' : 'opacity-90'
-                    }`}
-                  >
-                    <div className="text-white font-semibold capitalize">{option.id}</div>
-                    <div className="text-sm text-[#A1A1AA]">{option.description}</div>
-                    <div className="text-[#FF9631] font-semibold">{option.price}</div>
-                  </div>
+            {selectedVisibility ? (
+              <div className="rounded-[4px] p-[1px] bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)]">
+                <div className="flex items-center justify-between rounded-[4px] py-4 px-5 bg-[#141414]">
+                  <div className="text-white font-semibold capitalize">{selectedVisibility.id}</div>
+                  <div className="text-sm text-[#A1A1AA]">{selectedVisibility.description}</div>
+                  <div className="text-[#FF9631] font-semibold">{selectedVisibility.price}</div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <p className="text-sm text-[#A1A1AA]">None selected</p>
+            )}
           </div>
 
-          {/* Boost Ad's Reach Section */}
+          {/* Boost Ad's Reach Section — preview: only chosen boosts, or "None selected" */}
           <div>
             <h3 className="text-[18px] text-white mb-4">
               Boost your ad&apos;s reach
             </h3>
             <div className="border-t-[0.2px] border-0 border-white/20 mt-5 mb-6"></div>
-            <div className="space-y-3">
-              {boostOptions.map((option) => (
-                <div
-                  key={option.id}
-                  className={`rounded-[4px] p-[1px] transition-all ${
-                    formData.boostOptions?.[option.id]
-                      ? 'bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)]'
-                      : 'bg-transparent'
-                  }`}
-                >
+            {selectedBoostOptions.length > 0 ? (
+              <div className="space-y-3">
+                {selectedBoostOptions.map((option) => (
                   <div
-                    className={`flex items-center justify-between rounded-[4px] py-4 px-5 bg-[#141414] ${
-                      formData.boostOptions?.[option.id] ? '' : 'opacity-90'
-                    }`}
+                    key={option.id}
+                    className="rounded-[4px] p-[1px] bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)]"
                   >
-                    <div className="text-white font-semibold">
-                      {option.id === 'auto-bump' ? 'Auto-Bump (3 days)' :
-                       option.id === 'homepage-spotlight' ? 'Homepage Spotlight' :
-                       option.id === 'urgent-tag' ? 'Urgent Tag' :
-                       'Multi-Chain Tag'}
+                    <div className="flex items-center justify-between rounded-[4px] py-4 px-5 bg-[#141414]">
+                      <div className="text-white font-semibold">
+                        {option.id === 'auto-bump'
+                          ? 'Auto-Bump (3 days)'
+                          : option.id === 'homepage-spotlight'
+                            ? 'Homepage Spotlight'
+                            : option.id === 'urgent-tag'
+                              ? 'Urgent Tag'
+                              : 'Multi-Chain Tag'}
+                      </div>
+                      <div className="text-sm text-[#A1A1AA]">{option.description}</div>
+                      <div className="text-[#FF9631] font-semibold">{option.price}</div>
                     </div>
-                    <div className="text-sm text-[#A1A1AA]">{option.description}</div>
-                    <div className="text-[#FF9631] font-semibold">{option.price}</div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-[#A1A1AA]">None selected</p>
+            )}
           </div>
         </div>
 
@@ -322,6 +332,7 @@ export default function PreviewStep({
           onPaymentDialogOpenChange(false);
           onPublish();
         }}
+        ensureDraftSaved={ensureDraftSaved}
       />
     </div>
   );

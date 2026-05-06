@@ -243,6 +243,7 @@ export default function PostAdPage() {
           onPaymentDialogOpenChange={setPaymentDialogOpen}
           draftAdId={draftAdId}
           savingDraft={savingDraft}
+          ensureDraftSaved={ensureDraftSaved}
         />
       )}
     </>
