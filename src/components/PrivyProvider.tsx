@@ -4,7 +4,7 @@ import React, { useMemo } from 'react';
 import { PrivyProvider as PrivyProviderBase } from '@privy-io/react-auth';
 import { createSolanaRpc, createSolanaRpcSubscriptions } from '@solana/kit';
 import RewardProgressSync from '@/components/RewardProgressSync';
-import { getDefaultSolanaRpcUrl, getDefaultSolanaRpcWsUrl } from '@/lib/solanaRpc';
+import { getDefaultSolanaRpcUrl } from '@/lib/solanaRpc';
 
 interface PrivyProviderProps {
   children: React.ReactNode;
@@ -15,7 +15,11 @@ export default function PrivyProvider({ children }: PrivyProviderProps) {
 
   const solanaRpcs = useMemo(() => {
     const http = getDefaultSolanaRpcUrl();
-    const ws = getDefaultSolanaRpcWsUrl();
+    const ws = /^https:/i.test(http)
+      ? http.replace(/^https:/i, 'wss:')
+      : /^http:/i.test(http)
+        ? http.replace(/^http:/i, 'ws:')
+        : http;
     const bundle = {
       rpc: createSolanaRpc(http),
       rpcSubscriptions: createSolanaRpcSubscriptions(ws),
