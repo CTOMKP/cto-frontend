@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { Suspense, useState, useCallback, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { invalidateListingQueries } from "@/lib/queryInvalidation";
@@ -245,7 +245,7 @@ function canProceedWithScan(scan: ScanResult | null): boolean {
   return backendEligible === true || riskScore >= minRequired;
 }
 
-export default function ListingApplication() {
+function ListingApplicationContent() {
   const queryClient = useQueryClient();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -784,5 +784,13 @@ export default function ListingApplication() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ListingApplication() {
+  return (
+    <Suspense fallback={<div className="mt-[78px] mx-50 text-white/70">Loading...</div>}>
+      <ListingApplicationContent />
+    </Suspense>
   );
 }
