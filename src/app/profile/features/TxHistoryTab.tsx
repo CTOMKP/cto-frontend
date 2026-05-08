@@ -3,37 +3,73 @@
 import { SquareArrowOutUpRight } from "lucide-react";
 import type { WalletTransaction } from "@/services/movementWalletService";
 import TxHistoryTableSkeleton from "./TxHistoryTableSkeleton";
+import { getDefaultSolanaRpcUrl } from "@/lib/solanaRpc";
+
+export type HistoryTxRow = WalletTransaction & {
+  sourceChain: "movement" | "solana";
+};
 
 interface TxHistoryTabProps {
-  transactions: WalletTransaction[];
+  transactions: HistoryTxRow[];
   loading: boolean;
   syncing: boolean;
   onSync: () => void;
 }
 
+function tokenMeta(tx: WalletTransaction): {
+  divisor: number;
+  symbol: string;
+} {
+  const sym = String(tx.tokenSymbol ?? "").toUpperCase();
+  if (sym.includes("USDC")) {
+    return { divisor: 1_000_000, symbol: "USDC" };
+  }
+  if (sym === "SOL") {
+    return { divisor: 1_000_000_000, symbol: "SOL" };
+  }
+  return { divisor: 100_000_000, symbol: "MOVE" };
+}
+
 function formatTransactionAmount(tx: WalletTransaction): string {
-  const isUSDC = tx.tokenSymbol?.toLowerCase().includes("usdc");
-  const divisor = isUSDC ? 1000000 : 100000000;
-  const decimals = isUSDC ? 2 : 2;
+  const { divisor, symbol } = tokenMeta(tx);
   const amount = parseFloat(tx.amount) / divisor;
-  const symbol = isUSDC ? "USDC" : "MOVE";
-  return `${amount.toFixed(decimals)} ${symbol}`;
+  return `${amount.toFixed(symbol === "SOL" ? 4 : 2)} ${symbol}`;
 }
 
 function formatTransactionValue(tx: WalletTransaction): string {
-  const isUSDC = tx.tokenSymbol?.toLowerCase().includes("usdc");
-  if (isUSDC) {
-    const amount = parseFloat(tx.amount) / 1000000;
-    return `$${amount.toFixed(2)}`;
-  }
-  const amount = parseFloat(tx.amount) / 100000000;
-  return `${amount.toFixed(2)} MOVE`;
+  const { divisor, symbol } = tokenMeta(tx);
+  const amount = parseFloat(tx.amount) / divisor;
+  if (symbol === "USDC") return `$${amount.toFixed(2)}`;
+  return `${amount.toFixed(symbol === "SOL" ? 4 : 2)} ${symbol}`;
 }
 
-function formatAddress(address: string): string {
-  if (!address) return "";
-  if (address.length <= 10) return address;
-  return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+function formatAddressSnippet(raw: string): string {
+  if (!raw) return "";
+  if (raw.length <= 10) return raw;
+  return `${raw.substring(0, 6)}...${raw.substring(raw.length - 4)}`;
+}
+
+/** Counterparty / reference line (matches test `MovementWalletRecentActivity`). */
+function counterpartyAddress(tx: WalletTransaction): string {
+  const side =
+    tx.txType === "CREDIT"
+      ? tx.fromAddress || tx.txHash
+      : tx.toAddress || tx.txHash;
+  return side ? String(side) : "";
+}
+
+function explorerHref(tx: HistoryTxRow): string {
+  if (tx.sourceChain === "solana") {
+    const devnet = getDefaultSolanaRpcUrl().toLowerCase().includes("devnet");
+    return devnet
+      ? `https://solscan.io/tx/${encodeURIComponent(tx.txHash)}?cluster=devnet`
+      : `https://solscan.io/tx/${encodeURIComponent(tx.txHash)}`;
+  }
+  if (tx.txHash?.startsWith("version-")) {
+    const version = tx.txHash.replace("version-", "");
+    return `https://explorer.movementnetwork.xyz/version/${encodeURIComponent(version)}?network=bardock+testnet`;
+  }
+  return `https://explorer.movementnetwork.xyz/txn/${encodeURIComponent(tx.txHash)}?network=bardock+testnet`;
 }
 
 export default function TxHistoryTab({
@@ -47,6 +83,7 @@ export default function TxHistoryTab({
       <div className="flex justify-between items-center mb-4">
         <div />
         <button
+          type="button"
           onClick={onSync}
           disabled={syncing}
           className="text-xs px-3 py-1 rounded-lg bg-[#17171C] text-white hover:bg-[#2A2A2E] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
@@ -86,10 +123,13 @@ export default function TxHistoryTab({
             <thead>
               <tr className="text-left">
                 <th className="text-xs font-bold text-white/50 py-2 pr-4">
+                  Network
+                </th>
+                <th className="text-xs font-bold text-white/50 py-2 pr-4">
                   Timestamp
                 </th>
                 <th className="text-xs font-bold text-white/50 py-2 pr-4">
-                  Value (USDC)
+                  Value
                 </th>
                 <th className="text-xs font-bold text-white/50 py-2 pr-4">
                   Amount
@@ -98,16 +138,19 @@ export default function TxHistoryTab({
                   Type
                 </th>
                 <th className="text-xs font-bold text-white/50 py-2 pr-4">
-                  Address
+                  Counterparty
                 </th>
                 <th className="text-xs font-bold text-white/50 py-2 pr-0 text-right">
-                  Hash ID
+                  Explorer
                 </th>
               </tr>
             </thead>
             <tbody>
               {transactions.map((tx) => (
-                <tr key={tx.id} className="bg-white/2">
+                <tr key={`${tx.sourceChain}-${tx.id}-${tx.txHash}`} className="bg-white/2">
+                  <td className="text-xs font-medium text-white/80 py-3 pr-4 whitespace-nowrap">
+                    {tx.sourceChain === "solana" ? "Solana" : "Movement"}
+                  </td>
                   <td className="text-xs font-medium text-white py-3 pr-4 whitespace-nowrap">
                     {new Date(tx.createdAt).toLocaleString([], {
                       dateStyle: "short",
@@ -135,12 +178,12 @@ export default function TxHistoryTab({
                           : "Transfer"}
                     </span>
                   </td>
-                  <td className="text-xs font-medium text-white py-3 pr-4 whitespace-nowrap">
-                    {formatAddress(tx.txHash)}
+                  <td className="text-xs font-medium text-white py-3 pr-4 font-mono max-w-[140px] truncate">
+                    {formatAddressSnippet(counterpartyAddress(tx))}
                   </td>
                   <td className="text-xs font-medium text-white py-3 pr-0 whitespace-nowrap text-right">
                     <a
-                      href={`https://explorer.movementnetwork.xyz/txn/${tx.txHash}?network=bardock+testnet`}
+                      href={explorerHref(tx)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-white/80 hover:text-white"

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { invalidateListingQueries } from "@/lib/queryInvalidation";
 import {
@@ -14,8 +15,14 @@ import Step2, { SocialLinks } from "./features/Step2";
 import Step3 from "./features/Step3";
 import Step4 from "./features/Step4";
 import { Hourglass } from "lucide-react";
-import { userListingsService, ScanResult, CreateUserListingPayload } from "@/services/userListingsService";
+import {
+  userListingsService,
+  ScanResult,
+  CreateUserListingPayload,
+  type ScanMetadata,
+} from "@/services/userListingsService";
 import { toast } from "react-toastify";
+import type { AllUserListings } from "@/types/api";
 
 const networks = [
   {
@@ -90,6 +97,92 @@ const getStarted = [
 
 const DRAFT_KEY = 'cto_draft_listing_id';
 
+function normalizeChainForListAsset(chain: string): string {
+  const c = chain.trim().toLowerCase().replace(/\s+/g, "");
+  if (c === "bsc" || c === "binance" || c === "bnbchain" || c === "binance-smart-chain") return "bnb";
+  if (c === "eth") return "ethereum";
+  return c;
+}
+
+function scanResultFromMineListing(listing: AllUserListings): ScanResult {
+  const md = listing.scanMetadata;
+  const vr = md?.vetting_results;
+  const risk = listing.scanRiskScore ?? listing.vettingScore ?? 0;
+  const tier = listing.scanTier || listing.vettingTier || "UNQUALIFIED";
+
+  const metadata: ScanMetadata = {
+    token_symbol: md?.token_symbol,
+    token_name: md?.token_name,
+    project_age_days: md?.project_age_days,
+    age_display: md?.age_display,
+    age_display_short: md?.age_display_short,
+    holder_count: md?.holder_count,
+    lp_amount_usd: md?.lp_amount_usd,
+    token_price: md?.token_price,
+    volume_24h: md?.volume_24h,
+    market_cap: md?.market_cap,
+    scan_timestamp: md?.scan_timestamp,
+    vetting_results: vr
+      ? {
+          overallScore: vr.overallScore,
+          riskLevel: vr.riskLevel,
+          eligibleTier: vr.eligibleTier,
+          dataSufficient: vr.dataSufficient,
+          missingData: vr.missingData as string[] | undefined,
+          allFlags: vr.allFlags,
+          componentScores: vr.componentScores
+            ? {
+                distribution: vr.componentScores.distribution
+                  ? {
+                      score: vr.componentScores.distribution.score,
+                      flags: vr.componentScores.distribution.flags,
+                    }
+                  : undefined,
+                liquidity: vr.componentScores.liquidity
+                  ? {
+                      score: vr.componentScores.liquidity.score,
+                      flags: vr.componentScores.liquidity.flags,
+                    }
+                  : undefined,
+                devAbandonment: vr.componentScores.devAbandonment
+                  ? {
+                      score: vr.componentScores.devAbandonment.score,
+                      flags: vr.componentScores.devAbandonment.flags,
+                    }
+                  : undefined,
+                technical: vr.componentScores.technical
+                  ? {
+                      score: vr.componentScores.technical.score,
+                      flags: vr.componentScores.technical.flags,
+                    }
+                  : undefined,
+              }
+            : undefined,
+          calculatedAt: vr.calculatedAt,
+        }
+      : undefined,
+  };
+
+  return {
+    success: true,
+    risk_score: risk,
+    tier,
+    eligible: true,
+    summary: listing.scanSummary,
+    minimum_required_score: 50,
+    metadata,
+    vettingScore: listing.vettingScore,
+    vettingTier: listing.vettingTier,
+    details: {
+      risk_score: risk,
+      tier,
+      eligible: true,
+      summary: listing.scanSummary,
+      metadata,
+    },
+  };
+}
+
 function extractListingIdFromCreateResponse(created: unknown): string | undefined {
   if (!created || typeof created !== 'object') return undefined;
   const record = created as Record<string, unknown>;
@@ -154,17 +247,13 @@ function canProceedWithScan(scan: ScanResult | null): boolean {
 
 export default function ListingApplication() {
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const createListingMutation = useCreateUserListingMutation();
   const updateListingMutation = useUpdateUserListingMutation();
   const publishListingMutation = usePublishUserListingMutation();
   const [selectedNetwork, setSelectedNetwork] = useState<string>("solana");
 
-  // Clear stale draft when starting a new listing flow (match cto-test-frontend)
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(DRAFT_KEY);
-    }
-  }, []);
   const [networkDialogueOpen, setNetworkDialogueOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [showStep4, setShowStep4] = useState<boolean>(false);
@@ -184,6 +273,77 @@ export default function ListingApplication() {
     telegram: '',
     discord: '',
   });
+  const [listingTitle, setListingTitle] = useState('');
+  const [listingDescription, setListingDescription] = useState('');
+
+  /** Fresh `/list-asset` visits reset saved draft id unless opening a resume link from profile. */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (!params.get("listingId")?.trim()) {
+      localStorage.removeItem(DRAFT_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    const listingId = searchParams.get("listingId")?.trim();
+    const resumeStep = searchParams.get("resumeStep")?.trim();
+    if (!listingId) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const raw = await userListingsService.getMyListing(listingId);
+        const listing = raw as AllUserListings;
+        if (cancelled || !listing || typeof listing !== "object") return;
+
+        const normalizeLink = (v: unknown) =>
+          typeof v === 'string' && v !== '#' ? v : '';
+
+        const linksRecord =
+          listing.links && typeof listing.links === 'object'
+            ? listing.links
+            : null;
+
+        setContractAddress((listing.contractAddr ?? "").trim());
+        setSelectedNetwork(normalizeChainForListAsset(listing.chain ?? "solana"));
+        const resumedScan = scanResultFromMineListing(listing);
+        setScanResult(resumedScan);
+        setBio(listing.bio ?? "");
+        setListingTitle((listing.title ?? "").trim());
+        setListingDescription((listing.description ?? "").trim());
+        setLinks({
+          website: normalizeLink(linksRecord?.website),
+          twitter: normalizeLink(linksRecord?.twitter),
+          telegram: normalizeLink(linksRecord?.telegram),
+          discord: normalizeLink(linksRecord?.discord),
+        });
+        const logo = listing.logoUrl ?? "";
+        const banner = listing.bannerUrl ?? "";
+        setLogoUrl(logo);
+        setBannerUrl(banner);
+        setProfilePreview(logo || null);
+        setBannerPreview(banner || null);
+        setDraftId(listing.id);
+        localStorage.setItem(DRAFT_KEY, listing.id);
+
+        if (resumeStep === "review") {
+          setShowStep4(true);
+        } else {
+          setShowStep4(false);
+          setCurrentStep(2);
+        }
+
+        router.replace("/list-asset", { scroll: false });
+      } catch {
+        if (!cancelled) toast.error("Could not load your listing draft");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, router]);
 
   const goToStep = useCallback(
     (step: number) => {
@@ -300,6 +460,8 @@ export default function ListingApplication() {
     getDraftId,
     createListingMutation,
     queryClient,
+    listingTitle,
+    listingDescription,
   ]);
 
   const handleProfilePictureChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -385,6 +547,8 @@ export default function ListingApplication() {
       // Draft is created only here (on Continue), not when uploading images
       await ensureDraftExists(
         {
+          title: listingTitle.trim() || undefined,
+          description: listingDescription.trim() || undefined,
           bio,
           logoUrl: logoUrl || undefined,
           bannerUrl: bannerUrl || undefined,
@@ -397,7 +561,7 @@ export default function ListingApplication() {
       const msg = (err as Error)?.message ?? 'Failed to save draft';
       toast.error(msg);
     }
-  }, [ensureDraftExists, scanResult, bio, logoUrl, bannerUrl, links]);
+  }, [ensureDraftExists, scanResult, bio, logoUrl, bannerUrl, links, listingTitle, listingDescription]);
 
   return (
     <div>
@@ -496,6 +660,8 @@ export default function ListingApplication() {
                 setCurrentStep={setCurrentStep}
                 onScanResultChange={setScanResult}
                 onContractAddressChange={setContractAddress}
+                restoredContractAddress={contractAddress}
+                restoredScanResult={scanResult}
               />
             )}
 
@@ -512,6 +678,7 @@ export default function ListingApplication() {
                 setCurrentStep={setCurrentStep}
                 onContinue={handleStep2Continue}
                 onBioChange={setBio}
+                initialBio={bio}
                 links={links}
                 setLinks={setLinks}
               />
@@ -545,6 +712,8 @@ export default function ListingApplication() {
                 bannerUrl={bannerUrl}
                 bio={bio}
                 links={links}
+                initialTitle={listingTitle}
+                initialDescription={listingDescription}
               />
             )}
           </div>

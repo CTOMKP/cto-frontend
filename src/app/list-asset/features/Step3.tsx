@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   useCreateUserListingMutation,
   useUpdateUserListingMutation,
@@ -25,6 +25,9 @@ interface Step3Props {
   bannerUrl?: string;
   bio?: string;
   links?: SocialLinks;
+  /** From saved listing (`mine/{id}`) when resuming */
+  initialTitle?: string;
+  initialDescription?: string;
 }
 
 function extractListingIdFromCreateResponse(result: unknown): string | undefined {
@@ -57,14 +60,24 @@ export default function Step3({
   bannerUrl = '',
   bio,
   links,
+  initialTitle = '',
+  initialDescription = '',
 }: Step3Props) {
   const updateListingMutation = useUpdateUserListingMutation();
   const createListingMutation = useCreateUserListingMutation();
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [title, setTitle] = useState(initialTitle);
+  const [description, setDescription] = useState(initialDescription);
   const [listingId, setListingId] = useState<string | null>(null);
   const [isCreatingListing, setIsCreatingListing] = useState(false);
+
+  useEffect(() => {
+    setTitle(initialTitle ?? '');
+  }, [initialTitle]);
+
+  useEffect(() => {
+    setDescription(initialDescription ?? '');
+  }, [initialDescription]);
 
   const handleProceed = async () => {
     if (!title.trim() || !description.trim()) {

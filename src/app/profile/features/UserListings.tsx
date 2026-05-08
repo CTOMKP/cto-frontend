@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { Card, CardContent } from "@/components/ui/card";
 import { TableRow, TableCell } from "@/components/ui/table";
-import { MockLikeCoin, SortField, SortDirection } from "@/app/listings/features/types/listing";
+import type { MockLikeCoin } from "@/app/listings/features/types/listing";
+import { SortField, SortDirection } from "@/app/listings/features/types/listing";
 import { AllUserListings } from "@/types/api";
 import { useUserListingsQuery } from "@/hooks/useUserListingsQuery";
 import UserListingsTableHeader from "./UserListingsTableHeader";
@@ -38,6 +39,7 @@ function mapMineItemsToTableRows(items: AllUserListings[]): MockLikeCoin[] {
 
     const change24h = 0;
     return {
+      listingId: it.id,
       name: it.scanMetadata?.token_name || it.scanMetadata?.token_symbol || "",
       whale: false,
       age: it.scanMetadata?.age_display,
@@ -159,12 +161,33 @@ export default function UserListings() {
     });
   }, [tableData, sortField, sortDirection]);
 
-  const handleProjectClick = (projectName: string, projectAddress: string) => {
-    const slug = slugify(projectName) || projectAddress;
+  const handleListingRowClick = (coin: MockLikeCoin) => {
+    const status = (coin.status ?? "").toUpperCase();
+    const listingId = coin.listingId?.trim();
+
+    if (listingId && status === "DRAFT") {
+      router.push(
+        `/list-asset?listingId=${encodeURIComponent(listingId)}&resumeStep=2`,
+      );
+      return;
+    }
+    if (listingId && status === "PENDING_APPROVAL") {
+      router.push(
+        `/list-asset?listingId=${encodeURIComponent(listingId)}&resumeStep=review`,
+      );
+      return;
+    }
+
+    const slug = slugify(coin.name) || coin.address;
+    if (listingId && status === "PUBLISHED") {
+      router.push(
+        `/projects/${encodeURIComponent(slug)}?address=${encodeURIComponent(coin.address)}&userListingId=${encodeURIComponent(listingId)}`,
+      );
+      return;
+    }
+
     router.push(
-      `/projects/${encodeURIComponent(slug)}?address=${encodeURIComponent(
-        projectAddress,
-      )}`,
+      `/projects/${encodeURIComponent(slug)}?address=${encodeURIComponent(coin.address)}`,
     );
   };
 
@@ -185,9 +208,9 @@ export default function UserListings() {
                 ) : sortedData.length > 0 ? (
                   sortedData.map((coin, index) => (
                     <UserListingsTableRow
-                      key={coin.address + index}
+                      key={coin.listingId ?? `${coin.address}-${index}`}
                       coin={coin}
-                      onProjectClick={handleProjectClick}
+                      onListingRowClick={handleListingRowClick}
                     />
                   ))
                 ) : (

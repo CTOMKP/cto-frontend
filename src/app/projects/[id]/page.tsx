@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import type { ApiCoinItem } from "@/types/api";
+import type { AllUserListings, ApiCoinItem } from "@/types/api";
 import { Info } from "./features/ProjectProfileInfoTabs";
 import LoadingSkeleton from "./features/LoadingSkeleton";
 import ProjectHeader from "./features/ProjectHeader";
@@ -13,12 +13,15 @@ import SwapWidget from "./features/SwapWidget";
 import ActivitiesSection from "./features/ActivitiesSection";
 import { formatAgeYMD } from "@/app/listings/features/utils/listingUtils";
 import { usePublicListingCoinQuery } from "@/hooks/usePublicListingCoinQuery";
+import { usePublicUserListingQuery } from "@/hooks/usePublicUserListingQuery";
+import { mapUserListingToApiCoinItem } from "@/lib/mapUserListingToApiCoinItem";
 
 export default function ProjectProfilePage() {
   const [info, setInfo] = useState<Info>("about");
   const { id } = useParams();
   const searchParams = useSearchParams();
   const addressFromQuery = searchParams.get("address");
+  const userListingId = searchParams.get("userListingId")?.trim() ?? "";
 
   const fetchKey = useMemo(() => {
     const idParam = Array.isArray(id) ? id[0] : id;
@@ -26,9 +29,19 @@ export default function ProjectProfilePage() {
     return typeof raw === "string" ? raw.trim() : "";
   }, [id, addressFromQuery]);
 
-  const listingQuery = usePublicListingCoinQuery(fetchKey || undefined);
-  const projectData: ApiCoinItem | null =
-    (listingQuery.data as ApiCoinItem | undefined) ?? null;
+  const publicListingQuery = usePublicListingCoinQuery(
+    userListingId ? undefined : fetchKey || undefined,
+  );
+  const userListingQuery = usePublicUserListingQuery(
+    userListingId || undefined,
+  );
+
+  const listingQuery = userListingId ? userListingQuery : publicListingQuery;
+  const projectData: ApiCoinItem | null = userListingId
+    ? userListingQuery.data
+      ? mapUserListingToApiCoinItem(userListingQuery.data as AllUserListings)
+      : null
+    : ((publicListingQuery.data as ApiCoinItem | undefined) ?? null);
 
   function formatRelativeAge(date: Date): string {
     const diffMs = Date.now() - date.getTime();
@@ -53,7 +66,7 @@ export default function ProjectProfilePage() {
     return formatted || "0d";
   }
 
-  if (!fetchKey) {
+  if (!fetchKey && !userListingId) {
     return (
       <main className="min-h-[40vh] flex items-center justify-center text-white/70">
         <p>Missing project address or id.</p>

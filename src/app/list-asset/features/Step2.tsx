@@ -25,6 +25,8 @@ interface Step2Props {
   setCurrentStep: (step: number) => void;
   onContinue?: () => void | Promise<void>;
   onBioChange?: (bio: string) => void;
+  /** Prefill when resuming a draft from profile (parent `bio` state on first mount). */
+  initialBio?: string;
   links?: SocialLinks;
   setLinks?: (links: SocialLinks) => void;
 }
@@ -41,10 +43,11 @@ export default function Step2({
   setCurrentStep,
   onContinue,
   onBioChange,
+  initialBio = "",
   links,
   setLinks,
 }: Step2Props) {
-  const [bio, setBio] = useState('');
+  const [bio, setBio] = useState(initialBio);
   const [continuing, setContinuing] = useState(false);
   const profileSrc = profilePreview || logoUrl;
   const bannerSrc = bannerPreview || bannerUrl;

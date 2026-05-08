@@ -24,6 +24,10 @@ export interface WalletTransaction {
   status: string;
   description: string;
   createdAt: string;
+  /** Present on some Movement / Solana API rows (counterparty display). */
+  fromAddress?: string;
+  toAddress?: string;
+  tokenAddress?: string;
 }
 
 export const movementWalletService = {

@@ -5,14 +5,16 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 import { X, Check } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import Image from "next/image";
 import Link from "next/link";
 import { io, type Socket } from "socket.io-client";
-import { getAuthToken } from "@/lib/authSession";
+import { getAuthToken, getUserId } from "@/lib/authSession";
 import messagesService from "@/services/messagesService";
+import type { MessageThread } from "@/types/messages";
 
 export type Filter = "all" | "unread";
 
@@ -49,6 +51,7 @@ export default function NavBarChats() {
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<Filter>("all");
   const [unread, setUnread] = useState(0);
+  const [threads, setThreads] = useState<MessageThread[]>([]);
 
   const filters: Filter[] = ["all", "unread"];
 
@@ -60,14 +63,27 @@ export default function NavBarChats() {
   const backendUrl =
     process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.ctomarketplace.com";
 
-  const loadUnread = useCallback(async () => {
+  const loadThreads = useCallback(async () => {
     const token = getAuthToken();
     if (!token) {
       setUnread(0);
+      setThreads([]);
       return;
     }
     try {
       const res: unknown = await messagesService.listThreads();
+      const items = listItemsFromResponse(res)
+        .map((raw) => (toRecord(raw) ?? {}) as MessageThread)
+        .map((thread) => ({
+          ...thread,
+          id: thread.id ? String(thread.id) : "",
+          unreadCount:
+            typeof thread.unreadCount === "number"
+              ? thread.unreadCount
+              : Number(thread.unreadCount ?? 0),
+        }))
+        .filter((thread) => thread.id.length > 0);
+      setThreads(items);
       setUnread(totalUnreadFromThreadsPayload(res));
     } catch {
       // best-effort (matches cto-test-frontend MessagesBell)
@@ -75,10 +91,10 @@ export default function NavBarChats() {
   }, []);
 
   useEffect(() => {
-    void loadUnread();
-    const interval = setInterval(() => void loadUnread(), 20_000);
+    void loadThreads();
+    const interval = setInterval(() => void loadThreads(), 20_000);
     return () => clearInterval(interval);
-  }, [loadUnread]);
+  }, [loadThreads]);
 
   useEffect(() => {
     const token = getAuthToken();
@@ -95,17 +111,40 @@ export default function NavBarChats() {
 
     socket.on("messages.new", () => {
       setUnread((prev) => prev + 1);
-      void loadUnread();
+      void loadThreads();
     });
 
     return () => {
       socket.disconnect();
     };
-  }, [backendUrl, loadUnread]);
+  }, [backendUrl, loadThreads]);
 
   useEffect(() => {
-    if (isDropdownOpen) void loadUnread();
-  }, [isDropdownOpen, loadUnread]);
+    if (isDropdownOpen) void loadThreads();
+  }, [isDropdownOpen, loadThreads]);
+
+  const currentUserId = Number(getUserId() ?? 0);
+
+  const getThreadTitle = useCallback(
+    (thread: MessageThread): string => {
+      const adTitle =
+        thread.ad && typeof thread.ad === "object"
+          ? (thread.ad as { title?: string | null }).title
+          : null;
+      if (adTitle && adTitle.trim().length > 0) return adTitle;
+
+      const posterName = thread.poster?.name?.trim();
+      const applicantName = thread.applicant?.name?.trim();
+      if (thread.posterId === currentUserId && applicantName) return applicantName;
+      if (thread.applicantId === currentUserId && posterName) return posterName;
+      return applicantName || posterName || "Conversation";
+    },
+    [currentUserId],
+  );
+
+  const filteredThreads = threads.filter((thread) =>
+    selectedFilter === "unread" ? Number(thread.unreadCount ?? 0) > 0 : true,
+  );
 
   return (
     <DropdownMenu
@@ -115,7 +154,7 @@ export default function NavBarChats() {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="relative flex justify-center items-center rounded-lg size-13 border-[0.2px] border-[#FFFFFF20] cursor-pointer"
+          className="relative flex justify-center items-center rounded-lg size-13 border-[0.2px] border-[#FFFFFF20]"
           aria-label="Messages"
         >
           <span className="bg-[#FFFFFF0D] rounded-sm size-7 flex items-center justify-center">
@@ -126,11 +165,11 @@ export default function NavBarChats() {
               height={15}
             />
           </span>
-          {unread > 0 ? (
-            <span className="absolute -right-0.5 -top-0.5 min-w-[18px] rounded-full bg-pink-500 px-1 py-0.5 text-[10px] font-semibold leading-none text-white tabular-nums text-center">
-              {unread > 99 ? "99+" : unread}
-            </span>
-          ) : null}
+          {unread > 0 && (
+            <Badge className="h-4 absolute top-1 right-1 text-[10px] font-bold text-white cta-gradient min-w-4 rounded-full px-1 font-mono tabular-nums">
+              <span>{unread}</span>
+            </Badge>
+          )}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="bg-[#010101] text-white p-6 w-[534px] border-2 border-[#86868630]">
@@ -177,10 +216,37 @@ export default function NavBarChats() {
           </div>
         </div>
 
-        <div>
-          <span className="text-xs font-normal text-[#FFFFFFB2]">
-            You have no price chats yet
-          </span>
+        <div className="max-h-[320px] overflow-y-auto space-y-2 pr-1">
+          {filteredThreads.length === 0 ? (
+            <span className="text-xs font-normal text-[#FFFFFFB2]">
+              {selectedFilter === "unread"
+                ? "No unread messages."
+                : "You have no chats yet."}
+            </span>
+          ) : (
+            filteredThreads.map((thread) => {
+              const preview = (thread.lastMessagePreview ?? "").trim() || "Open chat";
+              const unreadCount = Number(thread.unreadCount ?? 0);
+              return (
+                <Link
+                  key={thread.id}
+                  href={`/messages/${encodeURIComponent(thread.id)}`}
+                  onClick={() => setDropdownOpen(false)}
+                  className="block rounded-lg border border-[#FFFFFF20] bg-[#FFFFFF08] hover:bg-[#FFFFFF14] px-3 py-2"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold truncate">{getThreadTitle(thread)}</p>
+                    {unreadCount > 0 && (
+                      <span className="text-[10px] rounded-full px-1.5 py-0.5 cta-gradient text-white font-bold tabular-nums">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-xs text-white/70 line-clamp-2">{preview}</p>
+                </Link>
+              );
+            })
+          )}
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
