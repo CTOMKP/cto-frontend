@@ -14,17 +14,17 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 
 interface UserListingsTableRowProps {
   coin: MockLikeCoin;
-  onProjectClick: (projectName: string, projectAddress: string) => void;
+  onListingRowClick: (coin: MockLikeCoin) => void;
 }
 
 export default function UserListingsTableRow({
   coin,
-  onProjectClick,
+  onListingRowClick,
 }: UserListingsTableRowProps) {
   return (
     <TableRow
       className="border-none rounded-lg bg-[#FFFFFF]/5 h-13 hover:!bg-[#FFFFFF1A] cursor-pointer"
-      onClick={() => onProjectClick(coin.name, coin.address)}
+      onClick={() => onListingRowClick(coin)}
     >
       <TableCell>
         <div>

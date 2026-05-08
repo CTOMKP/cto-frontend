@@ -1,11 +1,34 @@
 import { getAuthToken } from '@/lib/authSession';
 import { ApiError } from '@/lib/apiError';
 import { apiDelete, apiGet, apiPost, apiPut, getBackendBaseUrl } from '@/lib/apiClient';
-import { unwrapApiData } from '@/lib/apiResponse';
+import { unwrapApiData, unwrapApiJsonBody } from '@/lib/apiResponse';
 import {
   normalizePresignPayload,
   putFileToPresignedUrl,
 } from '@/lib/presignedUpload';
+
+/**
+ * Mine/detail endpoints may return `{ success, data: listing }` or nested `data` wrappers
+ * after the standard `{ data: … }` interceptor envelope. Peel until we reach the listing row.
+ */
+function unwrapUserListingDetailBody(raw: unknown): unknown {
+  let v: unknown = unwrapApiJsonBody(raw);
+  for (let i = 0; i < 8; i += 1) {
+    if (!v || typeof v !== 'object') return v;
+    const o = v as Record<string, unknown>;
+    const hasContract =
+      typeof o.contractAddr === 'string' ||
+      typeof o.contractAddress === 'string';
+    if (hasContract) return v;
+    const nested = o.data;
+    if (nested !== null && nested !== undefined && typeof nested === 'object') {
+      v = nested;
+      continue;
+    }
+    return v;
+  }
+  return v;
+}
 
 export interface ScanMetadata {
   token_symbol?: string;
@@ -229,11 +252,11 @@ export const userListingsService = {
   },
   async getMyListing(id: string, signal?: AbortSignal) {
     const res = await apiGet<unknown>(`/api/v1/user-listings/mine/${id}`, { signal });
-    return unwrapApiData(res);
+    return unwrapUserListingDetailBody(res);
   },
   async getPublicListing(id: string, signal?: AbortSignal) {
     const res = await apiGet<unknown>(`/api/v1/user-listings/${id}`, { signal });
-    return unwrapApiData(res);
+    return unwrapUserListingDetailBody(res);
   },
 
   /** Same as detail pages: mine when token + success, else public. */

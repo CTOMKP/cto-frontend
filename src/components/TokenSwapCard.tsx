@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, X } from "lucide-react";
 import {
+  Dialog,
   DialogClose,
   DialogContent,
   DialogDescription,
@@ -20,19 +21,37 @@ import { useWalletRouter } from "@/utils/walletRouter";
 import { toast } from "react-toastify";
 
 type TokenMeta = { mint: string; decimals: number };
+type SwapPairPreview = {
+  fromSymbol: string;
+  fromImage?: string | null;
+  toSymbol?: string;
+  toImage?: string | null;
+};
+type TokenSwapCardProps = {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideFloatingTrigger?: boolean;
+  pairPreview?: SwapPairPreview | null;
+};
 
 function unwrapSwapPayload(payload: unknown): Record<string, unknown> {
   return toRecord(unwrapApiJsonBody(payload));
 }
 
-export default function TokenSwapCard() {
+export default function TokenSwapCard({
+  open,
+  onOpenChange,
+  hideFloatingTrigger = false,
+  pairPreview = null,
+}: TokenSwapCardProps = {}) {
   const [sellPercent, setSellPercent] = useState<'clear' | '25' | '50' | '75' | 'max'>('clear');
-  const [fromToken, setFromToken] = useState("USDC");
-  const [toToken, setToToken] = useState("SOL");
+  const [fromToken, setFromToken] = useState(pairPreview?.fromSymbol || "USDC");
+  const [toToken, setToToken] = useState(pairPreview?.toSymbol || "SOL");
   const [amount, setAmount] = useState("");
   const [isSwapping, setIsSwapping] = useState(false);
   const [result, setResult] = useState<{ txHash?: string; error?: string } | null>(null);
   const { executeTrade, getSolanaWallet } = useWalletRouter();
+  const [internalOpen, setInternalOpen] = useState(false);
 
   const pathname = usePathname();
   const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || process.env.REACT_APP_SOLANA_RPC_URL || "";
@@ -50,6 +69,18 @@ export default function TokenSwapCard() {
     if (bonkMint) map.BONK = { mint: bonkMint, decimals: 5 };
     return map;
   }, [rpcUrl]);
+
+  useEffect(() => {
+    if (!pairPreview) return;
+    setFromToken(pairPreview.fromSymbol);
+    setToToken(pairPreview.toSymbol || "USDC");
+  }, [pairPreview]);
+
+  const resolvedOpen = open ?? internalOpen;
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (onOpenChange) onOpenChange(nextOpen);
+    if (open === undefined) setInternalOpen(nextOpen);
+  };
 
   const handleSwap = async () => {
     if (isNonMainnetRpc) {
@@ -123,11 +154,13 @@ export default function TokenSwapCard() {
   };
 
   return (
-    <div className={`${pathname === '/' || pathname === '/faq' ? 'hidden' : ''}`}>
-      <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[1px] rounded-2xl inline-block">
-        <DialogTrigger className="bg-black cursor-pointer text-white size-15 text-sm rounded-2xl flex items-center justify-center hover:opacity-90 transition">
-          <Image loading="lazy" src="/emoji-icons/grape.svg" className="size-6.5" alt="grape icon" width={26} height={26} />
-        </DialogTrigger>
+    <Dialog open={resolvedOpen} onOpenChange={handleOpenChange}>
+      <div className={`${pathname === '/' || pathname === '/faq' || hideFloatingTrigger ? 'hidden' : ''}`}>
+        <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[1px] rounded-2xl inline-block">
+          <DialogTrigger className="bg-black cursor-pointer text-white size-15 text-sm rounded-2xl flex items-center justify-center hover:opacity-90 transition">
+            <Image loading="lazy" src="/emoji-icons/grape.svg" className="size-6.5" alt="grape icon" width={26} height={26} />
+          </DialogTrigger>
+        </div>
       </div>
       <DialogContent className="bg-[#010101] border-2 border-[#86868630]">
         <DialogHeader className="hidden">
@@ -178,23 +211,29 @@ export default function TokenSwapCard() {
                       width={24}
                       height={24}
                       className="size-6 rounded-full"
-                      src={"/listings-chains/movement.png"}
-                      alt={"listings-chains"}
+                      src={pairPreview?.fromImage || "/listings-chains/movement.png"}
+                      alt={fromToken}
                     />
-                    <select
-                      className="bg-transparent text-white text-sm outline-none"
-                      value={fromToken}
-                      onChange={(e) => setFromToken(e.target.value)}
-                    >
-                      {Object.keys(tokenMap).map((token) => (
-                        <option key={token} value={token} className="text-black">{token}</option>
-                      ))}
-                    </select>
-                    <ChevronDown
-                      size={20}
-                      color="#FFFFFF"
-                      className="text-white"
-                    />
+                    {pairPreview ? (
+                      <span className="text-white text-sm">{fromToken}</span>
+                    ) : (
+                      <>
+                        <select
+                          className="bg-transparent text-white text-sm outline-none"
+                          value={fromToken}
+                          onChange={(e) => setFromToken(e.target.value)}
+                        >
+                          {Object.keys(tokenMap).map((token) => (
+                            <option key={token} value={token} className="text-black">{token}</option>
+                          ))}
+                        </select>
+                        <ChevronDown
+                          size={20}
+                          color="#FFFFFF"
+                          className="text-white"
+                        />
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -283,7 +322,7 @@ export default function TokenSwapCard() {
                 <div className="flex justify-between items-center mb-4">
                   <Input
                     type="number"
-                    placeholder="Quote output"
+                    placeholder=""
                     readOnly
                     className="text-white max-w-[200px] w-fit bg-transparent border-none !text-[24px] placeholder:text-[24px] placeholder:text-white appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
                   />
@@ -293,23 +332,29 @@ export default function TokenSwapCard() {
                       width={24}
                       height={24}
                       className="size-6 rounded-full"
-                      src={"/listings-chains/solana.png"}
-                      alt={"listings-chains"}
+                      src={pairPreview?.toImage || "/listings-chains/solana.png"}
+                      alt={toToken}
                     />
-                    <select
-                      className="bg-transparent text-white text-sm outline-none"
-                      value={toToken}
-                      onChange={(e) => setToToken(e.target.value)}
-                    >
-                      {Object.keys(tokenMap).map((token) => (
-                        <option key={token} value={token} className="text-black">{token}</option>
-                      ))}
-                    </select>
-                    <ChevronDown
-                      size={20}
-                      color="#FFFFFF"
-                      className="text-white"
-                    />
+                    {pairPreview ? (
+                      <span className="text-white text-sm">{toToken}</span>
+                    ) : (
+                      <>
+                        <select
+                          className="bg-transparent text-white text-sm outline-none"
+                          value={toToken}
+                          onChange={(e) => setToToken(e.target.value)}
+                        >
+                          {Object.keys(tokenMap).map((token) => (
+                            <option key={token} value={token} className="text-black">{token}</option>
+                          ))}
+                        </select>
+                        <ChevronDown
+                          size={20}
+                          color="#FFFFFF"
+                          className="text-white"
+                        />
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -339,6 +384,6 @@ export default function TokenSwapCard() {
             </div>
         </div>
       </DialogContent>
-    </div>
+    </Dialog>
   );
 }

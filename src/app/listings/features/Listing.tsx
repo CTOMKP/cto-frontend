@@ -24,6 +24,7 @@ import ListingTableRow from "./ListingTableRow";
 import ListingFilters from "./ListingFilters";
 import ListingPagination from "./ListingPagination";
 import { slugify } from "@/lib/utils/slugify";
+import TokenSwapCard from "@/components/TokenSwapCard";
 
 
 export default function TopListings() {
@@ -37,6 +38,8 @@ export default function TopListings() {
   const [liveItems, setLiveItems] = useState<MockLikeCoin[]>([]);
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const [swapOpen, setSwapOpen] = useState(false);
+  const [swapCoin, setSwapCoin] = useState<MockLikeCoin | null>(null);
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   const tableFilters = useMemo<ListingTableFilters>(
@@ -227,6 +230,11 @@ export default function TopListings() {
     setLiveItems(mapApiCoinItemsToMockLikeCoins(filteredItems));
   };
 
+  const handleBuyClick = (coin: MockLikeCoin) => {
+    setSwapCoin(coin);
+    setSwapOpen(true);
+  };
+
   return (
     <div>
       <div className="h-px w-full bg-[#FF007510] mt-7 mb-4.5"></div>
@@ -297,6 +305,7 @@ export default function TopListings() {
                         key={index}
                         coin={coin}
                         onProjectClick={handleProjectClick}
+                        onBuyClick={handleBuyClick}
                       />
                     ))
                   )}
@@ -311,6 +320,21 @@ export default function TopListings() {
           </CardContent>
         </Card>
       </div>
+      <TokenSwapCard
+        open={swapOpen}
+        onOpenChange={setSwapOpen}
+        hideFloatingTrigger
+        pairPreview={
+          swapCoin
+            ? {
+                fromSymbol: (swapCoin.name || "TOKEN").toUpperCase(),
+                fromImage: swapCoin.image || null,
+                toSymbol: "USDC",
+                toImage: null,
+              }
+            : null
+        }
+      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Check, Ellipsis, Search, X, Zap } from 'lucide-react'
@@ -41,6 +41,9 @@ interface Step1Props {
   setCurrentStep: (step: number) => void;
   onScanResultChange?: (result: ScanResult | null) => void;
   onContractAddressChange?: (address: string) => void;
+  /** Parent-held values when resuming a draft or returning from later steps. */
+  restoredContractAddress?: string;
+  restoredScanResult?: ScanResult | null;
 }
 
 const info = [
@@ -135,14 +138,18 @@ export default function Step1({
   networks,
   setCurrentStep,
   onScanResultChange,
-  onContractAddressChange
+  onContractAddressChange,
+  restoredContractAddress = '',
+  restoredScanResult = null,
 }: Step1Props) {
   const [scanDialogOpen, setScanDialogOpen] = useState(false);
-  const [scanComplete, setScanComplete] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [contractAddress, setContractAddress] = useState('');
+  const [scanComplete, setScanComplete] = useState(() => Boolean(restoredScanResult));
+  const [progress, setProgress] = useState(() => (restoredScanResult ? 100 : 0));
+  const [contractAddress, setContractAddress] = useState(() =>
+    (restoredContractAddress ?? '').trim(),
+  );
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
-  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  const [scanResult, setScanResult] = useState<ScanResult | null>(() => restoredScanResult ?? null);
   const [addressValidation, setAddressValidation] = useState<{
     isValid: boolean | null;
     message: string;
@@ -263,6 +270,15 @@ export default function Step1({
 
     return { isValid: false, message: 'Invalid address format' };
   };
+
+  useEffect(() => {
+    const addr = contractAddress.trim();
+    if (!addr) {
+      setAddressValidation({ isValid: null, message: '' });
+      return;
+    }
+    setAddressValidation(validateContractAddress(contractAddress, selectedNetwork));
+  }, [contractAddress, selectedNetwork]);
 
   // Handle address input change with validation
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {

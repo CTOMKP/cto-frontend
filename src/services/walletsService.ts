@@ -29,6 +29,12 @@ function isMovementBackendWallet(wallet: BackendWallet): boolean {
   );
 }
 
+function isSolanaBackendWallet(wallet: BackendWallet): boolean {
+  const blockchain = String(wallet.blockchain ?? "").toUpperCase();
+  const chainType = String(wallet.chainType ?? "").toLowerCase();
+  return blockchain === "SOLANA" || chainType === "solana";
+}
+
 export function findMovementWalletInBackend(
   wallets: BackendWallet[],
 ): BackendWallet | null {
@@ -46,6 +52,24 @@ export function findWalletIdForAddress(
       isMovementBackendWallet(w),
   );
   return typeof match?.id === "string" ? match.id : null;
+}
+
+/** Backend wallet row id for Solana — required for `/wallet/solana/transactions/:walletId`. */
+export function findSolanaWalletIdForAddress(
+  wallets: BackendWallet[],
+  address: string,
+): string | null {
+  const match = wallets.find(
+    (w) =>
+      typeof w.address === "string" &&
+      w.address.toLowerCase() === address.toLowerCase() &&
+      isSolanaBackendWallet(w),
+  );
+  return typeof match?.id === "string" ? match.id : null;
+}
+
+export function findSolanaWalletInBackend(wallets: BackendWallet[]): BackendWallet | null {
+  return wallets.find((w) => isSolanaBackendWallet(w)) ?? null;
 }
 
 export const walletsService = {

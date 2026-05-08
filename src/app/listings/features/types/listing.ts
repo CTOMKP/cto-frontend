@@ -2,6 +2,8 @@ export type SortField = 'name' | 'marketCap' | 'liquidity' | 'holders' | 'age' |
 export type SortDirection = 'asc' | 'desc' | null;
 
 export type MockLikeCoin = {
+  /** User listing row id (profile “My listings”), when sourced from `/user-listings/mine`. */
+  listingId?: string;
   name: string;
   whale: boolean;
   age: string | null;

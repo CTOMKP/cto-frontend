@@ -17,9 +17,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 interface ListingTableRowProps {
   coin: MockLikeCoin;
   onProjectClick: (projectName: string, projectAddress: string) => void;
+  onBuyClick?: (coin: MockLikeCoin) => void;
 }
 
-export default function ListingTableRow({ coin, onProjectClick }: ListingTableRowProps) {
+export default function ListingTableRow({ coin, onProjectClick, onBuyClick }: ListingTableRowProps) {
   return (
     <TableRow
       className="border-none rounded-lg bg-[#FFFFFF]/5 h-13 hover:!bg-[#FFFFFF1A] cursor-pointer"
@@ -224,7 +225,7 @@ export default function ListingTableRow({ coin, onProjectClick }: ListingTableRo
             className="bg-[#FF4A15]/21 text-[#FF4A15] p-0 h-fit px-1 py-1 ml-5 rounded-[5.5px] font-bold"
             onClick={(e) => {
               e.stopPropagation();
-              // Add your buy logic here
+              onBuyClick?.(coin);
             }}
           >
             Buy

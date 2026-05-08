@@ -1,24 +1,115 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { movementWalletService, type WalletTransaction } from '@/services/movementWalletService';
-import { toast } from 'react-toastify';
-import { WALLET_ID_KEY } from '@/lib/authSession';
-import UserListings from './UserListings';
-import TxHistoryTab from './TxHistoryTab';
-import MyAdsTab from './MyAdsTab';
-import { useResolvedMovementWallet } from '@/hooks/useResolvedMovementWallet';
+import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { useWallets as useSolanaWallets } from "@privy-io/react-auth/solana";
+import {
+  movementWalletService,
+  type WalletTransaction,
+} from "@/services/movementWalletService";
+import solanaWalletService from "@/services/solanaWalletService";
+import { toast } from "react-toastify";
+import { WALLET_ID_KEY } from "@/lib/authSession";
+import walletsService, {
+  findSolanaWalletIdForAddress,
+} from "@/services/walletsService";
+import { resolvePrivySolanaAddress } from "@/lib/solanaTransaction";
+import { useSessionStore } from "@/lib/sessionStore";
+import type { BackendWallet } from "@/types/privy";
+import UserListings from "./UserListings";
+import TxHistoryTab, { type HistoryTxRow } from "./TxHistoryTab";
+import MyAdsTab from "./MyAdsTab";
+import { useResolvedMovementWallet } from "@/hooks/useResolvedMovementWallet";
+
+const HISTORY_LIMIT = 100;
+
+function mergeHistoryRows(
+  movement: WalletTransaction[],
+  solana: WalletTransaction[],
+  limit: number,
+): HistoryTxRow[] {
+  const merged: HistoryTxRow[] = [
+    ...movement.map((tx) => ({ ...tx, sourceChain: "movement" as const })),
+    ...solana.map((tx) => ({ ...tx, sourceChain: "solana" as const })),
+  ];
+  const seen = new Set<string>();
+  return merged
+    .filter((tx) => {
+      const k = `${tx.sourceChain}:${tx.txHash}:${tx.createdAt}`;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    })
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    )
+    .slice(0, limit);
+}
 
 export default function TransactionHistory() {
-  const movementWalletQuery = useResolvedMovementWallet({ preferStorage: true });
-  const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeWalletId, setActiveWalletId] = useState<string | null>(null);
-  const [syncing, setSyncing] = useState(false);
+  const { user, authenticated, ready } = usePrivy();
+  const sessionUserId = useSessionStore((s) => s.userId);
+  const token = useSessionStore((s) => s.token);
+  const { wallets } = useWallets();
+  const { wallets: solanaScopedWallets } = useSolanaWallets();
 
-  // Use shared movement wallet resolution path.
+  const movementWalletQuery = useResolvedMovementWallet({ preferStorage: true });
+  const [transactions, setTransactions] = useState<HistoryTxRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeMovementWalletId, setActiveMovementWalletId] = useState<
+    string | null
+  >(null);
+  const [syncing, setSyncing] = useState(false);
+  const [backendWallets, setBackendWallets] = useState<BackendWallet[]>([]);
+  const initialPollDoneRef = useRef(false);
+
+  const solanaLinkedAddress = useMemo(
+    () =>
+      resolvePrivySolanaAddress(
+        wallets as unknown[],
+        solanaScopedWallets as unknown[] | undefined,
+      ),
+    [wallets, solanaScopedWallets],
+  );
+
+  const solanaBackendWalletId = useMemo(() => {
+    if (!solanaLinkedAddress) return null;
+    return findSolanaWalletIdForAddress(backendWallets, solanaLinkedAddress);
+  }, [backendWallets, solanaLinkedAddress]);
+
+  /** Authenticated `/auth/privy/wallets` — needed to map Privy Solana address → backend wallet id for tx APIs. */
   useEffect(() => {
+    if (!authenticated || !ready || !user || !token) {
+      setBackendWallets([]);
+      return;
+    }
+    let cancelled = false;
+    void walletsService
+      .listPrivyWallets({
+        userId: sessionUserId || user.id,
+        preferStorage: true,
+      })
+      .then((w) => {
+        if (!cancelled) setBackendWallets(w);
+      })
+      .catch(() => {
+        if (!cancelled) setBackendWallets([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [authenticated, ready, user?.id, sessionUserId, token]);
+
+  useEffect(() => {
+    if (!authenticated || !token) {
+      initialPollDoneRef.current = false;
+      setActiveMovementWalletId(null);
+      setTransactions([]);
+      setLoading(false);
+      return;
+    }
     if (movementWalletQuery.isError) {
       toast.error("Failed to resolve wallet context");
       setLoading(false);
@@ -27,90 +118,138 @@ export default function TransactionHistory() {
     const walletId = movementWalletQuery.data?.walletId ?? null;
     if (walletId) {
       localStorage.setItem(WALLET_ID_KEY, walletId);
-      setActiveWalletId(walletId);
+      setActiveMovementWalletId(walletId);
       return;
     }
     if (!movementWalletQuery.isPending) {
-      setActiveWalletId(null);
-      setLoading(false);
+      setActiveMovementWalletId(null);
     }
   }, [
+    authenticated,
+    token,
     movementWalletQuery.data?.walletId,
     movementWalletQuery.isError,
     movementWalletQuery.isPending,
   ]);
 
-  // Load transactions (EXACTLY like test frontend loadData function)
   const loadTransactions = useCallback(async () => {
-    if (!activeWalletId) return;
-    
+    const movementId = activeMovementWalletId;
+    const solId = solanaBackendWalletId;
+
+    if (!movementId && !solId) {
+      setTransactions([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
-      // Fetch transactions (like test frontend line 131)
-      const txData = await movementWalletService.getTransactions(activeWalletId, 50); // Get more transactions for history
-      setTransactions(txData);
-    } catch (error) {
-      // Error handling without console logs
+      const [movTxs, solTxs] = await Promise.all([
+        movementId
+          ? movementWalletService.getTransactions(movementId, 50)
+          : Promise.resolve<WalletTransaction[]>([]),
+        solId
+          ? solanaWalletService.getTransactions(solId, 50)
+          : Promise.resolve<WalletTransaction[]>([]),
+      ]);
+      setTransactions(mergeHistoryRows(movTxs, solTxs, HISTORY_LIMIT));
+    } catch {
+      toast.error("Could not load transaction history.");
     } finally {
       setLoading(false);
     }
-  }, [activeWalletId]);
+  }, [activeMovementWalletId, solanaBackendWalletId]);
 
-  // Load transactions when wallet ID is available (like test frontend line 256-262)
   useEffect(() => {
-    if (activeWalletId) {
-      loadTransactions();
-    }
-  }, [activeWalletId, loadTransactions]);
+    if (!authenticated || !token) return;
+    void loadTransactions();
+  }, [
+    authenticated,
+    token,
+    activeMovementWalletId,
+    solanaBackendWalletId,
+    loadTransactions,
+  ]);
 
-  // Sync transactions with Movement blockchain
-  const handleSync = async (silent = false) => {
-    if (!activeWalletId) return;
-    
-    setSyncing(true);
-    let loadingToastId: number | string | null = null;
-    
-    try {
-      if (!silent) {
-        loadingToastId = toast.loading('Syncing with Movement blockchain...');
-      }
-      
-      // 1. Poll for new transactions (Detect funding/payments)
-      await movementWalletService.pollTransactions(activeWalletId);
-      
-      // 2. Refresh local data
-      await loadTransactions();
-      
-      if (!silent) {
-        if (loadingToastId) {
-          toast.dismiss(loadingToastId);
-        }
-        toast.success('Wallet synced successfully');
-      }
-    } catch (error) {
-      console.error('Sync failed:', error);
-      if (!silent) {
-        if (loadingToastId) {
-          toast.dismiss(loadingToastId);
-        }
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        toast.error('Sync failed: ' + errorMessage);
-      }
-    } finally {
-      setSyncing(false);
-    }
-  };
+  const handleSync = useCallback(
+    async (silent = false) => {
+      if (!activeMovementWalletId && !solanaBackendWalletId) return;
 
-  // Set up periodic background sync
+      setSyncing(true);
+      let loadingToastId: number | string | null = null;
+
+      try {
+        if (!silent) {
+          loadingToastId = toast.loading("Syncing wallets…");
+        }
+
+        if (activeMovementWalletId) {
+          await movementWalletService.pollTransactions(activeMovementWalletId);
+        }
+        if (solanaBackendWalletId && solanaLinkedAddress) {
+          await solanaWalletService.pollTransactions(
+            solanaBackendWalletId,
+            50,
+            solanaLinkedAddress,
+          );
+        }
+
+        await loadTransactions();
+
+        if (!silent) {
+          if (loadingToastId) toast.dismiss(loadingToastId);
+          toast.success("Wallet history synced");
+        }
+      } catch (error) {
+        console.error("Sync failed:", error);
+        if (!silent) {
+          if (loadingToastId) toast.dismiss(loadingToastId);
+          const errorMessage =
+            error instanceof Error ? error.message : "Unknown error";
+          toast.error(`Sync failed: ${errorMessage}`);
+        }
+      } finally {
+        setSyncing(false);
+      }
+    },
+    [
+      activeMovementWalletId,
+      solanaBackendWalletId,
+      solanaLinkedAddress,
+      loadTransactions,
+    ],
+  );
+
   useEffect(() => {
-    if (!activeWalletId) return;
+    if (!authenticated || !token) return;
+    if (!activeMovementWalletId && !solanaBackendWalletId) return;
+    if (initialPollDoneRef.current) return;
+    initialPollDoneRef.current = true;
+    void handleSync(true);
+  }, [
+    authenticated,
+    token,
+    activeMovementWalletId,
+    solanaBackendWalletId,
+    handleSync,
+  ]);
+
+  useEffect(() => {
+    if (!authenticated || !token) return;
+    if (!activeMovementWalletId && !solanaBackendWalletId) return;
 
     const intervalId = setInterval(() => {
-      handleSync(true);
-    }, 60000); // 60 seconds
+      void handleSync(true);
+    }, 60_000);
 
     return () => clearInterval(intervalId);
-  }, [activeWalletId]);
+  }, [
+    authenticated,
+    token,
+    activeMovementWalletId,
+    solanaBackendWalletId,
+    handleSync,
+  ]);
 
   return (
     <div className="mt-10">
@@ -136,11 +275,11 @@ export default function TransactionHistory() {
           </TabsTrigger>
         </TabsList>
         <div className="border-t-[0.5px] border-white/20 mt-4"></div>
-        
+
         <TabsContent value="my-listings">
           <UserListings />
         </TabsContent>
-        
+
         <TabsContent value="my-ads">
           <MyAdsTab />
         </TabsContent>
@@ -150,7 +289,9 @@ export default function TransactionHistory() {
             transactions={transactions}
             loading={loading}
             syncing={syncing}
-            onSync={() => handleSync(false)}
+            onSync={() => {
+              void handleSync(false);
+            }}
           />
         </TabsContent>
       </Tabs>
