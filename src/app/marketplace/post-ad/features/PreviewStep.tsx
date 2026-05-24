@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import AdPaymentDialog from '@/app/marketplace/post-ad/features/AdPaymentDialog';
@@ -45,6 +45,11 @@ export default function PreviewStep({
   savingDraft = false,
   ensureDraftSaved,
 }: PreviewStepProps) {
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.getElementById('preview-step-header')?.scrollIntoView({ behavior: 'instant', block: 'start' });
+  }, []);
+
   const visibilityIdForPricing = formData.visibility?.trim();
   const hasValidVisibility =
     !!visibilityIdForPricing &&
@@ -159,7 +164,7 @@ export default function PreviewStep({
             <ArrowLeft size={18} />
             Back To Edit
           </Button>
-          <h2 className="text-2xl font-bold text-white">
+          <h2 id="preview-step-header" className="text-2xl font-bold text-white">
             Review Your Ad Before Publishing
           </h2>
           <div className="w-32"></div> {/* Spacer for centering */}

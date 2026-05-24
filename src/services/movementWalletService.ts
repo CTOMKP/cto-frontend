@@ -6,9 +6,13 @@ export interface WalletBalance {
   walletId: string;
   tokenAddress: string;
   tokenSymbol: string;
+  tokenName?: string;
   balance: string;
+  balanceUsd?: number | null;
   decimals: number;
   lastUpdated: string;
+  createdAt?: string;
+  updatedAt?: string;
   networkStatus?: 'healthy' | 'degraded' | 'down';
   isStale?: boolean;
   lastSyncTime?: string;

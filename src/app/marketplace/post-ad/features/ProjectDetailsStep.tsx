@@ -15,6 +15,7 @@ export interface ProjectDetailsData {
   adTitle?: string;
   projectDescription?: string;
   blockchainFocus?: string;
+  blockchainOther?: string;
   roleType?: string;
   toolsStack?: string;
   paymentType?: string;
@@ -47,6 +48,42 @@ const categoryIdToName: Record<string, string> = {
   'tools-services': 'Tools & Services',
   'writing-content': 'Writing & Content',
 };
+
+const AD_TITLE_MIN = 6;
+const AD_TITLE_MAX = 80;
+const DESC_MIN = 800;
+
+function getDescriptionCounterText(length: number): { line: string; tone: 'muted' | 'warn' | 'ok' | 'error' } {
+  if (length < DESC_MIN) {
+    return {
+      line: `${length} entered · ${DESC_MIN - length} more required (${DESC_MIN} minimum)`,
+      tone: 'warn',
+    };
+  }
+  return {
+    line: `${length} entered · minimum met (${length - DESC_MIN} over minimum)`,
+    tone: 'ok',
+  };
+}
+
+function getAdTitleCounterText(length: number): { line: string; tone: 'muted' | 'warn' | 'ok' | 'error' } {
+  if (length === 0) {
+    return { line: `0/${AD_TITLE_MAX} · ${AD_TITLE_MIN}-${AD_TITLE_MAX} characters required`, tone: 'muted' };
+  }
+  if (length < AD_TITLE_MIN) {
+    return {
+      line: `${length}/${AD_TITLE_MAX} · ${AD_TITLE_MIN - length} more required`,
+      tone: 'warn',
+    };
+  }
+  if (length > AD_TITLE_MAX) {
+    return {
+      line: `${length}/${AD_TITLE_MAX} · ${length - AD_TITLE_MAX} over limit`,
+      tone: 'error',
+    };
+  }
+  return { line: `${length}/${AD_TITLE_MAX} · ${AD_TITLE_MAX - length} remaining`, tone: 'ok' };
+}
 
 function getCategoryDisplayName(id: string | undefined): string {
   if (!id) return '—';
@@ -87,8 +124,9 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
   const [adTitle, setAdTitle] = useState(initialData?.adTitle || '');
   const [projectDescription, setProjectDescription] = useState(initialData?.projectDescription || '');
   const [blockchainFocus, setBlockchainFocus] = useState(initialData?.blockchainFocus || 'Solana');
-  const [roleType, setRoleType] = useState(initialData?.roleType || 'Designer');
-  const [toolsStack, setToolsStack] = useState(initialData?.toolsStack || 'Adobe Illustrator');
+  const [blockchainOther, setBlockchainOther] = useState(initialData?.blockchainOther || '');
+  const roleType = initialData?.subcategory || initialData?.roleType || '';
+  const [toolsStack, setToolsStack] = useState(initialData?.toolsStack || '');
   const [paymentType, setPaymentType] = useState(initialData?.paymentType || 'USDT');
   const [amount, setAmount] = useState(initialData?.amount || '10,000');
   const [deadline, setDeadline] = useState(() => toDateValue(initialData?.deadline || ''));
@@ -115,12 +153,14 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
   const adTitleRef = React.useRef<HTMLDivElement | null>(null);
   const imagesRef = React.useRef<HTMLDivElement | null>(null);
   const projectDescriptionRef = React.useRef<HTMLDivElement | null>(null);
+  const specsRef = React.useRef<HTMLDivElement | null>(null);
 
   const [errors, setErrors] = useState<{
     projectName?: string;
     adTitle?: string;
     images?: string;
     projectDescription?: string;
+    blockchainOther?: string;
   }>({});
 
   const handleBoostToggle = (option: string) => {
@@ -166,29 +206,45 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
     return total;
   };
 
+  const hasAtLeastOneImage = imagePreviews.some((src) => !!src);
+  const trimmedProjectName = projectName.trim();
+  const trimmedAdTitle = adTitle.trim();
+  const trimmedDescription = projectDescription.trim();
+  const titleLength = trimmedAdTitle.length;
+  const descLength = projectDescription.length;
+
+  const isFormValid =
+    !!trimmedProjectName &&
+    titleLength >= AD_TITLE_MIN &&
+    titleLength <= AD_TITLE_MAX &&
+    hasAtLeastOneImage &&
+    trimmedDescription.length >= DESC_MIN &&
+    (blockchainFocus !== 'Other' || !!blockchainOther.trim());
+
+  const adTitleCounter = getAdTitleCounterText(titleLength);
+  const descCounter = getDescriptionCounterText(descLength);
+
   const handlePreview = () => {
     const nextErrors: typeof errors = {};
-
-    const trimmedProjectName = projectName.trim();
-    const trimmedAdTitle = adTitle.trim();
-    const trimmedDescription = projectDescription.trim();
-    const hasAtLeastOneImage = imagePreviews.some((src) => !!src);
 
     if (!trimmedProjectName) {
       nextErrors.projectName = 'Project name is required.';
     }
 
-    const titleLength = trimmedAdTitle.length;
-    if (!trimmedAdTitle || titleLength < 6 || titleLength > 80) {
-      nextErrors.adTitle = 'Ad title must be between 6 and 80 characters.';
+    if (!trimmedAdTitle || titleLength < AD_TITLE_MIN || titleLength > AD_TITLE_MAX) {
+      nextErrors.adTitle = `Ad title must be between ${AD_TITLE_MIN} and ${AD_TITLE_MAX} characters.`;
     }
 
     if (!hasAtLeastOneImage) {
       nextErrors.images = 'At least one image is required.';
     }
 
-    if (!trimmedDescription || trimmedDescription.length < 800) {
-      nextErrors.projectDescription = 'Project description must be at least 800 characters.';
+    if (!trimmedDescription || trimmedDescription.length < DESC_MIN) {
+      nextErrors.projectDescription = `Project description must be at least ${DESC_MIN} characters (${DESC_MIN - trimmedDescription.length} more needed).`;
+    }
+
+    if (blockchainFocus === 'Other' && !blockchainOther.trim()) {
+      nextErrors.blockchainOther = 'Please enter your blockchain name.';
     }
 
     if (Object.keys(nextErrors).length > 0) {
@@ -199,6 +255,7 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
         'adTitle',
         'images',
         'projectDescription',
+        'blockchainOther',
       ];
       for (const key of order) {
         if (!nextErrors[key]) continue;
@@ -209,7 +266,9 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
               ? adTitleRef
               : key === 'images'
                 ? imagesRef
-                : projectDescriptionRef;
+                : key === 'blockchainOther'
+                  ? specsRef
+                  : projectDescriptionRef;
         if (ref.current) {
           ref.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
@@ -232,13 +291,17 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
     if (deadline && deadline < today) {
       setDeadline(today);
     }
+    const resolvedBlockchain =
+      blockchainFocus === 'Other' ? blockchainOther.trim() : blockchainFocus;
+
     onNext({
       projectName: trimmedProjectName,
       adTitle: trimmedAdTitle,
       projectDescription: trimmedDescription,
-      blockchainFocus,
+      blockchainFocus: resolvedBlockchain,
+      blockchainOther: blockchainFocus === 'Other' ? blockchainOther.trim() : undefined,
       roleType,
-      toolsStack,
+      toolsStack: toolsStack.trim() || undefined,
       paymentType,
       amount,
       deadline: resolvedDeadline ?? '',
@@ -285,18 +348,30 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
           <label className="font-semibold text-white mb-2 block">
             Ad Title (short headline)<span className="text-red-500">*</span>
           </label>
-          <Textarea
+          <Input
+            type="text"
             placeholder="Write a short headline"
             value={adTitle}
+            maxLength={AD_TITLE_MAX}
             onChange={(e) => {
-              setAdTitle(e.target.value);
+              setAdTitle(e.target.value.replace(/\n/g, ' '));
               if (errors.adTitle) {
                 setErrors((prev) => ({ ...prev, adTitle: undefined }));
               }
             }}
-            className="w-full bg-[#141414] min-h-[160px] border-none text-white placeholder:text-[#606060]"
+            className="w-full bg-[#141414] border-none text-white placeholder:text-[#606060] h-10"
           />
-          <p className="text-sm text-[#FF9631] mt-1 text-right">6-80 characters, required</p>
+          <p
+            className={`text-sm mt-1 text-right ${
+              adTitleCounter.tone === 'error'
+                ? 'text-red-500'
+                : adTitleCounter.tone === 'ok'
+                  ? 'text-green-500'
+                  : 'text-[#FF9631]'
+            }`}
+          >
+            {adTitleCounter.line}
+          </p>
           {errors.adTitle && (
             <p className="text-sm text-red-500 mt-1 text-right">{errors.adTitle}</p>
           )}
@@ -350,15 +425,6 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
               <Plus size={32} className="text-[#606060]" />
             </div>
           </div>
-          <div className="mt-5 flex items-center justify-end gap-2">
-            <Button
-              variant="ghost"
-              className="text-[#FF9631] p-0 h-auto text-sm border border-[#FF9631] py-2.5 px-5 rounded-[20px] bg-[#FF9631]/20"
-            >
-              Upgrade to premium
-            </Button>
-            <span className="text-sm text-[#FF9631]">To add more than 3 images.</span>
-          </div>
           {errors.images && (
             <p className="text-sm text-red-500 mt-3 text-right">{errors.images}</p>
           )}
@@ -370,7 +436,7 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
             Project Description<span className="text-red-500">*</span>
           </label>
           <Textarea
-            placeholder="Write a short headline"
+            placeholder="Describe the project, scope, deliverables, and what you're looking for…"
             value={projectDescription}
             onChange={(e) => {
               setProjectDescription(e.target.value);
@@ -378,60 +444,84 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
                 setErrors((prev) => ({ ...prev, projectDescription: undefined }));
               }
             }}
-            className="w-full bg-[#141414] border-none text-white placeholder:text-[#606060] min-h-[120px]"
+            className="w-full bg-[#141414] border-none text-white placeholder:text-[#606060] min-h-[200px] !resize-y"
           />
-          <p className="text-sm text-[#FF9631] mt-1 text-right">At least 800 characters, required</p>
+          <p
+            className={`text-sm mt-1 text-right ${
+              descCounter.tone === 'ok' ? 'text-green-500' : 'text-[#FF9631]'
+            }`}
+          >
+            {descCounter.line}
+          </p>
           {errors.projectDescription && (
             <p className="text-sm text-red-500 mt-1 text-right">{errors.projectDescription}</p>
           )}
         </div>
 
         {/* Project Specifications */}
-        <div className="mb-6 space-y-4">
-          <div className="flex items-center justify-between">
+        <div className="mb-6 space-y-4" ref={specsRef}>
+          <div className="flex items-center justify-between gap-4 flex-wrap">
             <label className="text-sm font-semibold text-white">Blockchain Focus</label>
-            <Select value={blockchainFocus} onValueChange={setBlockchainFocus}>
-              <SelectTrigger className="w-[250px] bg-[#141414] border-none text-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-[#141414] border-none text-white">
-                <SelectItem value="Solana">Solana</SelectItem>
-                <SelectItem value="Ethereum">Ethereum</SelectItem>
-                <SelectItem value="Base">Base</SelectItem>
-                <SelectItem value="Polygon">Polygon</SelectItem>
-                <SelectItem value="Aptos">Aptos</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex flex-col items-end gap-2 w-full sm:w-auto">
+              <Select
+                value={blockchainFocus}
+                onValueChange={(value) => {
+                  setBlockchainFocus(value);
+                  if (value !== 'Other') setBlockchainOther('');
+                  if (errors.blockchainOther) {
+                    setErrors((prev) => ({ ...prev, blockchainOther: undefined }));
+                  }
+                }}
+              >
+                <SelectTrigger className="w-[250px] bg-[#141414] border-none text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-[#141414] border-none text-white">
+                  <SelectItem value="Solana">Solana</SelectItem>
+                  <SelectItem value="Ethereum">Ethereum</SelectItem>
+                  <SelectItem value="Base">Base</SelectItem>
+                  <SelectItem value="Polygon">Polygon</SelectItem>
+                  <SelectItem value="Aptos">Aptos</SelectItem>
+                  <SelectItem value="Movement">Movement</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+              {blockchainFocus === 'Other' && (
+                <Input
+                  type="text"
+                  placeholder="Enter blockchain name"
+                  value={blockchainOther}
+                  onChange={(e) => {
+                    setBlockchainOther(e.target.value);
+                    if (errors.blockchainOther) {
+                      setErrors((prev) => ({ ...prev, blockchainOther: undefined }));
+                    }
+                  }}
+                  className="w-[250px] bg-[#141414] border-none text-white placeholder:text-[#606060] h-10"
+                />
+              )}
+              {errors.blockchainOther && (
+                <p className="text-sm text-red-500 text-right">{errors.blockchainOther}</p>
+              )}
+            </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-semibold text-white">Role Type</label>
-            <Select value={roleType} onValueChange={setRoleType}>
-              <SelectTrigger className="w-[250px] bg-[#141414] border-none text-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-[#1A1A1A] border-[#404040] text-white">
-                <SelectItem value="Designer">Designer</SelectItem>
-                <SelectItem value="Developer">Developer</SelectItem>
-                <SelectItem value="Marketer">Marketer</SelectItem>
-                <SelectItem value="Writer">Writer</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {roleType ? (
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-semibold text-white">Role type</label>
+              <span className="text-sm text-white/90 w-[250px] text-right">{roleType}</span>
+            </div>
+          ) : null}
 
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-semibold text-white">Tools/Stack</label>
-            <Select value={toolsStack} onValueChange={setToolsStack}>
-              <SelectTrigger className="w-[250px] bg-[#141414] border-none text-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-[#1A1A1A] border-[#404040] text-white">
-                <SelectItem value="Adobe Illustrator">Adobe Illustrator</SelectItem>
-                <SelectItem value="Figma">Figma</SelectItem>
-                <SelectItem value="React">React</SelectItem>
-                <SelectItem value="Solidity">Solidity</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <label className="text-sm font-semibold text-white">Tools / stack</label>
+            <Input
+              type="text"
+              placeholder="e.g. React, Solidity, Figma"
+              value={toolsStack}
+              onChange={(e) => setToolsStack(e.target.value)}
+              className="w-[250px] bg-[#141414] border-none text-white placeholder:text-[#606060] h-10"
+            />
           </div>
 
           <div className="flex items-center justify-between">
@@ -443,7 +533,7 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
               <SelectContent className="bg-[#1A1A1A] border-[#404040] text-white">
                 <SelectItem value="USDT">USDT</SelectItem>
                 <SelectItem value="USDC">USDC</SelectItem>
-                <SelectItem value="ETH">ETH</SelectItem>
+                {/* <SelectItem value="ETH">ETH</SelectItem> */}
                 <SelectItem value="SOL">SOL</SelectItem>
               </SelectContent>
             </Select>
@@ -592,7 +682,8 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
             </div>
             <Button
               onClick={handlePreview}
-              className="bg-gradient-to-r from-[#FF0075] via-[#FF4A15] to-[#FFCB45] text-white font-semibold py-3 px-8 rounded-lg hover:opacity-90 transition-opacity"
+              disabled={!isFormValid}
+              className="bg-gradient-to-r from-[#FF0075] via-[#FF4A15] to-[#FFCB45] text-white font-semibold py-3 px-8 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Preview
             </Button>
