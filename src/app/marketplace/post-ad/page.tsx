@@ -47,7 +47,10 @@ const CHAIN_VALUES = ['SOLANA', 'ETHEREUM', 'BASE', 'POLYGON', 'APTOS', 'MOVEMEN
 function buildDraftPayload(formData: FormData, imageUrls: string[]): Record<string, unknown> {
   const tier = (formData.visibility === 'plus' ? 'PLUS' : formData.visibility === 'premium' ? 'PREMIUM' : 'FREE') as string;
   const chainRaw = (formData.blockchainFocus ?? '').toUpperCase().replace(/\s+/g, '_');
-  const chain = CHAIN_VALUES.includes(chainRaw as (typeof CHAIN_VALUES)[number]) ? chainRaw : undefined;
+  const chain =
+    chainRaw && CHAIN_VALUES.includes(chainRaw as (typeof CHAIN_VALUES)[number])
+      ? chainRaw
+      : chainRaw || undefined;
 
   const amountStr = formData.amount != null && formData.amount !== '' ? String(formData.amount).replace(/,/g, '') : '';
   const priceAmount = amountStr ? Number(amountStr) : undefined;
@@ -182,6 +185,9 @@ export default function PostAdPage() {
   const handleDetailsNext = (data: ProjectDetailsData) => {
     setFormData((prev: FormData) => ({ ...prev, ...data }));
     setCurrentStep('preview');
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
   };
 
   const handleDetailsBack = () => {

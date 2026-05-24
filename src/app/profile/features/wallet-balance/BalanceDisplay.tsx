@@ -14,6 +14,12 @@ export default function BalanceDisplay({
   walletBalance,
   balanceTextSize,
 }: BalanceDisplayProps) {
+  const assetSuffix = selectedAsset
+    ? selectedAsset.name === "USDC" && selectedAsset.networkLabel
+      ? `${selectedAsset.name} (${selectedAsset.networkLabel})`
+      : selectedAsset.name
+    : "";
+
   return (
     <div className="mb-6">
       {balanceVisible ? (
@@ -25,7 +31,7 @@ export default function BalanceDisplay({
               ? `${walletBalance.toLocaleString(undefined, {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
-                })} ${selectedAsset.name}`
+                })} ${assetSuffix}`
               : `$${walletBalance.toLocaleString()}`}
           </span>
         </div>

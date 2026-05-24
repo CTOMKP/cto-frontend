@@ -286,7 +286,7 @@ export default function CategorySelectionStep({ onNext }: CategorySelectionStepP
               <Button
                 onClick={handleCreatePost}
                 className="w-full h-10 bg-gradient-to-r from-[#FF0075] via-[#FF4A15] to-[#FFCB45] text-white font-semibold py-3 rounded-lg hover:opacity-90 transition-opacity"
-                disabled={!selectedCategory}
+                disabled={!selectedCategory || !selectedSubcategory}
               >
                 Create post
               </Button>
