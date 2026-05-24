@@ -50,7 +50,7 @@ export function useWalletBalance() {
       /* failure logged in solanaWalletService.getBalance */
     }
   }, [wallets, solanaScopedWallets]);
-  const movementWalletQuery = useResolvedMovementWallet({ preferStorage: true });
+  const movementWalletQuery = useResolvedMovementWallet({ preferStorage: false });
   const resolvedMovementWallet = movementWalletQuery.data?.movementWallet ?? null;
   const resolvedWalletId = movementWalletQuery.data?.walletId ?? null;
   const [walletAssets, setWalletAssets] = useState<WalletAsset[]>([]);

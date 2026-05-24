@@ -55,7 +55,7 @@ export default function TransactionHistory() {
   const { wallets } = useWallets();
   const { wallets: solanaScopedWallets } = useSolanaWallets();
 
-  const movementWalletQuery = useResolvedMovementWallet({ preferStorage: true });
+  const movementWalletQuery = useResolvedMovementWallet({ preferStorage: false });
   const [transactions, setTransactions] = useState<HistoryTxRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeMovementWalletId, setActiveMovementWalletId] = useState<
@@ -89,7 +89,7 @@ export default function TransactionHistory() {
     void walletsService
       .listPrivyWallets({
         userId: sessionUserId || user.id,
-        preferStorage: true,
+        preferStorage: false,
       })
       .then((w) => {
         if (!cancelled) setBackendWallets(w);
