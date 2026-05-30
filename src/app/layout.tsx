@@ -13,7 +13,6 @@ import MarketTrends from "@/components/MarketTrends";
 import TokenSwapCard from "@/components/TokenSwapCard";
 import { Dialog } from "@/components/ui/dialog";
 import { QueryProvider } from "@/providers/QueryProvider";
-import ReferralCapture from "@/components/ReferralCapture";
 
 const grotesqueArabicPro = localFont({
   src: './fonts/BasisGrotesqueArabicPro-Regular.woff2',
@@ -45,7 +44,6 @@ export default function RootLayout({
         <PrivyProvider>
           <QueryProvider>
             <Dialog>
-              <ReferralCapture />
               <HeaderAd />
               <NavBar />
               <MarketTrends />

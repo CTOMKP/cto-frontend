@@ -6,7 +6,6 @@ import {
   clearSessionStorage,
   getAuthToken,
   PROFILE_AVATAR_URL_KEY,
-  getStoredCreatorReferralCode,
   setAuthToken,
   USER_AVATAR_URL_KEY,
   USER_EMAIL_KEY,
@@ -89,11 +88,8 @@ class PrivyService {
         console.log(`🔄 Sync attempt ${retryCount + 1}: Using token: ${freshToken.substring(0, 20)}...`);
         
         response = await apiPost<unknown>(
-          `${API_BASE}/api/v1/auth/privy/sync`,
-          {
-            privyToken: freshToken,
-            referralCode: getStoredCreatorReferralCode(),
-          },
+        `${API_BASE}/api/v1/auth/privy/sync`,
+          { privyToken: freshToken },
         );
         
         // If we get here, the request succeeded
