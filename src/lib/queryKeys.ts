@@ -48,3 +48,11 @@ export const marketplaceKeys = {
     [...marketplaceKeys.all, "feed", tab] as const,
   ad: (id: string) => [...marketplaceKeys.all, "ad", id] as const,
 };
+
+export const creatorKeys = {
+  all: ["creator-program"] as const,
+  dashboard: () => [...creatorKeys.all, "dashboard"] as const,
+  referrals: () => [...creatorKeys.all, "referrals"] as const,
+  earnings: () => [...creatorKeys.all, "earnings"] as const,
+  payouts: () => [...creatorKeys.all, "payouts"] as const,
+};

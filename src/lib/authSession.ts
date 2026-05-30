@@ -15,6 +15,7 @@ export const USER_AVATAR_URL_KEY = "cto_user_avatar_url";
 export const PROFILE_AVATAR_URL_KEY = "profile_avatar_url";
 export const PROFILE_AVATAR_META_KEY = "profile_avatar_meta";
 export const PROFILE_BANNER_URL_KEY = "profile_banner_url";
+export const CREATOR_REFERRAL_CODE_KEY = "cto_creator_referral_code";
 export const GENERIC_WALLETS_KEY = "cto_user_wallets";
 export const LEGACY_CTO_TOKEN_KEY = "cto_token";
 export const LEGACY_CTO_USER_KEY = "cto_user";
@@ -53,6 +54,14 @@ export function getStoredAvatarUrl(): string | null {
   return ls.getItem(USER_AVATAR_URL_KEY) || ls.getItem(PROFILE_AVATAR_URL_KEY);
 }
 
+export function getStoredCreatorReferralCode(): string | null {
+  return storage()?.getItem(CREATOR_REFERRAL_CODE_KEY) ?? null;
+}
+
+export function setStoredCreatorReferralCode(code: string): void {
+  storage()?.setItem(CREATOR_REFERRAL_CODE_KEY, code.trim());
+}
+
 /**
  * Clears JWT, user snapshot, avatars, wallet caches, and legacy keys.
  * Does not clear reward/Xp keys — call `clearRewardData()` from `@/utils/rewardStorage` when logging out fully.
@@ -74,6 +83,7 @@ export function clearSessionStorage(): void {
   ls.removeItem(PROFILE_AVATAR_URL_KEY);
   ls.removeItem(PROFILE_AVATAR_META_KEY);
   ls.removeItem(PROFILE_BANNER_URL_KEY);
+  ls.removeItem(CREATOR_REFERRAL_CODE_KEY);
 
   ls.removeItem(GENERIC_WALLETS_KEY);
   ls.removeItem(LEGACY_CTO_TOKEN_KEY);
