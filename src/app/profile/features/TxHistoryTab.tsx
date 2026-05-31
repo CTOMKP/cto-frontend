@@ -13,7 +13,16 @@ interface TxHistoryTabProps {
   transactions: HistoryTxRow[];
   loading: boolean;
   syncing: boolean;
+  selectedChain: "solana" | "movement";
+  hasSolana: boolean;
+  hasMovement: boolean;
+  onSelectChain: (chain: "solana" | "movement") => void;
   onSync: () => void;
+  debugWalletMapping?: {
+    solanaLinkedAddress: string | null;
+    solanaBackendWalletId: string | null;
+    movementWalletId: string | null;
+  };
 }
 
 function tokenMeta(tx: WalletTransaction): {
@@ -49,6 +58,19 @@ function formatAddressSnippet(raw: string): string {
   return `${raw.substring(0, 6)}...${raw.substring(raw.length - 4)}`;
 }
 
+function formatTimestamp(raw: string): string {
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return raw;
+  return new Intl.DateTimeFormat("en-GB", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
 /** Counterparty / reference line (matches test `MovementWalletRecentActivity`). */
 function counterpartyAddress(tx: WalletTransaction): string {
   const side =
@@ -76,12 +98,42 @@ export default function TxHistoryTab({
   transactions,
   loading,
   syncing,
+  selectedChain,
+  hasSolana,
+  hasMovement,
+  onSelectChain,
   onSync,
+  debugWalletMapping,
 }: TxHistoryTabProps) {
   return (
     <>
       <div className="flex justify-between items-center mb-4">
-        <div />
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onSelectChain("solana")}
+            disabled={!hasSolana}
+            className={`text-xs px-3 py-1 rounded-lg border transition-colors ${
+              selectedChain === "solana"
+                ? "bg-[#17171C] text-white border-white/30"
+                : "bg-transparent text-white/70 border-white/15 hover:bg-white/5"
+            } disabled:opacity-40 disabled:cursor-not-allowed`}
+          >
+            Solana
+          </button>
+          <button
+            type="button"
+            onClick={() => onSelectChain("movement")}
+            disabled={!hasMovement}
+            className={`text-xs px-3 py-1 rounded-lg border transition-colors ${
+              selectedChain === "movement"
+                ? "bg-[#17171C] text-white border-white/30"
+                : "bg-transparent text-white/70 border-white/15 hover:bg-white/5"
+            } disabled:opacity-40 disabled:cursor-not-allowed`}
+          >
+            Movement
+          </button>
+        </div>
         <button
           type="button"
           onClick={onSync}
@@ -109,11 +161,29 @@ export default function TxHistoryTab({
                   d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                 />
               </svg>
-              Sync
+              Sync {selectedChain === "solana" ? "Solana" : "Movement"}
             </>
           )}
         </button>
       </div>
+      {/* {process.env.NODE_ENV !== "production" && debugWalletMapping && (
+        <div className="mb-4 rounded-md border border-white/15 bg-white/5 px-3 py-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-white/70">
+            Tx wallet mapping debug
+          </p>
+          <div className="mt-1 grid gap-1 text-xs text-white/80 font-mono break-all">
+            <p>
+              solanaLinkedAddress: {debugWalletMapping.solanaLinkedAddress ?? "null"}
+            </p>
+            <p>
+              solanaBackendWalletId: {debugWalletMapping.solanaBackendWalletId ?? "null"}
+            </p>
+            <p>
+              movementWalletId: {debugWalletMapping.movementWalletId ?? "null"}
+            </p>
+          </div>
+        </div>
+      )} */}
 
       {loading ? (
         <TxHistoryTableSkeleton />
@@ -152,10 +222,7 @@ export default function TxHistoryTab({
                     {tx.sourceChain === "solana" ? "Solana" : "Movement"}
                   </td>
                   <td className="text-xs font-medium text-white py-3 pr-4 whitespace-nowrap">
-                    {new Date(tx.createdAt).toLocaleString([], {
-                      dateStyle: "short",
-                      timeStyle: "short",
-                    })}
+                    {formatTimestamp(tx.createdAt)}
                   </td>
                   <td className="text-xs font-medium text-white py-3 pr-4 whitespace-nowrap">
                     {formatTransactionValue(tx)}

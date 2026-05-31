@@ -7,7 +7,6 @@ import {
   PROFILE_AVATAR_URL_KEY,
   USER_AVATAR_URL_KEY,
 } from '@/lib/authSession';
-import { getCloudFrontUrl } from '@/lib/image-url-helper';
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
 
@@ -221,20 +220,10 @@ class PFPService {
       if (saveData?.success) {
         // Use backend's avatarUrl if provided, otherwise use our constructed imageUrl
         // Backend might return avatarUrl, imageUrl, or url field
-        const backendUrl = String(saveData?.avatarUrl || saveData?.imageUrl || saveData?.url || imageUrl);
-        // Transform to CloudFront URL (same approach as memes)
-        const finalAvatarUrl = getCloudFrontUrl(backendUrl);
-        
-        console.log('💾 Storing avatar URL:', {
-          backendAvatarUrl: saveData?.avatarUrl,
-          backendImageUrl: saveData?.imageUrl,
-          backendUrl: saveData?.url,
-          constructedImageUrl: imageUrl,
-          cloudfrontUrl: finalAvatarUrl,
-          allSaveDataKeys: Object.keys(saveData || {}),
-        });
-        
-        // Store CloudFront URL in localStorage for quick access (both keys for compatibility)
+        const finalAvatarUrl = String(
+          saveData?.avatarUrl || saveData?.imageUrl || saveData?.url || imageUrl,
+        );
+
         localStorage.setItem(PROFILE_AVATAR_URL_KEY, finalAvatarUrl);
         localStorage.setItem(USER_AVATAR_URL_KEY, finalAvatarUrl);
         

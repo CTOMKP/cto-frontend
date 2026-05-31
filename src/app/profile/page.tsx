@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { useWallets as useSolanaWallets } from '@privy-io/react-auth/solana';
 import { useRouter } from 'next/navigation';
@@ -20,15 +20,25 @@ import PortfolioSection from './features/PortfolioSection';
 import TransactionHistory from './features/TransactionHistory';
 import WalletsDialog from './features/WalletsDialog';
 import { resolvePrivySolanaAddress } from '@/lib/solanaTransaction';
-
 export default function ProfilePage() {
   const router = useRouter();
   const { user, authenticated, ready } = usePrivy();
   const { wallets: privyMainWallets } = useWallets();
   const { wallets: solanaScopedWallets } = useSolanaWallets();
   const sessionUserId = useSessionStore((s) => s.userId);
-  const avatarUrl = useSessionStore((s) => s.avatarUrl);
+  const storedAvatarUrl = useSessionStore((s) => s.avatarUrl);
   const profileQuery = useProfileQuery({ enabled: !!(ready && authenticated) });
+
+  const avatarUrl = useMemo(
+    () => profileQuery.data?.avatarUrl ?? storedAvatarUrl,
+    [profileQuery.data?.avatarUrl, storedAvatarUrl],
+  );
+
+  useEffect(() => {
+    if (profileQuery.isSuccess) {
+      useSessionStore.getState().hydrateFromStorage();
+    }
+  }, [profileQuery.isSuccess, profileQuery.dataUpdatedAt]);
   // Keep allWallets for potential future use (displaying all wallets)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [allWallets, setAllWallets] = useState<BackendWallet[]>([]);
