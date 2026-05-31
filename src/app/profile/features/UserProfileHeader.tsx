@@ -11,7 +11,6 @@ import { toast } from "react-toastify";
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
 import { useUpdateUserMutation } from "@/hooks/useUpdateUserMutation";
 import { useSessionStore } from "@/lib/sessionStore";
-
 interface UserProfileHeaderProps {
   avatarUrl: string | null;
   email: string;

@@ -45,12 +45,13 @@ export function findWalletIdForAddress(
   wallets: BackendWallet[],
   address: string,
 ): string | null {
-  const match = wallets.find(
+  const matches = wallets.filter(
     (w) =>
       typeof w.address === "string" &&
       w.address.toLowerCase() === address.toLowerCase() &&
       isMovementBackendWallet(w),
   );
+  const match = pickBestWalletMatch(matches);
   return typeof match?.id === "string" ? match.id : null;
 }
 
@@ -59,13 +60,45 @@ export function findSolanaWalletIdForAddress(
   wallets: BackendWallet[],
   address: string,
 ): string | null {
-  const match = wallets.find(
+  const matches = wallets.filter(
     (w) =>
       typeof w.address === "string" &&
       w.address.toLowerCase() === address.toLowerCase() &&
       isSolanaBackendWallet(w),
   );
+  const match = pickBestWalletMatch(matches);
   return typeof match?.id === "string" ? match.id : null;
+}
+
+function asTime(value: unknown): number {
+  if (typeof value !== "string") return 0;
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+/**
+ * Some users can have duplicate wallet rows (same address), usually after resync/migrations.
+ * Pick the most likely current row in a stable order:
+ * 1) primary wallet
+ * 2) most recently updated
+ * 3) most recently created
+ */
+function pickBestWalletMatch(matches: BackendWallet[]): BackendWallet | null {
+  if (!matches.length) return null;
+  const ranked = [...matches].sort((a, b) => {
+    const aPrimary = a.isPrimary === true ? 1 : 0;
+    const bPrimary = b.isPrimary === true ? 1 : 0;
+    if (aPrimary !== bPrimary) return bPrimary - aPrimary;
+
+    const aUpdated = asTime(a.updatedAt);
+    const bUpdated = asTime(b.updatedAt);
+    if (aUpdated !== bUpdated) return bUpdated - aUpdated;
+
+    const aCreated = asTime(a.createdAt);
+    const bCreated = asTime(b.createdAt);
+    return bCreated - aCreated;
+  });
+  return ranked[0] ?? null;
 }
 
 export function findSolanaWalletInBackend(wallets: BackendWallet[]): BackendWallet | null {

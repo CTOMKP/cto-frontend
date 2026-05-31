@@ -18,7 +18,6 @@ import {
   WALLET_ID_KEY,
   clearAuthToken,
 } from '@/lib/authSession';
-
 class AuthService {
   private baseUrl: string;
   private isProduction: boolean;
@@ -84,6 +83,9 @@ class AuthService {
     if (profileData.avatarUrl) {
       localStorage.setItem(USER_AVATAR_URL_KEY, profileData.avatarUrl);
       localStorage.setItem(PROFILE_AVATAR_URL_KEY, profileData.avatarUrl);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('avatarUpdated'));
+      }
     }
     persistRewardData(profileData);
   }
@@ -278,6 +280,9 @@ class AuthService {
     if (updatedUser?.avatarUrl) {
       localStorage.setItem(USER_AVATAR_URL_KEY, updatedUser.avatarUrl);
       localStorage.setItem(PROFILE_AVATAR_URL_KEY, updatedUser.avatarUrl);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('avatarUpdated'));
+      }
     }
     persistRewardData(updatedUser);
     return updatedUser;

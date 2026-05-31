@@ -15,7 +15,6 @@ import { Check, MoveDown, MoveUp, SquareArrowOutUpRight } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Link from 'next/link';
 import FallbackImage from './FallbackImage';
-import { getCloudFrontUrl } from '@/lib/image-url-helper';
 import { useWalletBalance } from '@/app/profile/features/wallet-balance/useWalletBalance';
 import WalletBalanceContent from '@/app/profile/features/wallet-balance/WalletBalanceContent';
 import { Button } from './ui/button';
@@ -31,10 +30,7 @@ export default function AvatarDropdown() {
   const storedAvatarUrl = useSessionStore((s) => s.avatarUrl);
   const sessionEmail = useSessionStore((s) => s.email);
   const sessionUsername = useSessionStore((s) => s.username);
-  const avatarUrl = useMemo(
-    () => (storedAvatarUrl ? getCloudFrontUrl(storedAvatarUrl) : null),
-    [storedAvatarUrl],
-  );
+  const avatarUrl = storedAvatarUrl;
   const [copiedAddress, setCopiedAddress] = useState(false);
   const {
     rankLevel,

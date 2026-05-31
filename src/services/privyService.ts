@@ -1,7 +1,6 @@
 import { ApiError } from '@/lib/apiError';
 import { apiGet, apiPost } from '@/lib/apiClient';
 import { toRecord, unwrapApiData } from '@/lib/apiResponse';
-import { getCloudFrontUrl } from '@/lib/image-url-helper';
 import {
   clearSessionStorage,
   getAuthToken,
@@ -159,14 +158,10 @@ class PrivyService {
         localStorage.setItem(WALLET_ADDRESS_KEY, responseData.user.walletAddress);
       }
 
-      // Store avatarUrl if available (from database) - transform to CloudFront URL
+      // Store avatarUrl as returned by the API (no URL rewriting)
       if (responseData.user.avatarUrl) {
-        const cloudfrontUrl = getCloudFrontUrl(responseData.user.avatarUrl);
-        console.log('✅ Storing avatarUrl from backend sync (CloudFront):', cloudfrontUrl);
-        localStorage.setItem(USER_AVATAR_URL_KEY, cloudfrontUrl);
-        localStorage.setItem(PROFILE_AVATAR_URL_KEY, cloudfrontUrl);
-        } else {
-        console.log('⚠️ No avatarUrl in sync response');
+        localStorage.setItem(USER_AVATAR_URL_KEY, responseData.user.avatarUrl);
+        localStorage.setItem(PROFILE_AVATAR_URL_KEY, responseData.user.avatarUrl);
       }
 
       // Store ALL wallets (including Aptos) for profile display - scoped by user ID
