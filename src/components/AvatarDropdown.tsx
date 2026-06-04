@@ -24,6 +24,7 @@ import { useSessionStore } from '@/lib/sessionStore';
 import { useWallets } from '@privy-io/react-auth';
 import { useWallets as useSolanaWallets } from '@privy-io/react-auth/solana';
 import { resolvePrivySolanaAddress } from '@/lib/solanaTransaction';
+import { getRankBadgeSrc } from '@/lib/rankBadge';
 import type { DepositNetwork } from '@/app/profile/features/wallet-balance/ActionButtons';
 
 export default function AvatarDropdown() {
@@ -39,6 +40,7 @@ export default function AvatarDropdown() {
     nextLevelXP,
     progressPct,
   } = useRewardProgress();
+  const rankBadgeSrc = useMemo(() => getRankBadgeSrc(rankLabel), [rankLabel]);
   const router = useRouter();
   const { logout } = usePrivyAuth();
   const { user } = usePrivy();
@@ -176,11 +178,12 @@ export default function AvatarDropdown() {
               <div className="flex items-center gap-2 mb-1">
                 <h3 className="font-bold text-lg truncate">{username}</h3>
                 <Image
-                  src="/badge.svg"
-                  alt="badge"
-                  width={15}
-                  height={15}
+                  src={rankBadgeSrc}
+                  alt={`${rankLabel} badge`}
+                  width={20}
+                  height={20}
                   loading="lazy"
+                  className="rounded-sm object-cover"
                 />
               </div>
               <p className="text-sm text-white/70">
