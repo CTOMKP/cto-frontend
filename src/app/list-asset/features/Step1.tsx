@@ -69,10 +69,10 @@ const info = [
 export const getTierInfo = (tier: string | undefined) => {
   const tierStr = (tier || '').toLowerCase();
   const tierIcons: Record<string, string> = {
-    stellar: "/project-categories/stellar.svg",
-    bloom: "/project-categories/bloom.svg",
-    sprout: "/project-categories/sprout.svg",
-    seed: "/project-categories/seed.svg",
+    stellar: "/project-categories/stellar.png",
+    bloom: "/project-categories/bloom.png",
+    sprout: "/project-categories/sprout.png",
+    seed: "/project-categories/seed.png",
   };
   const tierBgColors: Record<string, string> = {
     seed: "bg-[#6D6D6D]/20",
@@ -93,7 +93,7 @@ export const getTierInfo = (tier: string | undefined) => {
     stellar: "Stellar",
   };
   return {
-    icon: tierIcons[tierStr] || "/project-categories/sprout.svg",
+    icon: tierIcons[tierStr] || "/project-categories/sprout.png",
     bgColor: tierBgColors[tierStr] || "bg-[#FF5900]/20",
     textColor: tierTextColors[tierStr] || "text-[#FF5900]",
     name: tierNames[tierStr] || "Sprout",
