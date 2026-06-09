@@ -1,16 +1,16 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import MissionStats from "./MissionStats";
 import { useRewardProgress } from "@/lib/userRewardProgress";
+import { getRankBadgeSrc } from "@/lib/rankBadge";
 
 export default function LevelXPProgress() {
   const {
     rankLevel,
     rankLabel,
-    rankEmoji,
     currentXP,
     nextLevelXP,
     xpProgress,
@@ -18,16 +18,22 @@ export default function LevelXPProgress() {
     isLoading,
   } = useRewardProgress();
 
-  const levelTitle = rankEmoji
-    ? `${rankEmoji} Level ${rankLevel} - ${rankLabel}`
-    : `Level ${rankLevel} - ${rankLabel}`;
+  const rankBadgeSrc = useMemo(() => getRankBadgeSrc(rankLabel), [rankLabel]);
+  const levelTitle = `Level ${rankLevel} - ${rankLabel}`;
 
   return (
     <div className="mb-4 rounded-lg border-[0.5px] border-white/20 py-[13px] px-3">
       <div className=" mb-2">
         <div className="flex justify-between items-start mb-4">
-          <div className="flex gap-1 items-center min-w-0">
-            {/* <Image alt="badge" src={"/badge.svg"} width={15} height={15} /> */}
+          <div className="flex gap-2 items-center min-w-0">
+            <Image
+              src={rankBadgeSrc}
+              alt={`${rankLabel} badge`}
+              width={20}
+              height={20}
+              loading="lazy"
+              className="shrink-0 rounded-sm object-cover"
+            />
             <span className="font-bold truncate" title={levelTitle}>
               {levelTitle}
             </span>

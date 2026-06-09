@@ -477,10 +477,10 @@ export default function TrendingCoins({
                             
                             const tier = tierStr;
                             const tierIcons: Record<string, string> = {
-                              stellar: "/project-categories/stellar.svg",
-                              bloom: "/project-categories/bloom.svg",
-                              sprout: "/project-categories/sprout.svg",
-                              seed: "/project-categories/seed.svg",
+                              stellar: "/project-categories/stellar.png",
+                              bloom: "/project-categories/bloom.png",
+                              sprout: "/project-categories/sprout.png",
+                              seed: "/project-categories/seed.png",
                             };
                             
                             const tierBgColors: Record<string, string> = {
@@ -504,7 +504,7 @@ export default function TrendingCoins({
                               stellar: { lp: ">$100,000", lpLockBurn: ">30% / 36mo" },
                             };
                             
-                            const iconPath = tierIcons[tier] || "/project-categories/bloom.svg";
+                            const iconPath = tierIcons[tier] || "/project-categories/bloom.png";
                             const bgColor = tierBgColors[tier] || "bg-[#15FF00]/20";
                             const description = tierDescriptions[tier] || "";
                             const lpRequirements = tierLpRequirements[tier] || { lp: "", lpLockBurn: "" };

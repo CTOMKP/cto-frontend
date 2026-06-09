@@ -610,7 +610,7 @@ function ListingApplicationContent() {
           >
             <span className="rounded-lg p-1.5 font-bold text-[#6D6D6D] bg-[#6D6D6D]/20 flex items-center gap-2.5">
               <Image
-                src="/project-categories/seed.svg"
+                src="/project-categories/seed.png"
                 alt="seed"
                 width={16}
                 height={16}
@@ -619,7 +619,7 @@ function ListingApplicationContent() {
             </span>
             <span className="rounded-lg p-1.5 font-bold text-[#FF5900] bg-[#FF5900]/20 flex items-center gap-2.5">
               <Image
-                src="/project-categories/sprout.svg"
+                src="/project-categories/sprout.png"
                 alt="sprout"
                 width={16}
                 height={16}
@@ -628,7 +628,7 @@ function ListingApplicationContent() {
             </span>
             <span className="rounded-lg p-1.5 font-bold text-[#15FF00] bg-[#15FF00]/20 flex items-center gap-2.5">
               <Image
-                src="/project-categories/bloom.svg"
+                src="/project-categories/bloom.png"
                 alt="bloom"
                 width={16}
                 height={16}
@@ -637,7 +637,7 @@ function ListingApplicationContent() {
             </span>
             <span className="rounded-lg p-1.5 font-bold text-[#FFBB00] bg-[#FFBB00]/20 flex items-center gap-2.5">
               <Image
-                src="/project-categories/stellar.svg"
+                src="/project-categories/stellar.png"
                 alt="stellar"
                 width={16}
                 height={16}
