@@ -17,7 +17,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { ApiCoinItem } from "@/types/api";
 import { useRouter } from "next/navigation";
 import FallbackImage from "@/components/FallbackImage";
-import { formatAgeYMD } from "./utils/listingUtils";
+import { formatAgeDisplay, formatAgeYMD } from "./utils/listingUtils";
 import { slugify } from "@/lib/utils/slugify";
 
 // Helper function to create shorter address for TrendingCommunity
@@ -161,7 +161,7 @@ export default function TrendingCommunity({
       let ageStr: string | null = null;
       if (item.age && typeof item.age === 'string' && item.age.trim() !== '') {
         // Convert to "1y 2mo 4d" format
-        ageStr = formatAgeYMD(item.age);
+        ageStr = formatAgeDisplay(item.age);
       } else {
         const createdAt = item.createdAt ? new Date(item.createdAt) : null;
         ageStr = createdAt ? formatAgeYMD(createdAt) : null;

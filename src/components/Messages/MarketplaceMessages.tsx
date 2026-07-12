@@ -24,6 +24,10 @@ import type {
   MessageThread,
 } from "@/types/messages";
 import { useSessionStore } from "@/lib/sessionStore";
+import {
+  getMessageContentBlockDisclaimer,
+  getMessageContentViolations,
+} from "@/lib/messageContentPolicy";
 
 function toRecord(v: unknown): Record<string, unknown> | null {
   return v && typeof v === "object" ? (v as Record<string, unknown>) : null;
@@ -497,9 +501,24 @@ export default function MarketplaceMessages({
     setActiveThreadId(threadId);
   };
 
+  const draftContentViolations = useMemo(
+    () => getMessageContentViolations(draft),
+    [draft],
+  );
+  const draftBlockedDisclaimer = useMemo(
+    () => getMessageContentBlockDisclaimer(draftContentViolations),
+    [draftContentViolations],
+  );
+
   const onSend = async () => {
     const body = draft.trim();
     if (!activeThreadId || body.length === 0) return;
+
+    if (draftContentViolations.length > 0) {
+      toast.error(draftBlockedDisclaimer, { autoClose: 6000 });
+      return;
+    }
+
     try {
       const resUnknown = await messagesService.sendMessage(
         activeThreadId,
@@ -518,7 +537,10 @@ export default function MarketplaceMessages({
       }
       setDraft("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to send message");
+      const message =
+        e instanceof Error ? e.message : "Failed to send message";
+      setError(message);
+      toast.error(message, { autoClose: 6000 });
     }
   };
 
@@ -711,6 +733,9 @@ export default function MarketplaceMessages({
             getMessageAvatarSrc={getMessageAvatarSrc}
             onOpenUserProfile={onOpenUserProfile}
             loadingMessages={loadingMessages}
+            contentBlockedDisclaimer={
+              draftBlockedDisclaimer || null
+            }
           />
         </div>
         <div className="h-screen overflow-auto hover-scrollbar shrink-0">

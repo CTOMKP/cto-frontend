@@ -1,6 +1,7 @@
 import { apiGet, apiPost } from '@/lib/apiClient';
 import { unwrapApiData } from '@/lib/apiResponse';
 import { uploadGenericViaPresign } from '@/lib/presignedUpload';
+import { assertMessageContentAllowed } from '@/lib/messageContentPolicy';
 
 export const messagesService = {
   async apply(adId: string, coverLetter: string) {
@@ -22,6 +23,7 @@ export const messagesService = {
   },
 
   async sendMessage(threadId: string, body: string) {
+    assertMessageContentAllowed(body);
     const res = await apiPost<unknown>(
       `/api/v1/messages/threads/${threadId}/messages`,
       { body },

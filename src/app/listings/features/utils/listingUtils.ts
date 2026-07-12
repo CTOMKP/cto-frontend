@@ -60,8 +60,51 @@ export function convertAgeToRelative(ageStr: string | null | undefined): string 
 }
 
 /**
- * Format age in years, months, and days format: "1y 2mo 4d"
- * Only shows non-zero parts (e.g., "2mo 4d" if no years, "4d" if only days)
+ * Format age with at most two timeframes.
+ * - 1 year or older: years and months only (e.g. "1y, 2mo")
+ * - Under 1 year: months and days (e.g. "2mo, 4d" or "10d")
+ */
+function formatAgeParts(years: number, months: number, days: number, totalDays?: number): string {
+  if (years >= 1) {
+    const parts = [`${years}y`];
+    if (months > 0) parts.push(`${months}mo`);
+    return parts.join(", ");
+  }
+
+  const parts: string[] = [];
+  if (months > 0) parts.push(`${months}mo`);
+  if (days > 0) parts.push(`${days}d`);
+  if (parts.length > 0) return parts.slice(0, 2).join(", ");
+
+  const fallbackDays = totalDays ?? 0;
+  if (fallbackDays > 0) return `${fallbackDays}d`;
+  return "0d";
+}
+
+/**
+ * Normalize an age string from the API (e.g. "1y 2mo 3d") to the display format.
+ */
+export function formatAgeDisplay(age: string | null | undefined): string | null {
+  if (!age || typeof age !== "string") return null;
+  const trimmed = age.trim();
+  if (!trimmed) return null;
+
+  const yearMatch = trimmed.match(/(\d+)\s*y/i);
+  const monthMatch = trimmed.match(/(\d+)\s*mo/i);
+  const dayMatch = trimmed.match(/(\d+)\s*d(?:\b|$)/i);
+
+  if (yearMatch || monthMatch || dayMatch) {
+    const years = yearMatch ? parseInt(yearMatch[1], 10) : 0;
+    const months = monthMatch ? parseInt(monthMatch[1], 10) : 0;
+    const days = dayMatch ? parseInt(dayMatch[1], 10) : 0;
+    return formatAgeParts(years, months, days);
+  }
+
+  return formatAgeYMD(trimmed);
+}
+
+/**
+ * Format age in years, months, and days — max two timeframes for display.
  */
 export function formatAgeYMD(dateOrDays: Date | number | string): string | null {
   let totalDays = 0;
@@ -91,13 +134,7 @@ export function formatAgeYMD(dateOrDays: Date | number | string): string | null 
   const months = Math.floor(remainingAfterYears / 30);
   const days = remainingAfterYears % 30;
 
-  const parts: string[] = [];
-  if (years > 0) parts.push(`${years}y`);
-  if (months > 0) parts.push(`${months}mo`);
-  if (days > 0) parts.push(`${days}d`);
-
-  // If all are zero (shouldn't happen due to check above), return "0d"
-  return parts.length > 0 ? parts.join(' ') : '0d';
+  return formatAgeParts(years, months, days, totalDays);
 }
 
 export function getChainImage(chain: string): string {
@@ -119,7 +156,7 @@ export function mapApiCoinItemsToMockLikeCoins(items: ApiCoinItem[]): MockLikeCo
   return items.map((it) => {
     let ageStr: string | null = null;
     if (it.age && typeof it.age === "string" && it.age.trim() !== "") {
-      ageStr = formatAgeYMD(it.age);
+      ageStr = formatAgeDisplay(it.age);
     } else {
       const createdAt = it.createdAt ? new Date(it.createdAt) : null;
       ageStr = createdAt ? formatAgeYMD(createdAt) : null;
