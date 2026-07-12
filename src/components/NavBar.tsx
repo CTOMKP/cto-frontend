@@ -27,22 +27,34 @@ import NavDropdownMenu from "./DropdownMenu";
 import { usePathname } from "next/navigation";
 import NavBarChats from "./NavBarChats";
 import { useSessionStore } from "@/lib/sessionStore";
+import {
+  DISCOVERY_CATEGORIES,
+  getDiscoveryCategoryHref,
+} from "@/lib/discoveryCategories";
 
-const ExploreCategoryLinks = [
-  { name: "Animals", href: "#" },
-  { name: "Food & Drinks", href: "#" },
-  { name: "Elon Musk-Inspired", href: "#" },
-  { name: "Lifestyle and Well-being", href: "#" },
-  { name: "Finance and Business", href: "#" },
-  { name: "Entertainment & Media", href: "#" },
-  { name: "Sports & Fitness", href: "#" },
-  { name: "Technology & Science", href: "#" },
-  { name: "Arts & Culture", href: "#" },
+const gradientHoverHandlers = {
+  onMouseEnter: (e: React.MouseEvent<HTMLElement>) => {
+    e.currentTarget.style.background =
+      "linear-gradient(100.86deg, rgba(255, 0, 117, 0.3) 4.13%, rgba(255, 74, 21, 0.3) 55.91%, rgba(255, 203, 69, 0.3) 100%)";
+  },
+  onMouseLeave: (e: React.MouseEvent<HTMLElement>) => {
+    e.currentTarget.style.background = "transparent";
+  },
+};
+
+const discoverNavItems: {
+  label: string;
+  href: string;
+  revealsCategories?: boolean;
+}[] = [
+  { label: "Listing", href: "/listings" },
+  { label: "Discovery Hub", href: "/categories", revealsCategories: true },
 ];
 
 export default function NavBar() {
   const { isAuthenticated, ready, isLoading: authLoading } = usePrivyAuth();
   const [isDropdownOpen, setDropdownOpen] = useState(false);
+  const [showCategories, setShowCategories] = useState(false);
   const hasAvatar = useSessionStore((s) => s.hasAvatar);
   const pathname = usePathname();
 
@@ -80,7 +92,10 @@ export default function NavBar() {
                 <NavigationMenuItem>
                   <DropdownMenu
                     open={isDropdownOpen}
-                    onOpenChange={setDropdownOpen}
+                    onOpenChange={(open) => {
+                      setDropdownOpen(open);
+                      if (!open) setShowCategories(false);
+                    }}
                   >
                     <DropdownMenuTrigger className="flex gap-2 items-center font-normal text-base">
                       Discover{" "}
@@ -90,33 +105,24 @@ export default function NavBar() {
                         <ChevronDown size={16} />
                       )}
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="bg-[#010101] text-sm font-normal text-[#FFFFFFB2] w-[534px] !border-2 !border-[#86868630] p-6">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          {[
-                            {
-                              label: "Listing",
-                              href: "/listings",
-                            },
-                            {
-                              label: "Discovery Hub",
-                              href: "/categories",
-                            },
-                          ].map((item) => (
-                            <NavigationMenuLink
-                              key={item.label}
-                              className="px-0"
-                            >
-                              <div
-                                className="rounded-lg p-[1px] transition-all duration-300"
+                    <DropdownMenuContent
+                      className={`bg-[#010101] text-sm font-normal text-[#FFFFFFB2] !border-2 !border-[#86868630] p-6 transition-[width] duration-200 ${
+                        showCategories ? "w-[534px]" : "w-[280px]"
+                      }`}
+                      onMouseLeave={() => setShowCategories(false)}
+                    >
+                      <div className="flex gap-4">
+                        <div className="min-w-[220px]">
+                          {discoverNavItems.map((item) => (
+                            <NavigationMenuLink key={item.label} className="px-0 block mb-1">
+                              <Link
+                                href={item.href}
+                                className="block rounded-lg p-[1px] transition-all duration-300"
                                 style={{ background: "transparent" }}
+                                {...gradientHoverHandlers}
                                 onMouseEnter={(e) => {
-                                  e.currentTarget.style.background =
-                                    "linear-gradient(100.86deg, rgba(255, 0, 117, 0.3) 4.13%, rgba(255, 74, 21, 0.3) 55.91%, rgba(255, 203, 69, 0.3) 100%)";
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.background =
-                                    "transparent";
+                                  gradientHoverHandlers.onMouseEnter(e);
+                                  setShowCategories(!!item.revealsCategories);
                                 }}
                               >
                                 <div
@@ -126,25 +132,17 @@ export default function NavBar() {
                                     transition: "all 0.3s ease-in-out",
                                   }}
                                 >
-                                  <div className="flex items-center justify-between">
-                                    <Link href={item.href}>{item.label}</Link>
-                                  </div>
+                                  {item.label}
                                 </div>
-                              </div>
+                              </Link>
                             </NavigationMenuLink>
                           ))}
                           <NavigationMenuLink className="px-0">
                             <div
                               className="rounded-lg p-[1px] transition-all duration-300"
                               style={{ background: "transparent" }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background =
-                                  "linear-gradient(100.86deg, rgba(255, 0, 117, 0.3) 4.13%, rgba(255, 74, 21, 0.3) 55.91%, rgba(255, 203, 69, 0.3) 100%)";
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background =
-                                  "transparent";
-                              }}
+                              {...gradientHoverHandlers}
+                              onMouseEnter={() => setShowCategories(false)}
                             >
                               <div
                                 className="rounded-lg w-full h-full px-2 py-1"
@@ -154,7 +152,7 @@ export default function NavBar() {
                                 }}
                               >
                                 <div className="flex items-center justify-between">
-                                  <Link href="#">CTO Vision</Link>
+                                  <span className="text-[#FFFFFFB2]">CTO Vision</span>
                                   <span className="text-[#C44FE2] text-[10px] bg-[#C44FE20D] rounded-[3px] px-[7px] py-1.5">
                                     Soon!
                                   </span>
@@ -164,51 +162,45 @@ export default function NavBar() {
                           </NavigationMenuLink>
                         </div>
 
-                        <div>
-                          <div className="pb-4.5 mb-4 border-b-[0.5px] border-[#FFFFFF20]">
-                            <span className="text-sm px-2 font-normal text-white">
-                              Categories
-                            </span>
-                          </div>
+                        {showCategories ? (
+                          <div
+                            className="flex-1 border-l-[0.5px] border-[#FFFFFF20] pl-4"
+                            onMouseEnter={() => setShowCategories(true)}
+                          >
+                            <div className="pb-4.5 mb-4 border-b-[0.5px] border-[#FFFFFF20]">
+                              <span className="text-sm px-2 font-normal text-white">
+                                Categories
+                              </span>
+                            </div>
 
-                          <div>
-                            {ExploreCategoryLinks.map((category, index) => (
-                              <NavigationMenuLink key={index} asChild>
-                                <div
-                                  className="rounded-lg group p-[1px] transition-all duration-300"
-                                  style={{
-                                    background: "transparent",
-                                    borderRadius: "8px",
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.background =
-                                      "linear-gradient(100.86deg, rgba(255, 0, 117, 0.3) 4.13%, rgba(255, 74, 21, 0.3) 55.91%, rgba(255, 203, 69, 0.3) 100%)";
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.background =
-                                      "transparent";
-                                  }}
+                            <div className="max-h-[320px] overflow-y-auto pr-1">
+                              {DISCOVERY_CATEGORIES.map((category) => (
+                                <NavigationMenuLink
+                                  key={category.slug}
+                                  className="px-0 block mb-1"
                                 >
-                                  <div
-                                    className="rounded-lg w-full h-full p-2"
-                                    style={{
-                                      background: "#010101",
-                                      borderRadius: "8px",
-                                      transition: "all 0.3s ease-in-out",
-                                    }}
+                                  <Link
+                                    href={getDiscoveryCategoryHref(category.slug)}
+                                    className="block rounded-lg p-[1px] transition-all duration-300"
+                                    style={{ background: "transparent" }}
+                                    {...gradientHoverHandlers}
+                                    onClick={() => setDropdownOpen(false)}
                                   >
-                                    <Link
-                                      href={category.href}
-                                      className="block w-full"
+                                    <div
+                                      className="rounded-lg w-full h-full p-2"
+                                      style={{
+                                        background: "#010101",
+                                        transition: "all 0.3s ease-in-out",
+                                      }}
                                     >
                                       {category.name}
-                                    </Link>
-                                  </div>
-                                </div>
-                              </NavigationMenuLink>
-                            ))}
+                                    </div>
+                                  </Link>
+                                </NavigationMenuLink>
+                              ))}
+                            </div>
                           </div>
-                        </div>
+                        ) : null}
                       </div>
                     </DropdownMenuContent>
                   </DropdownMenu>

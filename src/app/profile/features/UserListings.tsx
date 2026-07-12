@@ -13,6 +13,7 @@ import UserListingsTableHeader from "./UserListingsTableHeader";
 import UserListingsTableRow from "./UserListingsTableRow";
 import UserListingsTableSkeleton from "./UserListingsTableSkeleton";
 import { slugify } from "@/lib/utils/slugify";
+import { formatAgeDisplay } from "@/app/listings/features/utils/listingUtils";
 
 function mapMineItemsToTableRows(items: AllUserListings[]): MockLikeCoin[] {
   return items.map((it) => {
@@ -42,7 +43,7 @@ function mapMineItemsToTableRows(items: AllUserListings[]): MockLikeCoin[] {
       listingId: it.id,
       name: it.scanMetadata?.token_name || it.scanMetadata?.token_symbol || "",
       whale: false,
-      age: it.scanMetadata?.age_display,
+      age: formatAgeDisplay(it.scanMetadata?.age_display),
       status: it.status,
       address: it.contractAddr,
       x: undefined,

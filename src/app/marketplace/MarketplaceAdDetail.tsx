@@ -209,7 +209,7 @@ export default function MarketplaceAdDetail({ adId: adIdFromPage }: { adId: stri
           Back
         </Button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-10 min-w-0">
           <div className="lg:col-span-6 space-y-3">
             <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-white/5">
               <Image src={images[carouselIndex] || "/space-thumbnail.png"} alt="Ad" fill className="object-cover" sizes="(max-width: 1024px) 100vw, 50vw" />
@@ -229,7 +229,7 @@ export default function MarketplaceAdDetail({ adId: adIdFromPage }: { adId: stri
             </div>
           </div>
 
-          <div className="lg:col-span-6 space-y-4 border border-[#86868630] rounded-lg p-4">
+          <div className="lg:col-span-6 space-y-4 border border-[#86868630] rounded-lg p-4 min-w-0">
             <div className="flex relative items-center justify-end gap-3 mb-6">
               {expiresAt && (
                 <div className="absolute -top-4 -left-4 flex border-[0.5px] border-white/20 rounded-br-lg rounded-tl-lg items-center gap-1 bg-[#FFCB450A] px-2 py-1 text-xs text-[#FFCB45B2]">
@@ -242,7 +242,7 @@ export default function MarketplaceAdDetail({ adId: adIdFromPage }: { adId: stri
                 <Heart className={`h-5 w-5 ${liked ? "fill-red-500 text-red-500" : ""}`} />
               </button>
             </div>
-            <div className="bg-[#FFFFFF]/3 p-6 border border-[#FFFFFF]/8 rounded-lg">
+            <div className="bg-[#FFFFFF]/3 p-6 border border-[#FFFFFF]/8 rounded-lg min-w-0 overflow-hidden">
               <div className="flex items-center justify-between">
                 <h1 className="text-2xl lg:text-3xl font-bold text-white">{title}</h1>
                 <Image src={chainIcon} alt={chain || "chain"} width={24} height={24} className="rounded-full" />
@@ -256,9 +256,11 @@ export default function MarketplaceAdDetail({ adId: adIdFromPage }: { adId: stri
               </div>
             </div>
 
-            <div className="p-6 space-y-6 border border-[#FFFFFF]/8 rounded-lg">
+            <div className="p-6 space-y-6 border border-[#FFFFFF]/8 rounded-lg min-w-0 overflow-hidden">
               {description ? (
-                <p className="text-white/80 text-sm leading-relaxed whitespace-pre-wrap">{description}</p>
+                <p className="text-white/80 text-sm leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere] max-w-full">
+                  {description}
+                </p>
               ) : null}
               {contactLinks.length > 0 && (
                 <div className="flex flex-col gap-2">

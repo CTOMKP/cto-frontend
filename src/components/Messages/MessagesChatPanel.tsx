@@ -78,6 +78,7 @@ export default function MessagesChatPanel({
   getMessageAvatarSrc,
   onOpenUserProfile,
   loadingMessages,
+  contentBlockedDisclaimer,
 }: {
   headerTitle: string;
   messages: ChatMessage[];
@@ -95,6 +96,7 @@ export default function MessagesChatPanel({
   getMessageAvatarSrc: (senderId: number) => string;
   onOpenUserProfile: (senderId: number) => void;
   loadingMessages?: boolean;
+  contentBlockedDisclaimer?: string | null;
 }) {
   const endRef = useRef<HTMLDivElement | null>(null);
   const [messageAvatarErrors, setMessageAvatarErrors] = useState<
@@ -314,6 +316,14 @@ export default function MessagesChatPanel({
         </div>
 
         <div className="p-4 border-t border-white/10">
+          {contentBlockedDisclaimer ? (
+            <div
+              className="mb-3 rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs text-amber-100 leading-relaxed"
+              role="alert"
+            >
+              {contentBlockedDisclaimer}
+            </div>
+          ) : null}
           <div className="flex items-center gap-3">
             <input
               ref={attachmentInputRef}
@@ -348,7 +358,10 @@ export default function MessagesChatPanel({
               className="size-15 rounded-full cta-gradient text-white hover:opacity-90 flex items-center justify-center shrink-0"
               aria-label="Send message"
               disabled={
-                draft.trim().length === 0 || uploadingAttachment || !activeThread
+                draft.trim().length === 0 ||
+                uploadingAttachment ||
+                !activeThread ||
+                !!contentBlockedDisclaimer
               }
             >
               <SendHorizontal className="h-4 w-4" />
