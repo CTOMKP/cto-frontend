@@ -2,6 +2,8 @@
 
 import React from 'react';
 import CustomPieChart from '@/components/CustomPieChart';
+import { useQuery } from '@tanstack/react-query';
+import { getTotalPaidOut } from '@/services/walletSummaryService';
 
 interface PieChartData {
   name: string;
@@ -16,6 +18,20 @@ interface PortfolioSectionProps {
 export default function PortfolioSection({
   achievementData,
 }: PortfolioSectionProps) {
+  const paidOutQuery = useQuery({
+    queryKey: ['wallet-summary', 'total-paid-out'],
+    queryFn: ({ signal }) => getTotalPaidOut(signal),
+    staleTime: 60_000,
+  });
+
+  const totalPaidOut = paidOutQuery.isLoading
+    ? '...'
+    : new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2,
+      }).format(paidOutQuery.data?.totalPaidOutUsd ?? 0);
+
   return (
     <div className="rounded-lg border-[0.5px] border-white/20 py-3 px-5 mt-5 flex-1 flex flex-col justify-between">
       <h3 className='font-bold leading-6'>Portfolio</h3>
@@ -32,8 +48,8 @@ export default function PortfolioSection({
       {/* Stats Section */}
       <div className='flex items-center flex-shrink-0 mt-4'>
         <div className="flex-1">
-          <div className="text-xs font-medium mb-2">Volume traded</div>
-          <div className="text-xl font-medium">$124,560,986</div>
+          <div className="text-xs font-medium mb-2">Total paid out</div>
+          <div className="text-xl font-medium">{totalPaidOut}</div>
         </div>
         <div className="w-px h-12 bg-white/20 mx-4"></div>
         <div className="flex-1">

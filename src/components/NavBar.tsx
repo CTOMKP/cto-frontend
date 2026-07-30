@@ -230,7 +230,10 @@ export default function NavBar() {
                     asChild
                     className={navigationMenuTriggerStyle()}
                   >
-                    <Link className="text-base" href="#">
+                    <Link
+                      className="text-base"
+                      href={process.env.NEXT_PUBLIC_CREATOR_PROGRAM_URL || "https://earn.ctomarketplace.com"}
+                    >
                       <span className="flex gap-1 items-center">
                         <Image
                           loading="lazy"
