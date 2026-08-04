@@ -31,6 +31,7 @@ import {
   DISCOVERY_CATEGORIES,
   getDiscoveryCategoryHref,
 } from "@/lib/discoveryCategories";
+import { apiPost } from "@/lib/apiClient";
 
 const gradientHoverHandlers = {
   onMouseEnter: (e: React.MouseEvent<HTMLElement>) => {
@@ -57,6 +58,30 @@ export default function NavBar() {
   const [showCategories, setShowCategories] = useState(false);
   const hasAvatar = useSessionStore((s) => s.hasAvatar);
   const pathname = usePathname();
+  const creatorProgramUrl =
+    process.env.NEXT_PUBLIC_CREATOR_PROGRAM_URL ||
+    "https://earn.ctomarketplace.com";
+
+  const handleEarnClick = async (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!authResolved || !isAuthenticated) return;
+
+    event.preventDefault();
+    try {
+      const response = await apiPost<{
+        code?: string;
+        data?: { code?: string };
+      }>("/api/v1/auth/handoff", { target: "creator" });
+      const code = response.code ?? response.data?.code;
+      if (!code) throw new Error("Backend did not return a handoff code");
+
+      const destination = new URL(creatorProgramUrl, window.location.origin);
+      destination.searchParams.set("handoff", code);
+      window.location.assign(destination.toString());
+    } catch (error) {
+      console.error("Unable to transfer the signed-in session:", error);
+      window.location.assign(creatorProgramUrl);
+    }
+  };
 
   // Single "auth resolved" signal: only show auth-dependent UI when we know the real state
   const authResolved = !authLoading;
@@ -232,7 +257,8 @@ export default function NavBar() {
                   >
                     <Link
                       className="text-base"
-                      href={process.env.NEXT_PUBLIC_CREATOR_PROGRAM_URL || "https://earn.ctomarketplace.com"}
+                      href={creatorProgramUrl}
+                      onClick={handleEarnClick}
                     >
                       <span className="flex gap-1 items-center">
                         <Image
