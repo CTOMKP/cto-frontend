@@ -67,6 +67,10 @@ export default function PrivyProvider({ children }: PrivyProviderProps) {
       appId={privyAppId}
       config={{
         solana: { rpcs: solanaRpcs },
+        embeddedWallets: {
+          ethereum: { createOnLogin: 'users-without-wallets' },
+          solana: { createOnLogin: 'users-without-wallets' },
+        },
         loginMethods: ['email', 'wallet', 'google'],
         appearance: {
           theme: '#010101',
