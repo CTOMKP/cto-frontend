@@ -103,22 +103,23 @@ export default function UserProfileHeader({
       const { viewUrl, key } = await pfpService.uploadProfileImage(file, userId);
 
       try {
-        await updateUserMutation.mutateAsync({
+        const updated = await updateUserMutation.mutateAsync({
           userId,
           updates: { avatarUrl: viewUrl },
         });
+        const finalAvatarUrl = updated.avatarUrl ?? viewUrl;
+        localStorage.setItem(USER_AVATAR_URL_KEY, finalAvatarUrl);
+        localStorage.setItem(PROFILE_AVATAR_URL_KEY, finalAvatarUrl);
+        if (key) {
+          localStorage.setItem(PROFILE_AVATAR_META_KEY, JSON.stringify({ key }));
+        }
+        setAvatarUrl(finalAvatarUrl);
+        window.dispatchEvent(new Event("avatarUpdated"));
       } catch {
         // useUpdateUserMutation already toasts
         return;
       }
 
-      localStorage.setItem(USER_AVATAR_URL_KEY, viewUrl);
-      localStorage.setItem(PROFILE_AVATAR_URL_KEY, viewUrl);
-      if (key) {
-        localStorage.setItem(PROFILE_AVATAR_META_KEY, JSON.stringify({ key }));
-      }
-      setAvatarUrl(viewUrl);
-      window.dispatchEvent(new Event("avatarUpdated"));
       toast.success("Avatar uploaded");
     } catch (err: unknown) {
       const message =

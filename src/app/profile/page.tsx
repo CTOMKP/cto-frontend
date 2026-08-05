@@ -43,9 +43,9 @@ export default function ProfilePage() {
   const storedAvatarUrl = useSessionStore((s) => s.avatarUrl);
   const profileQuery = useProfileQuery({ enabled: !!(ready && authenticated) });
 
-  // Prefer stored avatar (updated immediately on PFP save), same as cto-test-frontend
+  // The backend profile is authoritative; storage only bridges the first render.
   const avatarUrl = useMemo(
-    () => storedAvatarUrl ?? profileQuery.data?.avatarUrl ?? null,
+    () => profileQuery.data?.avatarUrl ?? storedAvatarUrl ?? null,
     [profileQuery.data?.avatarUrl, storedAvatarUrl],
   );
 
