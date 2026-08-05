@@ -31,6 +31,7 @@ import {
   DISCOVERY_CATEGORIES,
   getDiscoveryCategoryHref,
 } from "@/lib/discoveryCategories";
+import { apiPost } from "@/lib/apiClient";
 
 const gradientHoverHandlers = {
   onMouseEnter: (e: React.MouseEvent<HTMLElement>) => {
@@ -52,21 +53,44 @@ const discoverNavItems: {
 ];
 
 export default function NavBar() {
-  const { privyAuthenticated, ready } = usePrivyAuth();
+  const { isAuthenticated, ready, isLoading: authLoading } = usePrivyAuth();
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const [showCategories, setShowCategories] = useState(false);
   const hasAvatar = useSessionStore((s) => s.hasAvatar);
   const pathname = usePathname();
+  const creatorProgramUrl =
+    process.env.NEXT_PUBLIC_CREATOR_PROGRAM_URL ||
+    "https://earn.ctomarketplace.com";
 
-  // Drive login button from Privy only — avoids hanging on our sync/isLoading state.
-  const showAuthedUi = ready && privyAuthenticated;
-  const showLogin = ready && !privyAuthenticated;
+  const handleEarnClick = async (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!authResolved || !isAuthenticated) return;
+
+    event.preventDefault();
+    try {
+      const response = await apiPost<{
+        code?: string;
+        data?: { code?: string };
+      }>("/api/v1/auth/handoff", { target: "creator" });
+      const code = response.code ?? response.data?.code;
+      if (!code) throw new Error("Backend did not return a handoff code");
+
+      const destination = new URL(creatorProgramUrl, window.location.origin);
+      destination.searchParams.set("handoff", code);
+      window.location.assign(destination.toString());
+    } catch (error) {
+      console.error("Unable to transfer the signed-in session:", error);
+      window.location.assign(creatorProgramUrl);
+    }
+  };
+
+  // Single "auth resolved" signal: only show auth-dependent UI when we know the real state
+  const authResolved = !authLoading;
 
   useEffect(() => {
-    if (!showAuthedUi) {
+    if (!authResolved || !isAuthenticated) {
       useSessionStore.getState().setHasAvatar(false);
     }
-  }, [showAuthedUi]);
+  }, [authResolved, isAuthenticated]);
 
   if (pathname === "/" || pathname === "/faq") return null;
 
@@ -222,6 +246,20 @@ export default function NavBar() {
                     className={navigationMenuTriggerStyle()}
                   >
                     <Link className="text-base" href="#">
+                      Forum
+                    </Link>
+                  </NavigationMenuLink>
+                </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <NavigationMenuLink
+                    asChild
+                    className={navigationMenuTriggerStyle()}
+                  >
+                    <Link
+                      className="text-base"
+                      href={creatorProgramUrl}
+                      onClick={handleEarnClick}
+                    >
                       <span className="flex gap-1 items-center">
                         <Image
                           loading="lazy"
@@ -230,7 +268,7 @@ export default function NavBar() {
                           width={16}
                           height={16}
                         />{" "}
-                        Creator Program
+                        Earn
                       </span>
                     </Link>
                   </NavigationMenuLink>
@@ -242,7 +280,7 @@ export default function NavBar() {
       </div>
 
       <div className="flex items-center">
-        {showAuthedUi ? (
+        {authResolved && isAuthenticated ? (
           <div className="flex items-center gap-1">
             <NavBarChats />
             <WatchList />
@@ -251,17 +289,17 @@ export default function NavBar() {
         ) : null}
 
         <div className="border-l-[0.2px] ml-4 border-[#FFFFFF20] h-full flex items-center justify-center gap-2">
-          {!ready ? (
+          {!authResolved ? (
             <div className="w-20 h-9" aria-hidden />
-          ) : showLogin ? (
-            <LoginButton />
-          ) : (
+          ) : isAuthenticated ? (
             <>
               <div style={{ display: hasAvatar ? 'none' : 'block' }}>
                 <HarvestGrape />
               </div>
               {hasAvatar && <AvatarDropdown />}
             </>
+          ) : (
+            <LoginButton />
           )}
         </div>
       </div>
