@@ -6,7 +6,6 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import QRCode from 'qrcode';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { usePrivyAuth } from '@/hooks/usePrivyAuth';
@@ -59,6 +58,7 @@ export default function AvatarDropdown() {
 
   const generateQRCode = async (address: string) => {
     try {
+      const QRCode = (await import("qrcode")).default;
       return await QRCode.toDataURL(address, {
         width: 200,
         margin: 1,

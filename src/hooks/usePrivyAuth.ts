@@ -44,70 +44,42 @@ export function usePrivyAuth() {
     bindSessionStoreListeners();
   }, []);
 
+  // After PFP save (avatarUpdated), refresh profile cache so UI doesn't keep a stale avatarUrl
   useEffect(() => {
-    if (ready && !authenticated) {
-      const token = getAuthToken();
-      if (!token) {
-        setIsAuthenticated(false);
-        setIsLoading(false);
+    const onAvatarUpdated = () => {
+      useSessionStore.getState().hydrateFromStorage();
+      void queryClient.invalidateQueries({ queryKey: profileKeys.detail() });
+    };
+    window.addEventListener("avatarUpdated", onAvatarUpdated);
+    return () => window.removeEventListener("avatarUpdated", onAvatarUpdated);
+  }, [queryClient]);
+
+  // Once Privy has settled, never leave the navbar stuck on a blank placeholder.
+  // Stale localStorage tokens must not block showing Login when Privy says logged out.
+  useEffect(() => {
+    if (!ready) return;
+
+    if (!authenticated) {
+      setIsAuthenticated(false);
+      setIsLoading(false);
+      if (!getAuthToken()) {
         useSessionStore.getState().clear();
       }
     }
   }, [ready, authenticated]);
 
-  // Check authentication status on mount (ONCE) - prioritize localStorage like test frontend
+  // Sync with backend when Privy becomes authenticated
   useEffect(() => {
-    checkAuthStatus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Intentionally empty - only run once on mount
-
-  // Check auth status - prioritize localStorage like test frontend
-  const checkAuthStatus = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      
-      // SECOND: If no localStorage token, check Privy state
-      if (authenticated && user && ready) {
-        await syncWithBackend();
-      } else {
-        setIsAuthenticated(false);
-        setIsLoading(false);
-      }
-    } catch (error) {
-      console.error('❌ Authentication check failed:', error);
-      setIsAuthenticated(false);
-      setIsLoading(false);
-    }
-  }, [authenticated, user, ready]);
-
-  // CRITICAL: Sync with backend when Privy becomes authenticated (like test frontend)
-  // This should run EVERY TIME Privy authenticates, not just when localStorage is empty
-  useEffect(() => {
-    // Match test frontend EXACTLY: same guards
-    if (!authenticated || !user || !ready) {
-      // If Privy is not authenticated, ensure isAuthenticated is false
-      if (!authenticated) {
-    const token = getAuthToken();
-        // Only set to false if there's no token in localStorage
-        if (!token) {
-          setIsAuthenticated(false);
-        }
-      }
-      return;
-    }
+    if (!ready || !authenticated || !user) return;
 
     const userId = user.id;
-    
-    // Set authenticated immediately when Privy authenticates (before sync completes)
-    // This ensures UI updates immediately after login
+
     setIsAuthenticated(true);
-    
-    // CRITICAL: Check module-level Set FIRST to prevent parallel runs
+
     if (processingUserIds.has(userId)) {
       return;
     }
-    
-    // Check if we've already synced for this user in this session
+
     const existingToken = getAuthToken();
     const existingUserId = getUserId();
     if (existingToken && existingUserId === userId) {
@@ -115,12 +87,9 @@ export function usePrivyAuth() {
       return;
     }
 
-    // Mark as processing IMMEDIATELY (synchronously) BEFORE any async operations
     processingUserIds.add(userId);
-    
-    // Trigger sync (like test frontend)
-    handleMovementWalletAndSync(userId);
-    
+    void handleMovementWalletAndSync(userId);
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authenticated, user?.id, ready]);
 
@@ -311,6 +280,8 @@ export function usePrivyAuth() {
     userData,
     setUserData,
     isAuthenticated,
+    /** Privy session flag — use for nav login/logout UI (resolves as soon as Privy is ready). */
+    privyAuthenticated: authenticated,
     isLoading: isLoading || !ready,
     login: handleLogin,
     logout: handleLogout,

@@ -15,8 +15,12 @@ import FilterButton from "@/components/FilterButton";
 import NetworkFilter, { Network } from "@/components/NetworkFilter";
 import ListingTableHeader from "@/app/listings/features/ListingTableHeader";
 import ListingTableRow from "@/app/listings/features/ListingTableRow";
-import TokenSwapCard from "@/components/TokenSwapCard";
+import dynamic from "next/dynamic";
 import type { ApiCoinItem } from "@/types/api";
+
+const TokenSwapCard = dynamic(() => import("@/components/TokenSwapCard"), {
+  ssr: false,
+});
 import type { MockLikeCoin, SortField, SortDirection } from "@/app/listings/features/types/listing";
 import { slugify } from "@/lib/utils/slugify";
 import { CATEGORY_MOCK_LISTINGS } from "./categoryMockData";

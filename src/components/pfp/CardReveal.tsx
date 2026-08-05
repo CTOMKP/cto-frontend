@@ -207,8 +207,12 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageS
         }
       } catch (error: unknown) {
         console.error('Failed to auto-save PFP:', error);
-        // Don't show error toast on auto-save failure - user can manually save
-        // Only log it for debugging
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Failed to auto-save profile picture. You can save manually.';
+        toast.error(message, { autoClose: 5000 });
+        // Keep isAutoSaved false so Set as Profile / Save stay available
       }
     };
 
@@ -367,7 +371,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageS
               </Button>
             </div>
           ) : (
-            <>
+            <div className="flex flex-col gap-2 w-full">
               <Button 
                 onClick={handleSavePFP}
                 className="cta-gradient w-26.5 rounded-lg font-medium text-[14px] text-white h-[36px]"
@@ -382,7 +386,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageS
               >
                 {isSaving ? 'Saving...' : 'Save'} <Save size={13} color="#FFFFFF50" />
               </Button>
-            </>
+            </div>
           )}
         </div>
       </motion.div>

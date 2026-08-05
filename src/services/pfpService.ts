@@ -7,6 +7,7 @@ import {
   PROFILE_AVATAR_URL_KEY,
   USER_AVATAR_URL_KEY,
 } from '@/lib/authSession';
+import { useSessionStore } from '@/lib/sessionStore';
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
 
@@ -226,12 +227,15 @@ class PFPService {
 
         localStorage.setItem(PROFILE_AVATAR_URL_KEY, finalAvatarUrl);
         localStorage.setItem(USER_AVATAR_URL_KEY, finalAvatarUrl);
-        
+
+        // Immediate session update (navbar / profile) — same keys as cto-test-frontend
+        useSessionStore.getState().setAvatarUrl(finalAvatarUrl);
+
         // Dispatch custom event to notify components of avatar update
         // Use a small delay to ensure localStorage is updated before event fires
-        if (typeof window !== 'undefined') {
+        if (typeof window !== "undefined") {
           setTimeout(() => {
-          window.dispatchEvent(new Event('avatarUpdated'));
+            window.dispatchEvent(new Event("avatarUpdated"));
           }, 100);
         }
         

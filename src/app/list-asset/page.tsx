@@ -10,11 +10,14 @@ import {
   useUpdateUserListingMutation,
 } from "@/hooks/mutations/useUserListingMutations";
 import Image from "next/image";
-import Step1 from "./features/Step1";
-import Step2, { SocialLinks } from "./features/Step2";
-import Step3 from "./features/Step3";
-import Step4 from "./features/Step4";
+import dynamic from "next/dynamic";
+import type { SocialLinks } from "./features/Step2";
 import { Hourglass } from "lucide-react";
+
+const Step1 = dynamic(() => import("./features/Step1"), { ssr: false });
+const Step2 = dynamic(() => import("./features/Step2"), { ssr: false });
+const Step3 = dynamic(() => import("./features/Step3"), { ssr: false });
+const Step4 = dynamic(() => import("./features/Step4"), { ssr: false });
 import {
   userListingsService,
   ScanResult,

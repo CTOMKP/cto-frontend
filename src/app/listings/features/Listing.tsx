@@ -24,7 +24,11 @@ import ListingTableRow from "./ListingTableRow";
 import ListingFilters from "./ListingFilters";
 import ListingPagination from "./ListingPagination";
 import { slugify } from "@/lib/utils/slugify";
-import TokenSwapCard from "@/components/TokenSwapCard";
+import dynamic from "next/dynamic";
+
+const TokenSwapCard = dynamic(() => import("@/components/TokenSwapCard"), {
+  ssr: false,
+});
 
 
 export default function TopListings() {

@@ -27,7 +27,10 @@ import { Button } from '@/components/ui/button';
 import { Progress } from "@/components/ui/progress"
 import { clearSessionStorage } from '@/lib/authSession';
 import { userListingsService, ScanResult } from '@/services/userListingsService';
-import PaymentDialog from './PaymentDialog';
+import dynamic from 'next/dynamic';
+
+/** Lazy: Solana + Movement payment stack (~1MB+) only when pay dialog opens. */
+const PaymentDialog = dynamic(() => import('./PaymentDialog'), { ssr: false });
 
 interface Step1Props {
   selectedNetwork: string;

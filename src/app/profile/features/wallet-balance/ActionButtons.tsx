@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MoveDown, MoveUp, ArrowUpDown, Check } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import QRCode from "qrcode";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import Image from "next/image";
 import { toast } from "react-toastify";
 
@@ -22,6 +23,7 @@ export default function ActionButtons({
 
   const generateQRCode = async (address: string) => {
     try {
+      const QRCode = (await import("qrcode")).default;
       return await QRCode.toDataURL(address, {
         width: 200,
         margin: 1,

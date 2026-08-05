@@ -73,9 +73,9 @@ const TrendingCoinsTableSkeleton = () => (
       <TableBody>
         {Array.from({ length: 6 }).map((_, index) => (
           <TableRow key={index} className="border-none">
-            <TableCell className="!py-1">
+            <TableCell className="!py-1 w-8">
               <div className="flex justify-center">
-                <div className="size-4 rounded-full bg-white/10 animate-pulse" />
+                <div className="size-4 min-w-4 shrink-0 rounded-sm bg-white/10 animate-pulse" />
               </div>
             </TableCell>
             <TableCell className="!py-1">
@@ -391,7 +391,7 @@ export default function TrendingCoins({
              <Table className="w-full min-w-[550px] xl:w-full hover-scrollbar">
             <TableHeader className="!text-[#FFFFFF]/50">
               <TableRow className="border-none">
-                <TableHead className="!font-bold">
+                <TableHead className="!font-bold w-8">
                     <span className="hidden">Watchlist button</span>
                 </TableHead>
                 <TableHead className="!font-bold">Name</TableHead>
@@ -409,10 +409,11 @@ export default function TrendingCoins({
                   className="border-none cursor-pointer"
                   onClick={() => handleRowClick(data.name, data.address)}
                 >
-                  <TableCell>
-                      <div>
+                  <TableCell className="w-8">
+                      <div className="flex justify-center">
                         <Button 
-                          className="p-0 w-fit h-fit"
+                          type="button"
+                          className="p-0 size-4 min-w-4 shrink-0"
                           onClick={(e) => {
                             e.stopPropagation();
                             // Add your watchlist logic here
@@ -421,7 +422,7 @@ export default function TrendingCoins({
                           <Image
                             src="/white-watchlist.svg"
                             alt="watchlist"
-                            className="bg-transparent"
+                            className="size-4 min-w-4 shrink-0 bg-transparent"
                             width={16}
                             height={16}
                           />
@@ -558,12 +559,13 @@ export default function TrendingCoins({
                             );
                           })()}
                         </div>
-                        <div className="flex items-center gap-0.5">
+                        <div className="flex items-center gap-1">
                           <span className="text-[#FFFFFF]/50 text-xs uppercase" title={data.address}>
                             {shortenAddressForTrending(data.address)}
                           </span>
                           <Button
-                            className="p-0 h-fit w-fit text-white"
+                            type="button"
+                            className="p-0 size-3 min-w-3 h-3 shrink-0 text-white"
                             onClick={(e) => {
                               e.stopPropagation();
                               if (data.address) navigator.clipboard.writeText(data.address);
@@ -572,21 +574,37 @@ export default function TrendingCoins({
                             <Image
                               src="/copy.svg"
                               alt="copy"
-                              className="text-white fill-white"
-                              width={7.85}
-                              height={8.38}
+                              className="size-3 min-w-3 shrink-0"
+                              width={12}
+                              height={12}
                             />
                           </Button>
-                          <Link href="#" onClick={(e) => e.stopPropagation()}>
-                            <Image loading="lazy" src="/x.svg" alt="x" height={8} width={8} />
+                          <Link
+                            href="#"
+                            className="inline-flex size-3 min-w-3 shrink-0"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Image
+                              loading="lazy"
+                              src="/x.svg"
+                              alt="x"
+                              className="size-3 min-w-3 shrink-0"
+                              height={12}
+                              width={12}
+                            />
                           </Link>
-                          <Link href="#" onClick={(e) => e.stopPropagation()}>
+                          <Link
+                            href="#"
+                            className="inline-flex size-3 min-w-3 shrink-0"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <Image
                               loading="lazy"
                               src="/globe.svg"
                               alt="website"
-                              width={7.5}
-                              height={7.5}
+                              className="size-3 min-w-3 shrink-0"
+                              width={12}
+                              height={12}
                             />
                           </Link>
                         </div>

@@ -52,20 +52,21 @@ const discoverNavItems: {
 ];
 
 export default function NavBar() {
-  const { isAuthenticated, ready, isLoading: authLoading } = usePrivyAuth();
+  const { privyAuthenticated, ready } = usePrivyAuth();
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const [showCategories, setShowCategories] = useState(false);
   const hasAvatar = useSessionStore((s) => s.hasAvatar);
   const pathname = usePathname();
 
-  // Single "auth resolved" signal: only show auth-dependent UI when we know the real state
-  const authResolved = !authLoading;
+  // Drive login button from Privy only — avoids hanging on our sync/isLoading state.
+  const showAuthedUi = ready && privyAuthenticated;
+  const showLogin = ready && !privyAuthenticated;
 
   useEffect(() => {
-    if (!authResolved || !isAuthenticated) {
+    if (!showAuthedUi) {
       useSessionStore.getState().setHasAvatar(false);
     }
-  }, [authResolved, isAuthenticated]);
+  }, [showAuthedUi]);
 
   if (pathname === "/" || pathname === "/faq") return null;
 
@@ -221,16 +222,6 @@ export default function NavBar() {
                     className={navigationMenuTriggerStyle()}
                   >
                     <Link className="text-base" href="#">
-                      Forum
-                    </Link>
-                  </NavigationMenuLink>
-                </NavigationMenuItem>
-                <NavigationMenuItem>
-                  <NavigationMenuLink
-                    asChild
-                    className={navigationMenuTriggerStyle()}
-                  >
-                    <Link className="text-base" href="#">
                       <span className="flex gap-1 items-center">
                         <Image
                           loading="lazy"
@@ -239,7 +230,7 @@ export default function NavBar() {
                           width={16}
                           height={16}
                         />{" "}
-                        Earn
+                        Creator Program
                       </span>
                     </Link>
                   </NavigationMenuLink>
@@ -251,7 +242,7 @@ export default function NavBar() {
       </div>
 
       <div className="flex items-center">
-        {authResolved && isAuthenticated ? (
+        {showAuthedUi ? (
           <div className="flex items-center gap-1">
             <NavBarChats />
             <WatchList />
@@ -260,17 +251,17 @@ export default function NavBar() {
         ) : null}
 
         <div className="border-l-[0.2px] ml-4 border-[#FFFFFF20] h-full flex items-center justify-center gap-2">
-          {!authResolved ? (
+          {!ready ? (
             <div className="w-20 h-9" aria-hidden />
-          ) : isAuthenticated ? (
+          ) : showLogin ? (
+            <LoginButton />
+          ) : (
             <>
               <div style={{ display: hasAvatar ? 'none' : 'block' }}>
                 <HarvestGrape />
               </div>
               {hasAvatar && <AvatarDropdown />}
             </>
-          ) : (
-            <LoginButton />
           )}
         </div>
       </div>
