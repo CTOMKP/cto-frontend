@@ -18,9 +18,25 @@ export function getCloudFrontUrl(url: string | null | undefined): string {
     return '';
   }
 
-  // If already a CloudFront URL, return as-is
+  // If already a CloudFront URL, still encode path segments (e.g. spaces in filenames)
   if (url.includes(CLOUDFRONT_DOMAIN)) {
-    return url;
+    try {
+      const urlObj = new URL(url);
+      const encodedPath = urlObj.pathname
+        .split('/')
+        .map((segment) => {
+          if (!segment) return segment;
+          try {
+            return encodeURIComponent(decodeURIComponent(segment));
+          } catch {
+            return encodeURIComponent(segment);
+          }
+        })
+        .join('/');
+      return `${urlObj.protocol}//${urlObj.host}${encodedPath}${urlObj.search}`;
+    } catch {
+      return url;
+    }
   }
 
   // Extract the path from S3 URL or relative path
@@ -64,8 +80,19 @@ export function getCloudFrontUrl(url: string | null | undefined): string {
     imagePath = url.startsWith('/') ? url.substring(1) : url;
   }
 
-  // Construct CloudFront URL
-  return `https://${CLOUDFRONT_DOMAIN}/${imagePath}`;
+  // Construct CloudFront URL (encode each path segment so spaces like "BASE SKIN.png" work)
+  const encodedPath = imagePath
+    .split('/')
+    .map((segment) => {
+      try {
+        return encodeURIComponent(decodeURIComponent(segment));
+      } catch {
+        return encodeURIComponent(segment);
+      }
+    })
+    .join('/');
+
+  return `https://${CLOUDFRONT_DOMAIN}/${encodedPath}`;
 }
 
 /**

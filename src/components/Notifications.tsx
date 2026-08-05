@@ -18,6 +18,7 @@ import { isApiError } from "@/lib/apiError";
 import { notificationKeys } from "@/lib/queryKeys";
 import notificationsService from "@/services/notificationsService";
 import { useSessionStore } from "@/lib/sessionStore";
+import { formatTimeAgo } from "@/lib/formatTimeAgo";
 
 export type Filter = "all" | "unread";
 
@@ -28,6 +29,7 @@ export type NotificationItem = {
   readAt?: string | null;
   type?: string;
   data?: unknown;
+  createdAt?: string | null;
 };
 
 type NotificationsListData = { items: NotificationItem[] };
@@ -54,7 +56,12 @@ export default function Notifications() {
     queryKey: notificationKeys.list(),
     queryFn: async ({ signal }) => {
       const res = await notificationsService.list(false, signal);
-      return { items: res.items as NotificationItem[] };
+      const items = (res.items as NotificationItem[]).map((n) => ({
+        ...n,
+        id: String(n.id),
+        createdAt: n.createdAt ?? null,
+      }));
+      return { items };
     },
     enabled: !!token,
     staleTime: 30_000,
@@ -215,6 +222,10 @@ export default function Notifications() {
         readAt: null,
         type: p?.type,
         data: p?.data,
+        createdAt:
+          typeof (p as { createdAt?: unknown }).createdAt === "string"
+            ? (p as { createdAt: string }).createdAt
+            : new Date().toISOString(),
       };
       queryClient.setQueryData<NotificationsListData>(notificationKeys.list(), (old) => {
         const prev = old?.items ?? [];
@@ -365,10 +376,24 @@ export default function Notifications() {
                     n.readAt ? "text-[#A1A1AA]" : "text-white"
                   }`}
                 >
-                  <div className="text-sm font-medium">{n.title ?? "Notification"}</div>
-                  {notificationSubtitle(n) && (
-                    <div className="text-xs text-[#FFFFFFB2] mt-0.5">{notificationSubtitle(n)}</div>
-                  )}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium">{n.title ?? "Notification"}</div>
+                      {notificationSubtitle(n) && (
+                        <div className="text-xs text-[#FFFFFFB2] mt-0.5">
+                          {notificationSubtitle(n)}
+                        </div>
+                      )}
+                    </div>
+                    {n.createdAt ? (
+                      <span
+                        className="shrink-0 text-[11px] text-[#FFFFFF80] mt-0.5"
+                        title={new Date(n.createdAt).toLocaleString()}
+                      >
+                        {formatTimeAgo(n.createdAt)}
+                      </span>
+                    ) : null}
+                  </div>
                 </button>
               ))}
             </div>

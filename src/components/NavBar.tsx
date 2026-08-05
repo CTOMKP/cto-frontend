@@ -268,7 +268,7 @@ export default function NavBar() {
                           width={16}
                           height={16}
                         />{" "}
-                        Earn
+                        Creator Program
                       </span>
                     </Link>
                   </NavigationMenuLink>

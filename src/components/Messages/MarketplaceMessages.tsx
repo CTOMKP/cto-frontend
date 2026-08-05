@@ -16,13 +16,23 @@ import escrowService from "@/services/escrowService";
 import MessagesSidebar from "./MessagesSidebar";
 import MessagesChatPanel from "./MessagesChatPanel";
 import MessagesDetailsPanel from "./MessagesDetailsPanel";
-import { EscrowCreateModal, EscrowViewModal } from "./EscrowModals";
+import dynamic from "next/dynamic";
 import type {
   ChatMessage,
   EscrowSummary,
   MessageReaction,
   MessageThread,
 } from "@/types/messages";
+
+const EscrowCreateModal = dynamic(
+  () =>
+    import("./EscrowModals").then((m) => m.EscrowCreateModal),
+  { ssr: false },
+);
+const EscrowViewModal = dynamic(
+  () => import("./EscrowModals").then((m) => m.EscrowViewModal),
+  { ssr: false },
+);
 import { useSessionStore } from "@/lib/sessionStore";
 import {
   getMessageContentBlockDisclaimer,

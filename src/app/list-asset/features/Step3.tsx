@@ -8,8 +8,10 @@ import {
 import { Plus } from 'lucide-react'
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import PaymentDialog from './PaymentDialog';
+import dynamic from 'next/dynamic';
 import type { ScanResult } from '@/services/userListingsService';
+
+const PaymentDialog = dynamic(() => import('./PaymentDialog'), { ssr: false });
 import { SocialLinks } from './Step2';
 import { toast } from 'react-toastify';
 

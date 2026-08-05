@@ -1,16 +1,23 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Edit, LogOut, Check } from 'lucide-react';
+import { Camera, Edit, LogOut, Check } from 'lucide-react';
 import { X } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { toast } from "react-toastify";
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
 import { useUpdateUserMutation } from "@/hooks/useUpdateUserMutation";
 import { useSessionStore } from "@/lib/sessionStore";
+import { pfpService } from "@/services/pfpService";
+import {
+  PROFILE_AVATAR_META_KEY,
+  PROFILE_AVATAR_URL_KEY,
+  USER_AVATAR_URL_KEY,
+} from "@/lib/authSession";
+
 interface UserProfileHeaderProps {
   avatarUrl: string | null;
   email: string;
@@ -37,10 +44,13 @@ export default function UserProfileHeader({
 }: UserProfileHeaderProps) {
   const [nameEditOpen, setNameEditOpen] = useState(false);
   const [tempName, setTempName] = useState<string>("");
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const { userData, setUserData } = usePrivyAuth();
   const sessionUserId = useSessionStore((s) => s.userId);
   const sessionEmail = useSessionStore((s) => s.email);
+  const setAvatarUrl = useSessionStore((s) => s.setAvatarUrl);
   const updateUserMutation = useUpdateUserMutation();
 
   /** Keep username independent from wallet/email fallbacks. */
@@ -76,24 +86,97 @@ export default function UserProfileHeader({
     );
   };
 
+  /** Same upload flow as cto-test-frontend ProfilePage: presign → S3 → PUT /auth/users/me */
+  const onAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const userId = sessionUserId || sessionEmail || email;
+    if (!userId) {
+      toast.error("Please log in to update your profile picture.");
+      e.target.value = "";
+      return;
+    }
+
+    try {
+      setAvatarUploading(true);
+      const { viewUrl, key } = await pfpService.uploadProfileImage(file, userId);
+
+      try {
+        await updateUserMutation.mutateAsync({
+          userId,
+          updates: { avatarUrl: viewUrl },
+        });
+      } catch {
+        // useUpdateUserMutation already toasts
+        return;
+      }
+
+      localStorage.setItem(USER_AVATAR_URL_KEY, viewUrl);
+      localStorage.setItem(PROFILE_AVATAR_URL_KEY, viewUrl);
+      if (key) {
+        localStorage.setItem(PROFILE_AVATAR_META_KEY, JSON.stringify({ key }));
+      }
+      setAvatarUrl(viewUrl);
+      window.dispatchEvent(new Event("avatarUpdated"));
+      toast.success("Avatar uploaded");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to upload avatar";
+      toast.error(message);
+    } finally {
+      setAvatarUploading(false);
+      e.target.value = "";
+    }
+  };
+
   return (
     <div className="flex items-start justify-between mb-4 border-[0.5px] border-white/20 py-5 px-3 rounded-lg bg-[#FFFFFF]/3">
       <div className="flex items-start gap-4">
-        <div className="relative w-20 h-20 rounded-full overflow-hidden">
-          {avatarUrl ? (
-            <Image
-              src={avatarUrl}
-              alt="Profile"
-              fill
-              className="object-cover size-15 rounded-full border-[0.6px] border-white"
-              loading="lazy"
-              unoptimized
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-2xl">
-              {email.charAt(0).toUpperCase()}
-            </div>
-          )}
+        <div className="relative w-20 h-20 shrink-0">
+          <div className="relative w-full h-full rounded-full overflow-hidden border-[0.6px] border-white">
+            {avatarUrl ? (
+              <Image
+                src={avatarUrl}
+                alt="Profile"
+                fill
+                className="object-cover"
+                loading="lazy"
+                unoptimized
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-2xl">
+                {email.charAt(0).toUpperCase()}
+              </div>
+            )}
+            {avatarUploading ? (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                <span className="h-5 w-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+              </div>
+            ) : null}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => avatarInputRef.current?.click()}
+            disabled={avatarUploading}
+            className="absolute -bottom-0.5 -right-0.5 flex size-7 items-center justify-center rounded-full border border-white/30 bg-[#17171C] text-white shadow-md transition-colors hover:bg-[#27272A] disabled:opacity-60"
+            aria-label="Change profile picture"
+            title="Change profile picture"
+          >
+            <Camera size={14} />
+          </button>
+
+          <input
+            ref={avatarInputRef}
+            id="profile-avatar-upload"
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={onAvatarChange}
+            disabled={avatarUploading}
+            aria-label="Upload avatar image"
+          />
         </div>
         <div>
           <div className="">

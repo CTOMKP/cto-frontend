@@ -15,11 +15,25 @@ import UserProfileHeader from './features/UserProfileHeader';
 import LevelXPProgress from './features/LevelXPProgress';
 import ReferralSection from './features/ReferralSection';
 import SocialAccounts from './features/SocialAccounts';
-import WalletBalance from './features/WalletBalance';
-import PortfolioSection from './features/PortfolioSection';
-import TransactionHistory from './features/TransactionHistory';
 import WalletsDialog from './features/WalletsDialog';
 import { resolvePrivySolanaAddress } from '@/lib/solanaTransaction';
+import dynamic from 'next/dynamic';
+
+const WalletBalance = dynamic(() => import('./features/WalletBalance'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-48 rounded-lg border border-white/10 bg-white/5 animate-pulse mb-4" />
+  ),
+});
+const PortfolioSection = dynamic(() => import('./features/PortfolioSection'), {
+  ssr: false,
+});
+const TransactionHistory = dynamic(() => import('./features/TransactionHistory'), {
+  ssr: false,
+  loading: () => (
+    <div className="mt-4 h-64 rounded-lg border border-white/10 bg-white/5 animate-pulse" />
+  ),
+});
 export default function ProfilePage() {
   const router = useRouter();
   const { user, authenticated, ready } = usePrivy();
@@ -29,8 +43,9 @@ export default function ProfilePage() {
   const storedAvatarUrl = useSessionStore((s) => s.avatarUrl);
   const profileQuery = useProfileQuery({ enabled: !!(ready && authenticated) });
 
+  // Prefer stored avatar (updated immediately on PFP save), same as cto-test-frontend
   const avatarUrl = useMemo(
-    () => profileQuery.data?.avatarUrl ?? storedAvatarUrl,
+    () => storedAvatarUrl ?? profileQuery.data?.avatarUrl ?? null,
     [profileQuery.data?.avatarUrl, storedAvatarUrl],
   );
 

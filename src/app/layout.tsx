@@ -10,7 +10,7 @@ import WelcomeSlideshow from "@/components/onboarding/WelcomeSlideshow";
 import HeaderAd from "@/components/HeaderAd";
 import NavBar from "@/components/NavBar";
 import MarketTrends from "@/components/MarketTrends";
-import TokenSwapCard from "@/components/TokenSwapCard";
+import FloatingTokenSwap from "@/components/FloatingTokenSwap";
 import { Dialog } from "@/components/ui/dialog";
 import { QueryProvider } from "@/providers/QueryProvider";
 
@@ -49,9 +49,7 @@ export default function RootLayout({
               <MarketTrends />
               {children}
               <WelcomeSlideshow />
-              <div className="fixed bottom-15 right-20 z-50">
-                <TokenSwapCard />
-              </div>
+              <FloatingTokenSwap />
             </Dialog>
           </QueryProvider>
         </PrivyProvider>

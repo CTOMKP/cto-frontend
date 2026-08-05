@@ -7,10 +7,21 @@ import {
   useUpdateMarketplaceDraftMutation,
 } from '@/hooks/mutations/useMarketplaceDraftMutations';
 import { toast } from 'react-toastify';
-import CategorySelectionStep from './features/CategorySelectionStep';
-import ProjectDetailsStep, { ProjectDetailsData } from './features/ProjectDetailsStep';
-import PreviewStep from './features/PreviewStep';
+import dynamic from 'next/dynamic';
+import type { ProjectDetailsData } from './features/ProjectDetailsStep';
 import { getUserId } from '@/lib/authSession';
+
+const CategorySelectionStep = dynamic(
+  () => import('./features/CategorySelectionStep'),
+  { ssr: false },
+);
+const ProjectDetailsStep = dynamic(
+  () => import('./features/ProjectDetailsStep'),
+  { ssr: false },
+);
+const PreviewStep = dynamic(() => import('./features/PreviewStep'), {
+  ssr: false,
+});
 import { pfpService } from '@/services/pfpService';
 import { isApiError } from '@/lib/apiError';
 import { toRecord, unwrapApiData } from '@/lib/apiResponse';

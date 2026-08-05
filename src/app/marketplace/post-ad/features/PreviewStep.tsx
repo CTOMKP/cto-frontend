@@ -1,9 +1,14 @@
 "use client";
 
 import React, { useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import AdPaymentDialog from '@/app/marketplace/post-ad/features/AdPaymentDialog';
+
+const AdPaymentDialog = dynamic(
+  () => import('@/app/marketplace/post-ad/features/AdPaymentDialog'),
+  { ssr: false },
+);
 
 interface PreviewStepProps {
   formData: {

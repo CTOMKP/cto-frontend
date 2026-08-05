@@ -1,10 +1,20 @@
 "use client";
 
 import React from "react";
-import MarketplaceMessages from "@/components/Messages/MarketplaceMessages";
+import dynamic from "next/dynamic";
 
-export default function MessagesHomePage() {
-  // MarketplaceMessages will pick the first available thread.
-  return <MarketplaceMessages initialThreadId={null} />;
+const MarketplaceMessages = dynamic(
+  () => import("@/components/Messages/MarketplaceMessages"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="min-h-screen flex items-center justify-center text-white/70">
+        Loading messages...
+      </div>
+    ),
+  },
+);
+
+export default function MessagesPage() {
+  return <MarketplaceMessages />;
 }
-

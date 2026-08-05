@@ -174,12 +174,13 @@ export default function ListingTableRow({ coin, onProjectClick, onBuyClick }: Li
                   );
                 })()}
               </div>
-              <div className="flex items-center gap-0.5">
+              <div className="flex items-center gap-1">
                 <span className="text-[#FFFFFF]/50 text-xs uppercase">
                   {shortenAddress(coin.address)}
                 </span>
                 <Button 
-                  className="p-0 h-fit w-fit"
+                  type="button"
+                  className="p-0 size-3 min-w-3 h-3 shrink-0"
                   onClick={(e) => {
                     e.stopPropagation();
                     navigator.clipboard.writeText(coin.address);
@@ -189,32 +190,37 @@ export default function ListingTableRow({ coin, onProjectClick, onBuyClick }: Li
                     loading="lazy"
                     src="/copy.svg"
                     alt="copy"
-                    width={7.85}
-                    height={8.38}
+                    className="size-3 min-w-3 shrink-0"
+                    width={12}
+                    height={12}
                   />
                 </Button>
                 <Link 
                   href={coin.website || "#"}
+                  className="inline-flex size-3 min-w-3 shrink-0"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <Image
                     loading="lazy"
                     src="/x.svg"
                     alt="x"
-                    height={8}
-                    width={8}
+                    className="size-3 min-w-3 shrink-0"
+                    height={12}
+                    width={12}
                   />
                 </Link>
                 <Link 
                   href={coin.website || "#"}
+                  className="inline-flex size-3 min-w-3 shrink-0"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <Image
                     loading="lazy"
                     src="/globe.svg"
                     alt="website"
-                    width={7.5}
-                    height={7.5}
+                    className="size-3 min-w-3 shrink-0"
+                    width={12}
+                    height={12}
                   />
                 </Link>
               </div>
