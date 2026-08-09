@@ -139,7 +139,9 @@ export default function Step4({ scanResult }: Step4Props) {
                   )}
                 </div>
                 <p className="text-white/50 font-bold text-xs">
-                  {metadata?.lp_locked
+                  {metadata?.lp_lock_data_status !== "observed"
+                    ? "Unverified"
+                    : metadata?.lp_locked
                     ? "Locked"
                     : metadata?.lp_burned
                     ? "Burned"

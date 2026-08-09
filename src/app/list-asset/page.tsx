@@ -226,26 +226,10 @@ function getBackendEligible(scan: ScanResult | null): boolean {
   );
 }
 
-function getMinRequiredScore(scan: ScanResult | null): number {
-  if (!scan) return 50;
-  const nested = scan.details?.details as
-    | { minimum_required_score?: number }
-    | undefined;
-  return (
-    scan.minimum_required_score ??
-    scan.details?.minimum_required_score ??
-    nested?.minimum_required_score ??
-    50
-  );
-}
-
-/** Match cto-test-frontend: eligible bypasses risk threshold; else risk_score >= minimum_required_score (fallback 50). */
+/** Backend eligibility is authoritative because mandatory evidence gates listing. */
 function canProceedWithScan(scan: ScanResult | null): boolean {
   if (!scan) return false;
-  const riskScore = getScanRiskScore(scan);
-  const minRequired = getMinRequiredScore(scan);
-  const backendEligible = getBackendEligible(scan);
-  return backendEligible === true || riskScore >= minRequired;
+  return getBackendEligible(scan) === true;
 }
 
 function ListingApplicationContent() {
@@ -360,7 +344,7 @@ function ListingApplicationContent() {
       }
       if (!canProceedWithScan(scanResult)) {
         toast.error(
-          "Listing requires backend eligibility or a risk score at or above the minimum for this scan."
+          "Listing requires backend eligibility and complete mandatory verification evidence."
         );
         return;
       }

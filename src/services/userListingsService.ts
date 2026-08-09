@@ -45,6 +45,7 @@ export interface ScanMetadata {
   lp_lock_months?: number;
   lp_burned?: boolean;
   lp_locked?: boolean;
+  lp_lock_data_status?: 'observed' | 'derived' | 'stale' | 'unknown';
   lock_contract?: unknown;
   lock_analysis?: unknown;
   largest_lp_holder?: unknown;
