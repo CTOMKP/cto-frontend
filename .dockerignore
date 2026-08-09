@@ -16,8 +16,3 @@ coverage
 *.swp
 *.swo
 *~
-
-# Large image files (these are already in git, no need to copy during build)
-public/mascots/**/*.png
-public/why-img.png
-
