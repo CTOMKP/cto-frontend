@@ -675,22 +675,10 @@ export default function Step1({
                       scanResult?.details?.eligible ??
                       scanResult?.eligible ??
                       false;
-                    const provisionalReason =
-                      nestedDetails?.provisional_reason ||
-                      scanResult?.details?.provisional_reason ||
-                      scanResult?.provisional_reason ||
-                      null;
                     const canProceed = backendEligible === true;
                     
                     return (
                       <>
-                        {!!provisionalReason && (
-                          <div className="w-full py-3 px-4 rounded-lg bg-amber-500/20 border border-amber-500/50">
-                            <p className="text-sm text-amber-300 text-center font-medium">
-                              {provisionalReason}
-                            </p>
-                          </div>
-                        )}
                         {!canProceed && (
                           <div className="w-full py-3 px-4 rounded-lg bg-red-500/20 border border-red-500/50">
                             <p className="text-sm text-red-400 text-center font-medium">
