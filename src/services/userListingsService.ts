@@ -65,7 +65,9 @@ export interface ScanMetadata {
     riskLevel?: string;
     eligibleTier?: string;
     dataSufficient?: boolean;
+    verificationCoverage?: number;
     missingData?: string[];
+    unmetRequirements?: string[];
     allFlags?: string[];
     componentScores?: {
       distribution?: { score: number; flags: string[] };
@@ -153,6 +155,9 @@ export const userListingsService = {
         risk_level: responseData?.risk_level,
         eligible: responseData?.eligible ?? false,
         summary: responseData?.summary,
+        provisional: responseData?.provisional ?? false,
+        provisional_reason: responseData?.provisional_reason ?? null,
+        provisional_missing_data: responseData?.provisional_missing_data ?? [],
         metadata: responseData?.metadata,
         // Legacy fields for backward compatibility
         vettingScore: responseData?.risk_score ?? responseData?.vettingScore ?? 0,
@@ -174,6 +179,9 @@ export const userListingsService = {
             risk_level: responseData?.risk_level,
             eligible: responseData?.eligible ?? false,
             summary: responseData?.summary,
+            provisional: responseData?.provisional ?? false,
+            provisional_reason: responseData?.provisional_reason ?? null,
+            provisional_missing_data: responseData?.provisional_missing_data ?? [],
             metadata: responseData?.metadata,
             vettingScore: responseData?.risk_score ?? 0,
             vettingTier: responseData?.tier ?? 'UNQUALIFIED',

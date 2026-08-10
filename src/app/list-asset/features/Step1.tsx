@@ -536,7 +536,7 @@ export default function Step1({
                   // Handle nested details.details structure
                   const nestedDetails = scanResult?.details?.details;
                   const tier = nestedDetails?.tier || scanResult?.details?.tier || scanResult?.tier;
-                  const riskScore = nestedDetails?.risk_score || scanResult?.details?.risk_score || scanResult?.risk_score || 0;
+                  const riskScore = nestedDetails?.risk_score ?? scanResult?.details?.risk_score ?? scanResult?.risk_score ?? 0;
                   // const riskLevel = nestedDetails?.risk_level || scanResult?.details?.risk_level || scanResult?.risk_level;
                   const tierInfo = getTierInfo(tier);
                   const metadata = nestedDetails?.metadata || scanResult?.details?.metadata || scanResult?.metadata;
@@ -612,7 +612,7 @@ export default function Step1({
                   // Handle nested details.details structure
                   const nestedDetails = scanResult?.details?.details;
                   const metadata = nestedDetails?.metadata || scanResult?.details?.metadata || scanResult?.metadata;
-                  const riskScore = nestedDetails?.risk_score || scanResult?.details?.risk_score || scanResult?.risk_score || 0;
+                  const riskScore = nestedDetails?.risk_score ?? scanResult?.details?.risk_score ?? scanResult?.risk_score ?? 0;
                   const riskLevel = nestedDetails?.risk_level || scanResult?.details?.risk_level || scanResult?.risk_level || 'UNKNOWN';
                   
                   return (
