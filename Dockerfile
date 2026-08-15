@@ -3,7 +3,25 @@ FROM node:20-bookworm-slim AS dependencies
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund
+RUN --mount=type=cache,id=cto-frontend-npm-cache,target=/root/.npm \
+    set -eu; \
+    npm config set fetch-retries 8; \
+    npm config set fetch-retry-factor 2; \
+    npm config set fetch-retry-mintimeout 10000; \
+    npm config set fetch-retry-maxtimeout 120000; \
+    npm config set fetch-timeout 300000; \
+    for attempt in 1 2 3; do \
+      status=0; \
+      npm ci --no-audit --no-fund --prefer-offline || status=$?; \
+      if [ "$status" -eq 0 ]; then \
+        exit 0; \
+      fi; \
+      rm -rf node_modules; \
+      if [ "$attempt" -eq 3 ]; then \
+        exit "$status"; \
+      fi; \
+      sleep $((attempt * 10)); \
+    done
 
 FROM node:20-bookworm-slim AS build
 
