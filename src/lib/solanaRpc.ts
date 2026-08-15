@@ -1,11 +1,30 @@
+export type AppSolanaNetwork = "devnet" | "mainnet-beta";
+
+export function getSolanaNetwork(): AppSolanaNetwork {
+  const value = (process.env.NEXT_PUBLIC_SOLANA_NETWORK || "devnet").trim().toLowerCase();
+  return value === "mainnet" || value === "mainnet-beta" ? "mainnet-beta" : "devnet";
+}
+
+export function getDefaultSolanaChainId(): "solana:devnet" | "solana:mainnet" {
+  return getSolanaNetwork() === "mainnet-beta" ? "solana:mainnet" : "solana:devnet";
+}
+
 /**
- * Solana JSON-RPC URL for browser code. Next.js only inlines `NEXT_PUBLIC_*`;
- * `REACT_APP_*` is kept as a fallback for parity with CRA-style env files.
+ * Browser RPC is used for wallet UI and signing only. Keep paid/private RPC keys
+ * on the backend; payment broadcasting is routed through the authenticated API.
  */
+export function getSolanaRpcUrl(network: AppSolanaNetwork): string {
+  if (network === "mainnet-beta") {
+    return process.env.NEXT_PUBLIC_SOLANA_MAINNET_RPC_URL?.trim()
+      || process.env.NEXT_PUBLIC_SOLANA_RPC_URL?.trim()
+      || "https://api.mainnet-beta.solana.com";
+  }
+  return process.env.NEXT_PUBLIC_SOLANA_DEVNET_RPC_URL?.trim()
+    || process.env.NEXT_PUBLIC_SOLANA_RPC_URL?.trim()
+    || "https://api.devnet.solana.com";
+}
+
 export function getDefaultSolanaRpcUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_SOLANA_RPC_URL?.trim() ||
-    "https://api.mainnet-beta.solana.com"
-  );
+  return getSolanaRpcUrl(getSolanaNetwork());
 }
 

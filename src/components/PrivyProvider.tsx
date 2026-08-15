@@ -4,7 +4,7 @@ import React, { useMemo } from 'react';
 import { PrivyProvider as PrivyProviderBase } from '@privy-io/react-auth';
 import { createSolanaRpc, createSolanaRpcSubscriptions } from '@solana/kit';
 import RewardProgressSync from '@/components/RewardProgressSync';
-import { getDefaultSolanaRpcUrl } from '@/lib/solanaRpc';
+import { getSolanaRpcUrl } from '@/lib/solanaRpc';
 
 interface PrivyProviderProps {
   children: React.ReactNode;
@@ -14,19 +14,20 @@ export default function PrivyProvider({ children }: PrivyProviderProps) {
   const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
 
   const solanaRpcs = useMemo(() => {
-    const http = getDefaultSolanaRpcUrl();
-    const ws = /^https:/i.test(http)
-      ? http.replace(/^https:/i, 'wss:')
-      : /^http:/i.test(http)
-        ? http.replace(/^http:/i, 'ws:')
-        : http;
-    const bundle = {
-      rpc: createSolanaRpc(http),
-      rpcSubscriptions: createSolanaRpcSubscriptions(ws),
+    const bundle = (http: string) => {
+      const ws = /^https:/i.test(http)
+        ? http.replace(/^https:/i, 'wss:')
+        : /^http:/i.test(http)
+          ? http.replace(/^http:/i, 'ws:')
+          : http;
+      return {
+        rpc: createSolanaRpc(http),
+        rpcSubscriptions: createSolanaRpcSubscriptions(ws),
+      };
     };
     return {
-      'solana:mainnet': bundle,
-      'solana:devnet': bundle,
+      'solana:devnet': bundle(getSolanaRpcUrl('devnet')),
+      'solana:mainnet': bundle(getSolanaRpcUrl('mainnet-beta')),
     };
   }, []);
 

@@ -28,10 +28,9 @@ import solanaWalletService from '@/services/solanaWalletService';
 import {
   getPrivySolanaPayWallet,
   resolvePrivySolanaAddress,
-  signAndBroadcastSolanaPayPreferPrivyHook,
+  signSolanaPayPreferPrivyHook,
   type PrivySolanaSignTransaction,
 } from '@/lib/solanaTransaction';
-import { getDefaultSolanaRpcUrl } from '@/lib/solanaRpc';
 
 interface AdPaymentDialogProps {
   open: boolean;
@@ -275,14 +274,25 @@ export default function AdPaymentDialog({
         if (!solanaPayWallet) {
           throw new Error('No Solana wallet found. Please connect a Solana wallet in Privy.');
         }
-        const paymentResponse = await solanaPaymentService.createMarketplaceAdPayment(actualAdId, totalAmount);
-        const paymentData = ((paymentResponse as { data?: unknown } | undefined)?.data ||
+        const paymentResponse = await marketplaceService.createPayment(actualAdId, "SOLANA");
+        const responseData = ((paymentResponse as { data?: unknown } | undefined)?.data ||
           paymentResponse) as Record<string, unknown>;
+        const paymentData = ((responseData.payment as Record<string, unknown> | undefined) ||
+          responseData) as Record<string, unknown>;
         const resolvedPaymentId =
           (paymentData.paymentId as string | undefined) ||
           (paymentData.payment as { paymentId?: string; id?: string } | undefined)?.paymentId ||
           (paymentData.payment as { id?: string } | undefined)?.id;
-        if (String(paymentData.message || '').includes('No payment required')) {
+        if (String(responseData.message || paymentData.message || '').includes('No payment required')) {
+          await invalidateMarketplaceQueries(queryClient);
+          handleContinue();
+          return;
+        }
+        if (
+          responseData.alreadyCompleted ||
+          paymentData.alreadyCompleted ||
+          String(responseData.message || paymentData.message || '').toLowerCase().includes('already completed')
+        ) {
           await invalidateMarketplaceQueries(queryClient);
           handleContinue();
           return;
@@ -291,15 +301,20 @@ export default function AdPaymentDialog({
         if (!txBase64) {
           throw new Error(String(paymentData.message || 'Transaction data missing'));
         }
-        const txHash = await signAndBroadcastSolanaPayPreferPrivyHook({
+        const signedTransaction = await signSolanaPayPreferPrivyHook({
           unsignedTxBase64: txBase64,
           wallet: solanaPayWallet,
           signTransactionHook: privySignSolanaTransaction as unknown as PrivySolanaSignTransaction,
-          rpcUrl: getDefaultSolanaRpcUrl(),
+          chainId: paymentData.chainId as "solana:devnet" | "solana:mainnet" | undefined,
         });
+        if (!resolvedPaymentId) throw new Error('Payment id missing');
+        const broadcast = await solanaPaymentService.broadcastPayment(resolvedPaymentId, signedTransaction) as
+          { txHash?: string; data?: { txHash?: string } };
+        const txHash = broadcast.txHash || broadcast.data?.txHash;
+        if (!txHash) throw new Error('Backend did not return a Solana transaction hash');
         if (resolvedPaymentId) {
           await new Promise((r) => setTimeout(r, 3000));
-          await solanaPaymentService.verifyMarketplaceAdPayment(resolvedPaymentId, txHash);
+          await marketplaceService.verifyPayment(resolvedPaymentId, txHash);
         }
         toast.success('Payment verified!');
         await invalidateMarketplaceQueries(queryClient);

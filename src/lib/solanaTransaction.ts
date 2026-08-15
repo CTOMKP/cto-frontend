@@ -1,5 +1,5 @@
 import { Connection, Transaction, VersionedTransaction } from "@solana/web3.js";
-import { getDefaultSolanaRpcUrl } from "@/lib/solanaRpc";
+import { getDefaultSolanaChainId, getDefaultSolanaRpcUrl } from "@/lib/solanaRpc";
 
 export type SolanaSignerWallet = {
   address: string;
@@ -193,6 +193,46 @@ export type PrivySolanaSignTransaction = (arg: {
   chain: string;
 }) => Promise<unknown>;
 
+function encodeSolanaTxBase64(bytes: Uint8Array): string {
+  let binary = "";
+  bytes.forEach((value) => {
+    binary += String.fromCharCode(value);
+  });
+  return btoa(binary);
+}
+
+/**
+ * Sign a server-built payment without exposing the production RPC credential in
+ * the browser. The signed bytes are broadcast by the authenticated backend.
+ */
+export async function signSolanaPayPreferPrivyHook(params: {
+  unsignedTxBase64: string;
+  wallet: SolanaSignerWallet;
+  signTransactionHook: PrivySolanaSignTransaction;
+  chainId?: "solana:devnet" | "solana:mainnet";
+}): Promise<string> {
+  const bytes = decodeSolanaTxBase64(params.unsignedTxBase64);
+  try {
+    const signedRaw = await params.signTransactionHook({
+      transaction: bytes,
+      wallet: params.wallet,
+      chain: params.chainId || getDefaultSolanaChainId(),
+    });
+    const signedBytes = normalizeSignedTxToBytes(signedRaw);
+    if (!signedBytes) throw new Error("Unable to parse signed Solana transaction bytes.");
+    return encodeSolanaTxBase64(signedBytes);
+  } catch (hookError) {
+    console.warn("[Solana pay] useSignTransaction failed, falling back to wallet.signTransaction", hookError);
+    let signedTx: VersionedTransaction | Transaction;
+    try {
+      signedTx = await signWithWallet(params.wallet, VersionedTransaction.deserialize(bytes));
+    } catch {
+      signedTx = await signWithWallet(params.wallet, Transaction.from(bytes));
+    }
+    return encodeSolanaTxBase64(signedTx.serialize());
+  }
+}
+
 /**
  * Embedded Privy Solana: sign with {@link useSignTransaction} from `@privy-io/react-auth/solana`
  * (wire bytes + `solana:devnet` | `solana:mainnet`), same as cto-test `SolanaWalletActivity`. Direct
@@ -226,7 +266,7 @@ export async function signAndBroadcastSolanaBase64TxWithPrivyHook(params: {
   rpcUrl?: string;
 }): Promise<string> {
   const rpcUrl = params.rpcUrl || getDefaultSolanaRpcUrl();
-  const chain = rpcUrl.toLowerCase().includes("devnet") ? "solana:devnet" : "solana:mainnet";
+  const chain = getDefaultSolanaChainId();
   const unsignedBytes = decodeSolanaTxBase64(params.unsignedTxBase64);
   const signedRaw = await params.signTransaction({
     transaction: unsignedBytes,
