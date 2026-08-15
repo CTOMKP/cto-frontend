@@ -1,0 +1,65 @@
+FROM node:20-bookworm-slim AS dependencies
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
+
+FROM node:20-bookworm-slim AS build
+
+WORKDIR /app
+
+ENV NEXT_TELEMETRY_DISABLED=1
+
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_BACKEND_URL
+ARG NEXT_PUBLIC_AUTH_API_BASE
+ARG NEXT_PUBLIC_PRIVY_APP_ID
+ARG NEXT_PUBLIC_SOLANA_NETWORK
+ARG NEXT_PUBLIC_SOLANA_RPC_URL
+ARG NEXT_PUBLIC_SOLANA_DEVNET_RPC_URL
+ARG NEXT_PUBLIC_SOLANA_MAINNET_RPC_URL
+ARG NEXT_PUBLIC_CLOUDFRONT_DOMAIN
+ARG NEXT_INTERNAL_API_URL
+ARG NEXTAUTH_URL
+
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
+ENV NEXT_PUBLIC_AUTH_API_BASE=$NEXT_PUBLIC_AUTH_API_BASE
+ENV NEXT_PUBLIC_PRIVY_APP_ID=$NEXT_PUBLIC_PRIVY_APP_ID
+ENV NEXT_PUBLIC_SOLANA_NETWORK=$NEXT_PUBLIC_SOLANA_NETWORK
+ENV NEXT_PUBLIC_SOLANA_RPC_URL=$NEXT_PUBLIC_SOLANA_RPC_URL
+ENV NEXT_PUBLIC_SOLANA_DEVNET_RPC_URL=$NEXT_PUBLIC_SOLANA_DEVNET_RPC_URL
+ENV NEXT_PUBLIC_SOLANA_MAINNET_RPC_URL=$NEXT_PUBLIC_SOLANA_MAINNET_RPC_URL
+ENV NEXT_PUBLIC_CLOUDFRONT_DOMAIN=$NEXT_PUBLIC_CLOUDFRONT_DOMAIN
+ENV NEXT_INTERNAL_API_URL=$NEXT_INTERNAL_API_URL
+ENV NEXTAUTH_URL=$NEXTAUTH_URL
+
+COPY --from=dependencies /app/node_modules ./node_modules
+COPY . .
+
+RUN npm run build
+
+FROM node:20-bookworm-slim AS production
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV HOSTNAME=0.0.0.0
+ENV PORT=3000
+
+RUN groupadd --system --gid 1001 nodejs \
+    && useradd --system --uid 1001 --gid nodejs nextjs
+
+COPY --from=build --chown=nextjs:nodejs /app/package.json /app/package-lock.json ./
+COPY --from=build --chown=nextjs:nodejs /app/node_modules ./node_modules
+COPY --from=build --chown=nextjs:nodejs /app/.next ./.next
+COPY --from=build --chown=nextjs:nodejs /app/public ./public
+COPY --from=build --chown=nextjs:nodejs /app/next.config.ts ./next.config.ts
+
+USER nextjs
+
+EXPOSE 3000
+
+CMD ["npm", "start"]
