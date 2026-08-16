@@ -54,6 +54,23 @@ class PFPService {
 
 
 
+  async getOrCreateMascotAssignment(): Promise<{ mascotKey: string; assignedAt?: string; catalogSize?: number }> {
+    const response = await apiPost<unknown>(
+      API_BASE + '/api/v1/pfp/assignment',
+      {},
+    );
+    const data = toRecord(unwrapApiData(response));
+    const mascotKey = typeof data.mascotKey === 'string' ? data.mascotKey.trim() : '';
+    if (!mascotKey || !/^[A-Za-z0-9._-]+$/.test(mascotKey)) {
+      throw new Error('Backend returned an invalid mascot assignment');
+    }
+    return {
+      mascotKey,
+      assignedAt: typeof data.assignedAt === 'string' ? data.assignedAt : undefined,
+      catalogSize: typeof data.catalogSize === 'number' ? data.catalogSize : undefined,
+    };
+  }
+
   /**
    * Upload profile image using presigned URL (similar to old project)
    * Falls back to base64 if presigned upload is not available

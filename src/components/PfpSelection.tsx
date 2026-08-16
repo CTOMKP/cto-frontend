@@ -29,32 +29,6 @@ const sharelinks = [
 ]
 
 
-const MASCOT_TRAITS = [
-  "ARTIST",
-  "ARTIST2",
-  "ARTIST3",
-  "CTO",
-  "CTO2",
-  "DEGEN",
-  "DEGEN2",
-  "DEV",
-  "EARLYADT.WHALE",
-  "HACKER",
-  "HACKER2",
-  "HACKER3",
-  "HODLER",
-  "KOL",
-  "MOD",
-  "MOD2",
-  "MOD3",
-  "NEWBIE",
-  "SHILLER",
-  "VISIONARY",
-  "VISIONARY2",
-  "WHALE",
-  "WHALE2",
-  "WHALE3",
-] as const;
 
 const PfpSelection = () => {
   const [phase, setPhase] = useState<"stacked" | "spread" | "selected">(
@@ -66,6 +40,7 @@ const PfpSelection = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [savedImageUrl, setSavedImageUrl] = useState<string | null>(null);
   const [revealedMascotTrait, setRevealedMascotTrait] = useState<string | null>(null);
+  const [isAssigningMascot, setIsAssigningMascot] = useState(false);
 
   // Fetch cards on mount
   useEffect(() => {
@@ -101,20 +76,23 @@ const PfpSelection = () => {
     setIsRevealed(false);
   };
 
-  const handleReveal = () => {
-    if (!selectedCardId) return;
+  const handleReveal = async () => {
+    if (!selectedCardId || isAssigningMascot) return;
 
-    setRevealedMascotTrait((current) => {
-      if (current) return current;
-      const randomIndex = Math.floor(Math.random() * MASCOT_TRAITS.length);
-      return MASCOT_TRAITS[randomIndex];
-    });
-
-    // Just transition to reveal the card - no API call needed
-    setIsRevealed(false); // Trigger exit animation of placeholder
-    setTimeout(() => {
-      setIsRevealed(true); // Show mascot reveal with entrance animation
-    }, 500); // Matches exit duration
+    setIsAssigningMascot(true);
+    try {
+      const assignment = await pfpService.getOrCreateMascotAssignment();
+      setRevealedMascotTrait(assignment.mascotKey);
+      setIsRevealed(false); // Trigger exit animation of placeholder
+      setTimeout(() => {
+        setIsRevealed(true); // Show mascot reveal with entrance animation
+      }, 500); // Matches exit duration
+    } catch (error) {
+      console.error('Failed to assign mascot:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to assign mascot');
+    } finally {
+      setIsAssigningMascot(false);
+    }
   };
 
   const handleHarvest = () => {
@@ -371,12 +349,12 @@ const PfpSelection = () => {
       : 
         <Button
         onClick={phase === "selected" ? handleReveal : handleHarvest}
-          disabled={!selectedCardId}
+          disabled={!selectedCardId || isAssigningMascot}
           className={`cta-gradient w-full mt-6 transition-all duration-300 ${
             !selectedCardId ? "opacity-50 cursor-not-allowed" : ""
           }`}
         >
-        {phase === "selected" ? "Reveal" : "Harvest"}
+        {phase === "selected" ? (isAssigningMascot ? "Revealing..." : "Reveal") : "Harvest"}
       </Button>}
     </div>
     </div>
