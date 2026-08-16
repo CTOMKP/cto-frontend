@@ -28,6 +28,34 @@ const sharelinks = [
   }
 ]
 
+
+const MASCOT_TRAITS = [
+  "ARTIST",
+  "ARTIST2",
+  "ARTIST3",
+  "CTO",
+  "CTO2",
+  "DEGEN",
+  "DEGEN2",
+  "DEV",
+  "EARLYADT.WHALE",
+  "HACKER",
+  "HACKER2",
+  "HACKER3",
+  "HODLER",
+  "KOL",
+  "MOD",
+  "MOD2",
+  "MOD3",
+  "NEWBIE",
+  "SHILLER",
+  "VISIONARY",
+  "VISIONARY2",
+  "WHALE",
+  "WHALE2",
+  "WHALE3",
+] as const;
+
 const PfpSelection = () => {
   const [phase, setPhase] = useState<"stacked" | "spread" | "selected">(
     "stacked"
@@ -37,6 +65,7 @@ const PfpSelection = () => {
   const [cards, setCards] = useState<PFPCard[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [savedImageUrl, setSavedImageUrl] = useState<string | null>(null);
+  const [revealedMascotTrait, setRevealedMascotTrait] = useState<string | null>(null);
 
   // Fetch cards on mount
   useEffect(() => {
@@ -68,11 +97,19 @@ const PfpSelection = () => {
 
   const handleSelect = (id: number) => {
     setSelectedCardId(id);
+    setRevealedMascotTrait(null);
+    setIsRevealed(false);
   };
 
   const handleReveal = () => {
     if (!selectedCardId) return;
-    
+
+    setRevealedMascotTrait((current) => {
+      if (current) return current;
+      const randomIndex = Math.floor(Math.random() * MASCOT_TRAITS.length);
+      return MASCOT_TRAITS[randomIndex];
+    });
+
     // Just transition to reveal the card - no API call needed
     setIsRevealed(false); // Trigger exit animation of placeholder
     setTimeout(() => {
@@ -294,7 +331,7 @@ const PfpSelection = () => {
             </motion.div>
           )}
 
-          {phase === "selected" && selectedCardId && isRevealed && (
+          {phase === "selected" && selectedCardId && isRevealed && revealedMascotTrait && (
             <motion.div
               key="mascot-reveal"
               initial={{ opacity: 0, y: 200, scale: 0.7 }}
@@ -307,7 +344,8 @@ const PfpSelection = () => {
               }}
             >
               <CardReveal 
-                selectedCardId={selectedCardId} 
+                selectedCardId={selectedCardId}
+                mascotTrait={revealedMascotTrait}
                 onImageSaved={(imageUrl) => setSavedImageUrl(imageUrl)}
               />
             </motion.div>

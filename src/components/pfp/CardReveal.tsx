@@ -15,39 +15,10 @@ import { useSessionStore } from '@/lib/sessionStore';
 
 interface CardRevealProps {
   selectedCardId: number | null;
+  mascotTrait: string;
   onClose?: () => void;
   onImageSaved?: (imageUrl: string) => void;
 }
-
-// Trait mapping - maps card IDs to trait names
-const TRAIT_MAP: Record<number, string> = {
-  1: 'CTO',
-  2: 'DEGEN',
-  3: 'DEV',
-  4: 'WHALE',
-  5: 'ARTIST',
-};
-
-// Available trait variants for randomization
-const TRAIT_VARIANTS: Record<string, string[]> = {
-  'CTO': ['CTO', 'CTO2'],
-  'DEGEN': ['DEGEN', 'DEGEN2'],
-  'DEV': ['DEV'],
-  'WHALE': ['WHALE', 'WHALE2', 'WHALE3', 'EARLYADT.WHALE'],
-  'ARTIST': ['ARTIST', 'ARTIST2', 'ARTIST3'],
-  'HACKER': ['HACKER', 'HACKER2', 'HACKER3'],
-  'MOD': ['MOD', 'MOD2', 'MOD3'],
-  'VISIONARY': ['VISIONARY', 'VISIONARY2'],
-};
-
-// Get trait image path with random variant selection
-const getTraitImage = (traitName: string, cardId: number): string => {
-  const variants = TRAIT_VARIANTS[traitName] || [traitName];
-  // Use cardId to deterministically select a variant (so same card always shows same variant)
-  const variantIndex = (cardId - 1) % variants.length;
-  const selectedVariant = variants[variantIndex] || traitName;
-  return `mascots/TRAITS/${selectedVariant}.png`;
-};
 
 /**
  * Composite mascot layers into a single canvas image (without stage layer)
@@ -113,7 +84,7 @@ const compositeMascotImage = async (
   });
 };
 
-export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageSaved }) => {
+export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, mascotTrait, onImageSaved }) => {
   const sessionUserId = useSessionStore((s) => s.userId);
   const [isSaving, setIsSaving] = useState(false);
   const [isAutoSaved, setIsAutoSaved] = useState(false);
@@ -124,11 +95,11 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageS
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const traitName = selectedCardId ? (TRAIT_MAP[selectedCardId] || 'CTO') : 'CTO';
+  const traitName = mascotTrait;
   // Use CloudFront CDN URLs for better performance
   const baseSkinPath = getMascotImageUrl('mascots/SKIN/BASE SKIN.png');
   const stagePath = getMascotImageUrl('mascots/STAGE/STAGE.png');
-  const traitPath = getMascotImageUrl(getTraitImage(traitName, selectedCardId || 0));
+  const traitPath = getMascotImageUrl(`mascots/TRAITS/${mascotTrait}.png`);
 
   // Track if all images are loaded
   const allImagesLoaded = imagesLoaded.base && imagesLoaded.stage && imagesLoaded.trait;
@@ -166,7 +137,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageS
     }, 2000);
 
     return () => clearTimeout(fallbackTimer);
-  }, [selectedCardId]);
+  }, [selectedCardId, mascotTrait]);
 
   // Auto-save when images are loaded (card is revealed) - waits for all images to load
   useEffect(() => {
