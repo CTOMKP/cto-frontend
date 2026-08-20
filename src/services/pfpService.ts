@@ -18,6 +18,14 @@ export interface PFPCard {
   traits?: Record<string, unknown>;
 }
 
+export interface MascotAssignment {
+  mascotKey: string;
+  assetVersion: 'v1' | 'v2';
+  assetPath: string;
+  assignedAt?: string;
+  catalogSize?: number;
+}
+
 
 class PFPService {
   /**
@@ -54,18 +62,31 @@ class PFPService {
 
 
 
-  async getOrCreateMascotAssignment(): Promise<{ mascotKey: string; assignedAt?: string; catalogSize?: number }> {
+  async getOrCreateMascotAssignment(): Promise<MascotAssignment> {
     const response = await apiPost<unknown>(
       API_BASE + '/api/v1/pfp/assignment',
       {},
     );
     const data = toRecord(unwrapApiData(response));
     const mascotKey = typeof data.mascotKey === 'string' ? data.mascotKey.trim() : '';
+    const assetVersion = data.assetVersion === 'v2' ? 'v2' : 'v1';
+    const providedAssetPath =
+      typeof data.assetPath === 'string' ? data.assetPath.trim() : '';
+    // Keep the frontend compatible during a staggered deployment where the
+    // legacy backend may still return only mascotKey.
+    const assetPath =
+      providedAssetPath ||
+      (assetVersion === 'v1' ? `mascots/TRAITS/${mascotKey}.png` : '');
     if (!mascotKey || !/^[A-Za-z0-9._-]+$/.test(mascotKey)) {
       throw new Error('Backend returned an invalid mascot assignment');
     }
+    if (!assetPath || !/^mascots\/[A-Za-z0-9._/-]+$/.test(assetPath)) {
+      throw new Error('Backend returned an invalid mascot asset path');
+    }
     return {
       mascotKey,
+      assetVersion,
+      assetPath,
       assignedAt: typeof data.assignedAt === 'string' ? data.assignedAt : undefined,
       catalogSize: typeof data.catalogSize === 'number' ? data.catalogSize : undefined,
     };
@@ -269,4 +290,3 @@ class PFPService {
 }
 
 export const pfpService = new PFPService();
-

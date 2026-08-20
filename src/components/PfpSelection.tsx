@@ -9,6 +9,8 @@ import { toast } from "react-toastify";
 import { CardReveal } from "./pfp/CardReveal";
 import { MoonLoader } from "react-spinners";
 
+import type { MascotAssignment } from '@/services/pfpService';
+
 const sharelinks = [
   {
     icon: "/social-icons/reddit.svg",
@@ -39,8 +41,9 @@ const PfpSelection = () => {
   const [cards, setCards] = useState<PFPCard[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [savedImageUrl, setSavedImageUrl] = useState<string | null>(null);
-  const [revealedMascotTrait, setRevealedMascotTrait] = useState<string | null>(null);
+  const [revealedMascotAssignment, setRevealedMascotAssignment] = useState<MascotAssignment | null>(null);
   const [isAssigningMascot, setIsAssigningMascot] = useState(false);
+  const revealedMascotTrait = revealedMascotAssignment?.mascotKey ?? null;
 
   // Fetch cards on mount
   useEffect(() => {
@@ -72,7 +75,7 @@ const PfpSelection = () => {
 
   const handleSelect = (id: number) => {
     setSelectedCardId(id);
-    setRevealedMascotTrait(null);
+    setRevealedMascotAssignment(null);
     setIsRevealed(false);
   };
 
@@ -82,7 +85,7 @@ const PfpSelection = () => {
     setIsAssigningMascot(true);
     try {
       const assignment = await pfpService.getOrCreateMascotAssignment();
-      setRevealedMascotTrait(assignment.mascotKey);
+      setRevealedMascotAssignment(assignment);
       setIsRevealed(false); // Trigger exit animation of placeholder
       setTimeout(() => {
         setIsRevealed(true); // Show mascot reveal with entrance animation
@@ -323,6 +326,7 @@ const PfpSelection = () => {
             >
               <CardReveal 
                 selectedCardId={selectedCardId}
+                assignment={revealedMascotAssignment!}
                 mascotTrait={revealedMascotTrait}
                 onImageSaved={(imageUrl) => setSavedImageUrl(imageUrl)}
               />

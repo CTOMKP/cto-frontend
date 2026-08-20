@@ -1,10 +1,10 @@
 /**
  * Upload Mascot Images to S3
  * 
- * This script uploads all mascot images from public/mascots/ to S3 bucket ctom-bucket-backup
+ * Upload a validated, versioned collection of finished mascot PFPs to S3.
  * 
  * Usage:
- *   node scripts/upload-mascots-to-s3.js
+ *   node scripts/upload-mascots-to-s3.js --source ../output --prefix mascots/v2/full --expected-count 146
  * 
  * Required Environment Variables:
  *   AWS_ACCESS_KEY_ID
@@ -17,8 +17,18 @@ const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const fs = require('fs');
 const path = require('path');
 
+function getArgument(name) {
+  const index = process.argv.indexOf(name);
+  return index >= 0 ? process.argv[index + 1] : undefined;
+}
+
+const requestedEnvironmentFile = getArgument('--env-file');
+
 // Load environment variables from .env files if they exist
 try {
+  if (requestedEnvironmentFile) {
+    require('dotenv').config({ path: path.resolve(requestedEnvironmentFile) });
+  }
   // Try .env.upload first (for upload script), then .env.local
   require('dotenv').config({ path: path.join(__dirname, '../.env.upload') });
   require('dotenv').config({ path: path.join(__dirname, '../.env.local') });
@@ -27,9 +37,20 @@ try {
 }
 
 // Configuration
-const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME || 'ctom-bucket-backup';
-const REGION = process.env.AWS_REGION || 'eu-north-1';
-const MASCOTS_DIR = path.join(__dirname, '../public/mascots');
+const BUCKET_NAME =
+  getArgument('--bucket') ||
+  process.env.AWS_S3_BUCKET_NAME ||
+  'ctom-bucket-backup';
+const REGION =
+  getArgument('--region') || process.env.AWS_REGION || 'eu-north-1';
+const MASCOTS_DIR = path.resolve(
+  getArgument('--source') || path.join(__dirname, '../public/mascots'),
+);
+const S3_PREFIX = String(
+  getArgument('--prefix') || 'mascots/v2/full',
+).replace(/^\/+|\/+$/g, '');
+const EXPECTED_COUNT = Number(getArgument('--expected-count') || 146);
+const DRY_RUN = process.argv.includes('--dry-run');
 
 // Initialize S3 client
 const s3Client = new S3Client({
@@ -55,6 +76,10 @@ function getMimeType(filename) {
 
 // Upload a single file to S3
 async function uploadFile(localPath, s3Key) {
+  if (DRY_RUN) {
+    console.log(`[dry-run] ${s3Key}`);
+    return true;
+  }
   try {
     const fileContent = fs.readFileSync(localPath);
     const contentType = getMimeType(localPath);
@@ -64,6 +89,7 @@ async function uploadFile(localPath, s3Key) {
       Key: s3Key,
       Body: fileContent,
       ContentType: contentType,
+      CacheControl: 'public, max-age=31536000, immutable',
       // Note: ACL removed - bucket uses bucket policies for public access
       // The bucket should have a policy allowing public read access to mascots/*
     });
@@ -73,6 +99,16 @@ async function uploadFile(localPath, s3Key) {
     return true;
   } catch (error) {
     console.error(`❌ Failed to upload ${s3Key}:`, error.message);
+    if (
+      [
+        'InvalidAccessKeyId',
+        'SignatureDoesNotMatch',
+        'ExpiredToken',
+        'CredentialsProviderError',
+      ].includes(error.name)
+    ) {
+      throw error;
+    }
     return false;
   }
 }
@@ -99,6 +135,8 @@ async function uploadMascots() {
   console.log(`📦 Bucket: ${BUCKET_NAME}`);
   console.log(`🌍 Region: ${REGION}`);
   console.log(`📁 Source: ${MASCOTS_DIR}\n`);
+  console.log(`🗂️  Prefix: ${S3_PREFIX}`);
+  console.log(`🧪 Mode: ${DRY_RUN ? 'validation only' : 'upload'}\n`);
 
   // Check if mascots directory exists
   if (!fs.existsSync(MASCOTS_DIR)) {
@@ -107,7 +145,7 @@ async function uploadMascots() {
   }
 
   // Check AWS credentials
-  if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+  if (!DRY_RUN && (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY)) {
     console.error('❌ Error: AWS credentials not found!');
     console.error('   Please set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables');
     process.exit(1);
@@ -119,6 +157,21 @@ async function uploadMascots() {
     const ext = path.extname(file).toLowerCase();
     return ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext);
   });
+  imageFiles.sort((left, right) => left.localeCompare(right));
+
+  if (imageFiles.length !== EXPECTED_COUNT) {
+    console.error(`❌ Expected ${EXPECTED_COUNT} images but found ${imageFiles.length}`);
+    process.exit(1);
+  }
+
+  const invalidNames = imageFiles.filter(
+    (file) => !/^\d{5}\.png$/i.test(path.basename(file)),
+  );
+  if (invalidNames.length > 0) {
+    console.error('❌ Every v2 PFP must use a five-digit PNG filename');
+    invalidNames.forEach((file) => console.error(`   ${path.basename(file)}`));
+    process.exit(1);
+  }
 
   if (imageFiles.length === 0) {
     console.error('❌ No image files found in mascots directory');
@@ -135,7 +188,7 @@ async function uploadMascots() {
     // Calculate S3 key (relative path from mascots directory)
     const relativePath = path.relative(MASCOTS_DIR, localPath);
     // Normalize path separators for S3 (use forward slashes)
-    const s3Key = `mascots/${relativePath.replace(/\\/g, '/')}`;
+    const s3Key = `${S3_PREFIX}/${relativePath.replace(/\\/g, '/')}`;
 
     const success = await uploadFile(localPath, s3Key);
     if (success) {
@@ -159,9 +212,7 @@ async function uploadMascots() {
   } else {
     console.log('\n🎉 All mascot images uploaded successfully!');
     console.log(`\n🔗 CloudFront URLs will be available at:`);
-    console.log(`   https://d2cjbd1iqkwr9j.cloudfront.net/mascots/STAGE/STAGE.png`);
-    console.log(`   https://d2cjbd1iqkwr9j.cloudfront.net/mascots/SKIN/BASE SKIN.png`);
-    console.log(`   https://d2cjbd1iqkwr9j.cloudfront.net/mascots/TRAITS/...`);
+    console.log(`   https://d2cjbd1iqkwr9j.cloudfront.net/${S3_PREFIX}/00001.png`);
   }
 }
 
