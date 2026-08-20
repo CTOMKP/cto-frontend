@@ -1,6 +1,7 @@
 "use client";
 
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { useWallets as useSolanaWallets } from '@privy-io/react-auth/solana';
 import { useCreateWallet } from '@privy-io/react-auth/extended-chains';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -31,6 +32,8 @@ export function usePrivyAuth() {
   
   const router = useRouter();
   const { createWallet } = useCreateWallet();
+  const { wallets: ethereumWallets } = useWallets();
+  const { wallets: solanaWallets } = useSolanaWallets();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [userData, setUserData] = useState<{
@@ -76,6 +79,26 @@ export function usePrivyAuth() {
 
     setIsAuthenticated(true);
 
+    // Do not sync or create Movement while Privy is still provisioning the
+    // automatic Ethereum and Solana wallets.
+    const linkedAccounts = Array.isArray(user.linkedAccounts) ? user.linkedAccounts : [];
+    const hasEthereumWallet = ethereumWallets.some((wallet) => {
+      const candidate = wallet as { chainType?: string; address?: string };
+      return (candidate.chainType === 'ethereum' || candidate.address?.startsWith('0x')) && !!candidate.address;
+    }) || linkedAccounts.some((account) => {
+      const candidate = account as { type?: string; chainType?: string; address?: string };
+      return candidate.type === 'wallet' && candidate.chainType === 'ethereum' && !!candidate.address;
+    });
+    const hasSolanaWallet = solanaWallets.length > 0 || linkedAccounts.some((account) => {
+      const candidate = account as { type?: string; chainType?: string; address?: string };
+      return candidate.type === 'wallet' && candidate.chainType === 'solana' && !!candidate.address;
+    });
+
+    if (!hasEthereumWallet || !hasSolanaWallet) {
+      setIsLoading(false);
+      return;
+    }
+
     if (processingUserIds.has(userId)) {
       return;
     }
@@ -91,34 +114,15 @@ export function usePrivyAuth() {
     void handleMovementWalletAndSync(userId);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authenticated, user?.id, ready]);
-
-  // Wait for Privy to fully load linkedAccounts (with retries)
-  const waitForPrivyAccounts = async (maxRetries = 10, delayMs = 500): Promise<boolean> => {
-    if (!user) return false;
-    
-    for (let i = 0; i < maxRetries; i++) {
-      if (user?.linkedAccounts && user.linkedAccounts.length > 0) {
-        return true;
-      }
-      
-      if (i < maxRetries - 1) {
-        await new Promise(resolve => setTimeout(resolve, delayMs));
-      }
-    }
-    
-    return false;
-  };
+  }, [authenticated, user?.id, user?.linkedAccounts?.length, ready, ethereumWallets.length, solanaWallets.length]);
 
   // Handle Movement wallet creation and backend sync (like test frontend)
   const handleMovementWalletAndSync = async (userId: string) => {
     try {
       setIsLoading(true);
       
-      // Step 1: Wait for Privy accounts to load
-        await waitForPrivyAccounts();
-        
-      // Step 2: Initial Sync with backend FIRST (like test frontend)
+      // Ethereum and Solana are ready (guarded by the effect above).
+      // Persist both before creating the separate Movement wallet.
       const syncResult = await syncWithBackend();
       
       if (!syncResult) {
@@ -202,22 +206,29 @@ export function usePrivyAuth() {
   
       const backendSyncResult = await privyService.syncUser(privyToken, getAccessToken);
 
-      const profile = await queryClient.fetchQuery({
-        queryKey: profileKeys.detail(),
-        queryFn: ({ signal }) => authService.fetchProfile(signal),
-      });
-
-      if (profile) {
-        setUserData({
-          id: String(profile.id),
-          email: profile.email,
-          name: profile.name,
-          walletId: profile.walletId,
+      // Backend synchronization is the required operation. A profile cache
+      // refresh can be cancelled by navigation or a weak connection and must
+      // not turn a successful wallet sync into an authentication failure.
+      try {
+        const profile = await queryClient.fetchQuery({
+          queryKey: profileKeys.detail(),
+          queryFn: ({ signal }) => authService.fetchProfile(signal),
         });
-        useSessionStore.getState().setUserId(String(profile.id));
-        useSessionStore.getState().setEmail(profile.email ?? null);
-        useSessionStore.getState().setUsername(profile.name ?? null);
-        useSessionStore.getState().hydrateFromStorage();
+
+        if (profile) {
+          setUserData({
+            id: String(profile.id),
+            email: profile.email,
+            name: profile.name,
+            walletId: profile.walletId,
+          });
+          useSessionStore.getState().setUserId(String(profile.id));
+          useSessionStore.getState().setEmail(profile.email ?? null);
+          useSessionStore.getState().setUsername(profile.name ?? null);
+          useSessionStore.getState().hydrateFromStorage();
+        }
+      } catch (profileError) {
+        console.warn('Profile refresh after wallet sync was interrupted:', profileError);
       }
       useSessionStore.getState().setToken(getAuthToken());
   

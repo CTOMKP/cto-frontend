@@ -69,8 +69,10 @@ export default function PrivyProvider({ children }: PrivyProviderProps) {
       config={{
         solana: { rpcs: solanaRpcs },
         embeddedWallets: {
-          ethereum: { createOnLogin: 'users-without-wallets' },
-          solana: { createOnLogin: 'users-without-wallets' },
+          // Provision each supported core wallet independently for every user.
+          // This also repairs users whose earlier interrupted signup created only Movement.
+          ethereum: { createOnLogin: 'all-users' },
+          solana: { createOnLogin: 'all-users' },
         },
         loginMethods: ['email', 'wallet', 'google'],
         appearance: {
