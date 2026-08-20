@@ -1,7 +1,10 @@
 "use client";
 
-import { usePrivy, useWallets } from '@privy-io/react-auth';
-import { useWallets as useSolanaWallets } from '@privy-io/react-auth/solana';
+import { useCreateWallet as useCreateEthereumWallet, usePrivy, useWallets } from '@privy-io/react-auth';
+import {
+  useCreateWallet as useCreateSolanaWallet,
+  useWallets as useSolanaWallets,
+} from '@privy-io/react-auth/solana';
 import { useCreateWallet } from '@privy-io/react-auth/extended-chains';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -9,7 +12,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { privyService } from '@/services/privyService';
 import { createMovementWallet, getMovementWallet } from '@/lib/movement-wallet';
 import { authService } from '@/services/authService';
-import { getAuthToken, getUserId } from '@/lib/authSession';
+import { getAuthToken } from '@/lib/authSession';
 import { profileKeys } from '@/lib/queryKeys';
 import { bindSessionStoreListeners, useSessionStore } from '@/lib/sessionStore';
 import { findMovementWalletInBackend } from '@/services/walletsService';
@@ -32,6 +35,8 @@ export function usePrivyAuth() {
   
   const router = useRouter();
   const { createWallet } = useCreateWallet();
+  const { createWallet: createEthereumWallet } = useCreateEthereumWallet();
+  const { createWallet: createSolanaWallet } = useCreateSolanaWallet();
   const { wallets: ethereumWallets } = useWallets();
   const { wallets: solanaWallets } = useSolanaWallets();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -79,56 +84,103 @@ export function usePrivyAuth() {
 
     setIsAuthenticated(true);
 
-    // Do not sync or create Movement while Privy is still provisioning the
-    // automatic Ethereum and Solana wallets.
+    // Authentication is already complete. Determine which wallets still need
+    // provisioning without blocking creation of the backend session.
     const linkedAccounts = Array.isArray(user.linkedAccounts) ? user.linkedAccounts : [];
     const hasEthereumWallet = ethereumWallets.some((wallet) => {
-      const candidate = wallet as { chainType?: string; address?: string };
-      return (candidate.chainType === 'ethereum' || candidate.address?.startsWith('0x')) && !!candidate.address;
+      const candidate = wallet as { walletClientType?: string; address?: string };
+      return candidate.walletClientType === 'privy' && !!candidate.address;
     }) || linkedAccounts.some((account) => {
-      const candidate = account as { type?: string; chainType?: string; address?: string };
-      return candidate.type === 'wallet' && candidate.chainType === 'ethereum' && !!candidate.address;
+      const candidate = account as {
+        type?: string;
+        chainType?: string;
+        walletClientType?: string;
+        address?: string;
+      };
+      return candidate.type === 'wallet' && candidate.chainType === 'ethereum' &&
+        candidate.walletClientType === 'privy' && !!candidate.address;
     });
-    const hasSolanaWallet = solanaWallets.length > 0 || linkedAccounts.some((account) => {
-      const candidate = account as { type?: string; chainType?: string; address?: string };
-      return candidate.type === 'wallet' && candidate.chainType === 'solana' && !!candidate.address;
+    const hasSolanaWallet = solanaWallets.some((wallet) => {
+      const candidate = wallet as {
+        walletClientType?: string;
+        standardWallet?: { name?: string };
+        address?: string;
+      };
+      return (candidate.walletClientType === 'privy' || candidate.standardWallet?.name === 'Privy') &&
+        !!candidate.address;
+    }) || linkedAccounts.some((account) => {
+      const candidate = account as {
+        type?: string;
+        chainType?: string;
+        walletClientType?: string;
+        address?: string;
+      };
+      return candidate.type === 'wallet' && candidate.chainType === 'solana' &&
+        candidate.walletClientType === 'privy' && !!candidate.address;
     });
-
-    if (!hasEthereumWallet || !hasSolanaWallet) {
-      setIsLoading(false);
-      return;
-    }
 
     if (processingUserIds.has(userId)) {
       return;
     }
 
-    const existingToken = getAuthToken();
-    const existingUserId = getUserId();
-    if (existingToken && existingUserId === userId) {
-      setIsLoading(false);
-      return;
-    }
-
     processingUserIds.add(userId);
-    void handleMovementWalletAndSync(userId);
+    void handleWalletProvisioningAndSync(userId, hasEthereumWallet, hasSolanaWallet);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authenticated, user?.id, user?.linkedAccounts?.length, ready, ethereumWallets.length, solanaWallets.length]);
 
-  // Handle Movement wallet creation and backend sync (like test frontend)
-  const handleMovementWalletAndSync = async (userId: string) => {
+  // Establish the application session first, then provision each wallet.
+  const handleWalletProvisioningAndSync = async (
+    userId: string,
+    hasEthereumWallet: boolean,
+    hasSolanaWallet: boolean,
+  ) => {
     try {
       setIsLoading(true);
-      
-      // Ethereum and Solana are ready (guarded by the effect above).
-      // Persist both before creating the separate Movement wallet.
+
+      const provisionCoreWallet = async (
+        label: 'Ethereum' | 'Solana',
+        createCoreWallet: () => Promise<unknown>,
+      ) => {
+        try {
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            window.setTimeout(
+              () => reject(new Error(label + ' wallet creation timed out')),
+              20000,
+            );
+          });
+          await Promise.race([createCoreWallet(), timeoutPromise]);
+          await new Promise((resolve) => window.setTimeout(resolve, 1500));
+          await syncWithBackend();
+        } catch (walletError) {
+          // The login and backend session remain valid. Recheck shortly in case
+          // Privy completes the original request after the UI timeout.
+          console.warn(label + ' wallet setup is delayed:', walletError);
+          window.setTimeout(() => {
+            void syncWithBackend();
+          }, 10000);
+        }
+      };
+
+      // Create the application user and token immediately. Wallet provisioning
+      // is deliberately not part of the login transaction.
       const syncResult = await syncWithBackend();
       
       if (!syncResult) {
         throw new Error('Initial backend synchronization failed');
         }
-        
+
+      setIsAuthenticated(true);
+      setIsLoading(false);
+
+      if (!hasEthereumWallet) {
+        await provisionCoreWallet('Ethereum', () => createEthereumWallet());
+      }
+
+      if (!hasSolanaWallet) {
+        await provisionCoreWallet('Solana', () => createSolanaWallet());
+      }
+
       // Step 3: Check if user has Movement wallet in backend or Privy
       const backendHasMovementWallet = !!findMovementWalletInBackend(
         Array.isArray(syncResult.wallets) ? syncResult.wallets : [],
@@ -142,8 +194,6 @@ export function usePrivyAuth() {
       // Step 4: Create wallet if needed
       if (!hasMoveWallet) {
           try {
-          setIsLoading(true);
-          
           // Create Movement wallet with 15 second timeout (like test frontend)
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const walletCreationPromise = createMovementWallet(user as any, createWallet as any);
