@@ -5,12 +5,14 @@
  */
 
 import {
+  CHAIN_DISPLAY_NAMES,
   CHAIN_SLUGS,
+  normalizeChainSlug,
   type ChainSlug,
 } from "@/lib/constants/slugs";
 
 export { type ChainSlug };
-export { CHAIN_SLUGS };
+export { CHAIN_SLUGS, CHAIN_DISPLAY_NAMES, normalizeChainSlug };
 
 /** Project slug regex: token-name portion + hyphen + chain. */
 export const PROJECT_SLUG_REGEX = new RegExp(
@@ -25,8 +27,9 @@ export const PROJECT_SLUG_REGEX = new RegExp(
  */
 export function generateProjectSlug(
   tokenName: string,
-  chain: ChainSlug
+  chain: string | ChainSlug
 ): string {
+  const chainSlug = normalizeChainSlug(chain);
   const base = tokenName
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, "") // remove special chars
@@ -35,8 +38,25 @@ export function generateProjectSlug(
     .replace(/^-|-$/g, "") // trim leading/trailing hyphens
     .slice(0, 60); // max 60 chars for name portion
 
-  const slug = `${base}-${chain}`;
+  const namePart = base || "token";
+  const slug = `${namePart}-${chainSlug}`;
   return slug.length > 80 ? slug.slice(0, 80) : slug;
+}
+
+/**
+ * Build `/projects/[slug]?address=…` (optional userListingId).
+ */
+export function buildProjectHref(params: {
+  name: string;
+  address: string;
+  chain?: string | null;
+  userListingId?: string | null;
+}): string {
+  const slug = generateProjectSlug(params.name, params.chain ?? "solana");
+  const qs = new URLSearchParams();
+  qs.set("address", params.address);
+  if (params.userListingId) qs.set("userListingId", params.userListingId);
+  return `/projects/${encodeURIComponent(slug)}?${qs.toString()}`;
 }
 
 /**

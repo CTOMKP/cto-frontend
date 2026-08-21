@@ -12,6 +12,7 @@ export const CHAIN_SLUGS = [
   "sui",
   "ton",
   "base",
+  "movement",
 ] as const;
 
 export type ChainSlug = (typeof CHAIN_SLUGS)[number];
@@ -24,7 +25,37 @@ export const CHAIN_DISPLAY_NAMES: Record<ChainSlug, string> = {
   sui: "Sui",
   ton: "TON",
   base: "Base",
+  movement: "Movement",
 };
+
+/** Common API / UI aliases → canonical chain slug */
+const CHAIN_ALIASES: Record<string, ChainSlug> = {
+  sol: "solana",
+  solana: "solana",
+  eth: "ethereum",
+  ethereum: "ethereum",
+  bnb: "bsc",
+  bsc: "bsc",
+  "binance-smart-chain": "bsc",
+  aptos: "aptos",
+  sui: "sui",
+  ton: "ton",
+  base: "base",
+  movement: "movement",
+  move: "movement",
+};
+
+/**
+ * Normalize a chain string from the API/UI into a known {@link ChainSlug}.
+ * Falls back to `solana` when unknown (matches existing listing defaults).
+ */
+export function normalizeChainSlug(chain: string | null | undefined): ChainSlug {
+  if (!chain) return "solana";
+  const key = chain.trim().toLowerCase().replace(/\s+/g, "-");
+  if (CHAIN_ALIASES[key]) return CHAIN_ALIASES[key];
+  if ((CHAIN_SLUGS as readonly string[]).includes(key)) return key as ChainSlug;
+  return "solana";
+}
 
 /** Listing tier slugs (Section 4.2) */
 export const TIER_SLUGS = ["seed", "sprout", "bloom", "stellar"] as const;

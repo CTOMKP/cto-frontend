@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useState, useMemo, useEffect } from "react";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import type { AllUserListings, ApiCoinItem } from "@/types/api";
 import { Info } from "./features/ProjectProfileInfoTabs";
 import LoadingSkeleton from "./features/LoadingSkeleton";
@@ -15,10 +15,12 @@ import { formatAgeYMD } from "@/app/listings/features/utils/listingUtils";
 import { usePublicListingCoinQuery } from "@/hooks/usePublicListingCoinQuery";
 import { usePublicUserListingQuery } from "@/hooks/usePublicUserListingQuery";
 import { mapUserListingToApiCoinItem } from "@/lib/mapUserListingToApiCoinItem";
+import { buildProjectHref, generateProjectSlug } from "@/lib/utils/slugify";
 
 export default function ProjectProfilePage() {
   const [info, setInfo] = useState<Info>("about");
   const { id } = useParams();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const addressFromQuery = searchParams.get("address");
   const userListingId = searchParams.get("userListingId")?.trim() ?? "";
@@ -43,21 +45,31 @@ export default function ProjectProfilePage() {
       : null
     : ((publicListingQuery.data as ApiCoinItem | undefined) ?? null);
 
-  function formatRelativeAge(date: Date): string {
-    const diffMs = Date.now() - date.getTime();
-    const mins = Math.floor(diffMs / 60000);
-    if (mins < 60) return `${mins}min`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}hr`;
-    const days = Math.floor(hrs / 24);
-    if (days < 30) return `${days}d`;
-    const months = Math.floor(days / 30);
-    return `${months}mo`;
-  }
+  // Canonicalize URL to [token-name]-[chain] when slug is outdated (e.g. /projects/michi → /projects/michi-solana)
+  useEffect(() => {
+    if (!projectData?.name || !projectData?.contractAddress) return;
+    const idParam = Array.isArray(id) ? id[0] : id;
+    const currentSlug = typeof idParam === "string" ? decodeURIComponent(idParam) : "";
+    const canonicalSlug = generateProjectSlug(projectData.name, projectData.chain);
+    if (!currentSlug || currentSlug === canonicalSlug) return;
+
+    router.replace(
+      buildProjectHref({
+        name: projectData.name,
+        address: projectData.contractAddress,
+        chain: projectData.chain,
+        userListingId: userListingId || null,
+      }),
+    );
+  }, [projectData, id, router, userListingId]);
 
   function formatJoinedDate(dateString: string): string {
     const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "2-digit" });
+    return date.toLocaleDateString("en-US", {
+      month: "2-digit",
+      day: "2-digit",
+      year: "2-digit",
+    });
   }
 
   function formatAge(ageString: string | null): string {

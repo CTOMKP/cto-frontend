@@ -23,7 +23,7 @@ import ListingTableHeader from "./ListingTableHeader";
 import ListingTableRow from "./ListingTableRow";
 import ListingFilters from "./ListingFilters";
 import ListingPagination from "./ListingPagination";
-import { slugify } from "@/lib/utils/slugify";
+import { buildProjectHref } from "@/lib/utils/slugify";
 import dynamic from "next/dynamic";
 
 const TokenSwapCard = dynamic(() => import("@/components/TokenSwapCard"), {
@@ -221,12 +221,17 @@ export default function TopListings() {
   const showTableSkeleton =
     !!backendUrl && !data && (isPending || isFetching);
 
-  const handleProjectClick = (projectName: string, projectAddress: string) => {
-    const slug = slugify(projectName) || projectAddress;
+  const handleProjectClick = (
+    projectName: string,
+    projectAddress: string,
+    projectChain?: string,
+  ) => {
     router.push(
-      `/projects/${encodeURIComponent(slug)}?address=${encodeURIComponent(
-        projectAddress,
-      )}`,
+      buildProjectHref({
+        name: projectName,
+        address: projectAddress,
+        chain: projectChain,
+      }),
     );
   };
 

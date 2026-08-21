@@ -22,7 +22,7 @@ const TokenSwapCard = dynamic(() => import("@/components/TokenSwapCard"), {
   ssr: false,
 });
 import type { MockLikeCoin, SortField, SortDirection } from "@/app/listings/features/types/listing";
-import { slugify } from "@/lib/utils/slugify";
+import { buildProjectHref } from "@/lib/utils/slugify";
 import { CATEGORY_MOCK_LISTINGS } from "./categoryMockData";
 
 type CategoryPageContentProps = {
@@ -58,9 +58,18 @@ export default function CategoryPageContent({ categoryName }: CategoryPageConten
     setSortDirection(newDirection);
   };
 
-  const handleProjectClick = (projectName: string, projectAddress: string) => {
-    const slug = slugify(projectName);
-    router.push(`/projects/${slug}?address=${encodeURIComponent(projectAddress)}`);
+  const handleProjectClick = (
+    projectName: string,
+    projectAddress: string,
+    projectChain?: string,
+  ) => {
+    router.push(
+      buildProjectHref({
+        name: projectName,
+        address: projectAddress,
+        chain: projectChain,
+      }),
+    );
   };
 
   const handleBuyClick = (coin: MockLikeCoin) => {

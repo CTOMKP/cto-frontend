@@ -4,6 +4,11 @@ import { ApiCoinItem } from "@/types/api";
 import { shortenAddress } from "@/utils/helper/shortenAddress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "react-toastify";
+import { getChainImage } from "@/app/listings/features/utils/listingUtils";
+import {
+  CHAIN_DISPLAY_NAMES,
+  normalizeChainSlug,
+} from "@/lib/constants/slugs";
 
 interface ProjectHeaderProps {
   projectData: ApiCoinItem | null;
@@ -11,6 +16,11 @@ interface ProjectHeaderProps {
 }
 
 export default function ProjectHeader({ projectData, formatJoinedDate }: ProjectHeaderProps) {
+  const chainSlug = normalizeChainSlug(projectData?.chain);
+  const chainLabel = CHAIN_DISPLAY_NAMES[chainSlug] ?? chainSlug;
+  const displayName =
+    projectData?.name || projectData?.symbol || "CHILLGUY";
+
   const handleCopyAddress = async () => {
     const address = projectData?.contractAddress;
     if (!address) {
@@ -21,7 +31,7 @@ export default function ProjectHeader({ projectData, formatJoinedDate }: Project
     try {
       await navigator.clipboard.writeText(address);
       toast.success("Address copied to clipboard");
-    } catch (error) {
+    } catch {
       toast.error("Failed to copy address");
     }
   };
@@ -29,35 +39,56 @@ export default function ProjectHeader({ projectData, formatJoinedDate }: Project
   return (
     <div className="px-[100px] border-b border-b-[#8686864D]">
       <div className='mt-6.5 bg-[url("/project-profile/default-project-bg-img.png")] bg-cover bg-center bg-no-repeat h-[167px] rounded-t-lg'></div>
-      <Image
-        loading="lazy"
-        src={
-          projectData?.logoUrl ||
-          projectData?.metadata?.market?.logoUrl ||
-          "/project-profile/default-project-pfp.png"
-        }
-        alt="project-pfp"
-        width={80}
-        height={80}
-        className="size-[80px] ml-2 -mt-10 rounded-full"
-      />
+      <div className="relative ml-2 -mt-10 size-[80px]">
+        <Image
+          loading="lazy"
+          src={
+            projectData?.logoUrl ||
+            projectData?.metadata?.market?.logoUrl ||
+            "/project-profile/default-project-pfp.png"
+          }
+          alt="project-pfp"
+          width={80}
+          height={80}
+          className="size-[80px] rounded-full"
+        />
+        <Image
+          loading="lazy"
+          src={getChainImage(chainSlug)}
+          alt={chainLabel}
+          width={24}
+          height={24}
+          className="absolute bottom-0 right-0 size-6 rounded-full border border-[#010101] bg-[#010101]"
+          title={chainLabel}
+        />
+      </div>
       <div className="mt-6.5">
         <div>
           <div className="flex justify-between">
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 flex-wrap">
               <h1
                 className="font-bold text-[32px] mr-1 max-w-[200px] truncate"
-                title={projectData?.name || projectData?.symbol || "CHILLGUY"}
+                title={displayName}
               >
-                {(projectData?.name || projectData?.symbol || "CHILLGUY")
-                  .length > 12
-                  ? `${(
-                      projectData?.name ||
-                      projectData?.symbol ||
-                      "CHILLGUY"
-                    ).substring(0, 12)}...`
-                  : projectData?.name || projectData?.symbol || "CHILLGUY"}
-              </h1>{" "}
+                {displayName.length > 12
+                  ? `${displayName.substring(0, 12)}...`
+                  : displayName}
+              </h1>
+
+              <span
+                className="bg-[#FFFFFF0D] rounded-[26px] flex items-center gap-1.5 justify-center px-2 h-6 text-xs font-medium text-white/80"
+                title={chainLabel}
+              >
+                <Image
+                  loading="lazy"
+                  src={getChainImage(chainSlug)}
+                  alt=""
+                  width={14}
+                  height={14}
+                  className="size-3.5 rounded-full"
+                />
+                {chainLabel}
+              </span>
 
               <div className="flex items-center gap-1">
                 {(() => {

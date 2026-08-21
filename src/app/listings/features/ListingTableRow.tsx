@@ -16,7 +16,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 
 interface ListingTableRowProps {
   coin: MockLikeCoin;
-  onProjectClick: (projectName: string, projectAddress: string) => void;
+  onProjectClick: (
+    projectName: string,
+    projectAddress: string,
+    projectChain?: string,
+  ) => void;
   onBuyClick?: (coin: MockLikeCoin) => void;
 }
 
@@ -24,7 +28,7 @@ export default function ListingTableRow({ coin, onProjectClick, onBuyClick }: Li
   return (
     <TableRow
       className="border-none rounded-lg bg-[#FFFFFF]/5 h-13 hover:!bg-[#FFFFFF1A] cursor-pointer"
-      onClick={() => onProjectClick(coin.name, coin.address)}
+      onClick={() => onProjectClick(coin.name, coin.address, coin.chain)}
     >
       <TableCell>
         <div>

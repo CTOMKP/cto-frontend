@@ -147,6 +147,7 @@ export function getChainImage(chain: string): string {
     'aptos': '/listings-chains/aptos.png',
     'near': '/listings-chains/near.png',
     'osmosis': '/listings-chains/osmosis.jpg',
+    'movement': '/listings-chains/movement.png',
   };
   return chainMap[chain.toLowerCase()] || '/listings-chains/solana.png';
 }

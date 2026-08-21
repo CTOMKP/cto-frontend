@@ -18,7 +18,7 @@ import { ApiCoinItem } from "@/types/api";
 import { useRouter } from "next/navigation";
 import FallbackImage from "@/components/FallbackImage";
 import { formatAgeDisplay, formatAgeYMD } from "./utils/listingUtils";
-import { slugify } from "@/lib/utils/slugify";
+import { buildProjectHref } from "@/lib/utils/slugify";
 
 // Helper function to create shorter address for TrendingCommunity
 function shortenAddressForTrending(address: string): string {
@@ -38,6 +38,7 @@ function getChainImage(chain: string): string {
     'aptos': '/listings-chains/aptos.png',
     'near': '/listings-chains/near.png',
     'osmosis': '/listings-chains/osmosis.jpg',
+    'movement': '/listings-chains/movement.png',
   };
   return chainMap[chain.toLowerCase()] || '/listings-chains/solana.png';
 }
@@ -100,13 +101,18 @@ export default function TrendingCommunity({
 }) {
   const router = useRouter();
 
-  const handleRowClick = (projectName?: string, projectAddress?: string) => {
+  const handleRowClick = (
+    projectName?: string,
+    projectAddress?: string,
+    chain?: string,
+  ) => {
     if (!projectName || !projectAddress) return;
-    const slug = slugify(projectName) || projectName;
     router.push(
-      `/projects/${encodeURIComponent(slug)}?address=${encodeURIComponent(
-        projectAddress,
-      )}`,
+      buildProjectHref({
+        name: projectName,
+        address: projectAddress,
+        chain,
+      }),
     );
   };
 
@@ -270,7 +276,7 @@ export default function TrendingCommunity({
                 <TableRow
                   key={index}
                   className="border-none cursor-pointer"
-                  onClick={() => handleRowClick(data.name, data.address)}
+                  onClick={() => handleRowClick(data.name, data.address, data.chain)}
                 >
                   <TableCell className="!py-1">
                     <div className="flex items-center gap-1">
