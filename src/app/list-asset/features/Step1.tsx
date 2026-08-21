@@ -31,6 +31,7 @@ import dynamic from 'next/dynamic';
 
 /** Lazy: Solana + Movement payment stack (~1MB+) only when pay dialog opens. */
 const PaymentDialog = dynamic(() => import('./PaymentDialog'), { ssr: false });
+import { MEMECOIN_LISTING_FEE_USDC } from './listingPricing';
 
 interface Step1Props {
   selectedNetwork: string;
@@ -759,7 +760,7 @@ export default function Step1({
         onOpenChange={setPaymentDialogOpen}
         projectTitle={(scanResult?.details?.details?.metadata?.token_name || scanResult?.details?.metadata?.token_name || scanResult?.metadata?.token_name) || 'Token Listing'}
         listingId={scanResult?.details?.details?.id || scanResult?.details?.id || '#432738'}
-        listingFee={5}
+        listingFee={MEMECOIN_LISTING_FEE_USDC}
       />
 
       <div className="border border-white/20 rounded-lg px-2 py-4.5">

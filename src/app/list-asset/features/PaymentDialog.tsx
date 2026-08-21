@@ -32,6 +32,7 @@ import {
 } from '@/lib/solanaTransaction';
 import { getDefaultSolanaRpcUrl } from '@/lib/solanaRpc';
 import { MoonLoader } from 'react-spinners';
+import { MEMECOIN_LISTING_FEE_USDC } from './listingPricing';
 
 interface PaymentDialogProps {
   open: boolean;
@@ -47,7 +48,7 @@ export default function PaymentDialog({
   onOpenChange,
   projectTitle = "Project Listing",
   listingId,
-  listingFee = 5,
+  listingFee = MEMECOIN_LISTING_FEE_USDC,
   onPaymentSuccess,
 }: PaymentDialogProps) {
   const { user, authenticated } = usePrivy();
@@ -100,7 +101,7 @@ export default function PaymentDialog({
         : '';
   const solanaAddrKey = solanaDisplayAddress ?? '';
 
-  const totalAmount = listingFee + 9; // Listing fee + ad boost (example)
+  const totalAmount = listingFee;
 
   const displayUsdcBalance = paymentMethod === 'SOL' ? solanaUsdc : movementUsdc;
   const displayWalletAddress = paymentMethod === 'SOL' ? solanaAddress : movementAddress;

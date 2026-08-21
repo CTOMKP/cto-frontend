@@ -12,6 +12,7 @@ import dynamic from 'next/dynamic';
 import type { ScanResult } from '@/services/userListingsService';
 
 const PaymentDialog = dynamic(() => import('./PaymentDialog'), { ssr: false });
+import { MEMECOIN_LISTING_FEE_USDC } from './listingPricing';
 import { SocialLinks } from './Step2';
 import { toast } from 'react-toastify';
 
@@ -236,7 +237,7 @@ export default function Step3({
           onOpenChange={setPaymentDialogOpen}
           projectTitle={title || "Project Listing"}
           listingId={listingId}
-          listingFee={5}
+          listingFee={MEMECOIN_LISTING_FEE_USDC}
           onPaymentSuccess={onPaymentSuccess}
         />
       )}
