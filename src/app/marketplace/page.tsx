@@ -4,9 +4,17 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useMarketplaceFeedQuery } from "@/hooks/useMarketplaceFeedQuery";
 import { Button } from "@/components/ui/button";
-import { BadgeCheck, Clock, EllipsisVertical, ListFilter, MoreHorizontal, Plus, Search } from "lucide-react";
+import { Clock, EllipsisVertical, Globe2, MoreHorizontal, Plus, RefreshCw, Search, Sparkles, Zap } from "lucide-react";
 import Image from "next/image";
 import MarketplaceTrendingFilter, { type Category } from "./features/MarketplaceTrendingFilter";
+import MarketplaceAdsFilter, {
+  EMPTY_MARKETPLACE_FILTERS,
+  matchesMarketplaceFilters,
+  type MarketplaceAdFilters,
+} from "./features/MarketplaceAdsFilter";
+import MarketplaceCategoryDropdowns, {
+  matchesCategorySelection,
+} from "./features/MarketplaceCategoryDropdowns";
 import { Input } from "@/components/ui/input";
 import { getCloudFrontUrl } from "@/utils/helper/image-url-helper";
 
@@ -118,19 +126,46 @@ const getDaysAgo = (dateStr?: string | null) => {
   return Math.floor(diff / 86400000);
 };
 
+const BOOST_TAGS = [
+  {
+    id: "autoBump",
+    label: "Auto-Bump",
+    color: "#D57300",
+    Icon: RefreshCw,
+    matches: (ad: MarketplaceAd) =>
+      typeof ad.autoBumpDays === "number" && ad.autoBumpDays > 0,
+  },
+  {
+    id: "spotlight",
+    label: "Spotlight",
+    color: "#BE9500",
+    Icon: Sparkles,
+    matches: (ad: MarketplaceAd) => !!ad.homepageSpotlight,
+  },
+  {
+    id: "urgent",
+    label: "Urgent",
+    color: "#AD0516",
+    Icon: Zap,
+    matches: (ad: MarketplaceAd) => !!ad.urgentTag,
+  },
+  {
+    id: "multichain",
+    label: "Multi-Chain",
+    color: "#008F72",
+    Icon: Globe2,
+    matches: (ad: MarketplaceAd) => !!ad.multiChainTag,
+  },
+] as const;
+
 export default function MarketplacePage() {
   const [category, setCategory] = useState<Category>("trending");
   const [searchTerm, setSearchTerm] = useState('');
   const [marketTab, setMarketTab] = useState<'forYou' | 'new' | 'trending'>('trending');
   const [roleFilter, setRoleFilter] = useState<string>('');
-
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-  };
-
-  const handleRoleFilter = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setRoleFilter(e.target.value);
-  };
+  const [adFilters, setAdFilters] = useState<MarketplaceAdFilters>(EMPTY_MARKETPLACE_FILTERS);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
 
   const handleMarketTabChange = (next: Category) => {
     setCategory(next);
@@ -170,7 +205,13 @@ export default function MarketplacePage() {
       const role = (ad.offerType || '').toLowerCase();
       const matchesQuery = !query || title.includes(query) || category.includes(query) || sub.includes(query);
       const matchesRole = !roleFilter || role === roleFilter.toLowerCase();
-      return matchesQuery && matchesRole;
+      const matchesFilters = matchesMarketplaceFilters(ad, adFilters);
+      const matchesCategory = matchesCategorySelection(
+        ad,
+        selectedCategoryId,
+        selectedSubcategory,
+      );
+      return matchesQuery && matchesRole && matchesFilters && matchesCategory;
     });
     return list.sort((a, b) => {
       if (marketTab === 'trending') {
@@ -188,7 +229,7 @@ export default function MarketplacePage() {
       const bTime = new Date(b.createdAt || 0).getTime();
       return bTime - aTime;
     });
-  }, [publicAds, searchTerm, roleFilter, marketTab]);
+  }, [publicAds, searchTerm, roleFilter, adFilters, selectedCategoryId, selectedSubcategory, marketTab]);
 
   return (
     <div>
@@ -219,7 +260,7 @@ export default function MarketplacePage() {
         </div>
       </section>
 
-      <section className="md:mx-25 mx-5">
+      <section className="md:mx-15 xly:mx-25 mx-5">
         {feedQuery.isError && (
           <div
             className="mt-4 mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-red-500/35 bg-red-500/10 px-3 py-2 text-sm text-red-200/90"
@@ -240,11 +281,19 @@ export default function MarketplacePage() {
             Loading ads…
           </p>
         )}
-        <div className="flex items-center justify-between mt-4 mb-8">
-          <MarketplaceTrendingFilter
-            selected={category}
-            onChange={handleMarketTabChange}
-          />
+        <div className="flex flex-wrap items-center justify-between gap-3 mt-4 mb-8">
+          <div className="flex flex-wrap items-center gap-2">
+            <MarketplaceCategoryDropdowns
+              categoryId={selectedCategoryId}
+              subcategory={selectedSubcategory}
+              onCategoryChange={setSelectedCategoryId}
+              onSubcategoryChange={setSelectedSubcategory}
+            />
+            <MarketplaceTrendingFilter
+              selected={category}
+              onChange={handleMarketTabChange}
+            />
+          </div>
           <div className="flex items-center gap-2">
             <div className="relative flex items-center">
               <Input
@@ -256,13 +305,11 @@ export default function MarketplacePage() {
               <Search size={16} color="#FFFFFF50" className="absolute left-2" />
             </div>
 
-            <div className="p-2 bg-white/3 text-sm text-[#FFFFFF80] border-[0.5px] border-[#FFFFFF20] flex items-center gap-1 rounded-lg">
-              <ListFilter size={15} color="#FFFFFF80" /> <span>Filter</span>
-            </div>
+            <MarketplaceAdsFilter value={adFilters} onChange={setAdFilters} />
           </div>
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto hover-scrollbar mb-8">
+        {/* <div className="flex items-center gap-2 overflow-x-auto hover-scrollbar mb-8">
           {roles.map((role) => (
             <button
             onClick={() => setRoleFilter(roleFilter === role ? '' : role)} 
@@ -270,9 +317,9 @@ export default function MarketplacePage() {
               {role}
             </button>
           ))}
-        </div>
+        </div> */}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 justify-items-center sm:justify-items-stretch mb-2">
+        <div className="grid w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 justify-items-stretch mb-2">
           {orderedAds.map((ad, index) => {
             const imageUrl =
             toCloudFrontUrl((Array.isArray(ad.images) ? ad.images[0] : undefined)) ||
@@ -287,15 +334,30 @@ export default function MarketplacePage() {
             <Link
               key={ad.id ?? String(index)}
               href={`/marketplace/${ad.id ?? ''}`}
-              className="w-full max-w-sm rounded-lg border border-white/10 overflow-hidden shrink-0 block focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+              className="w-full min-w-0 rounded-lg border border-white/10 overflow-hidden block focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
             >
           <div className="relative aspect-[4/3]">
-            <div className="absolute top-0 left-0 flex border-[0.5px] border-white/20 rounded-br-lg rounded-tl-lg items-center gap-1 bg-[#FFCB450A] px-2 py-1 text-xs text-[#FFCB45B2]">
+            <div className="absolute top-2.5 flex items-center gap-1 px-2 py-1 text-xs text-[#FFCB45B2]">
               <Clock className="h-3.5 w-3.5" />
               <span>{expiryCountdown}</span>
             </div>
-            <div className="absolute top-0 right-0 h-5.5 w-10 rounded-bl-lg bg-[#892BFF]/20 flex items-center justify-center">
+            {/* <div className="absolute top-0 right-0 h-5.5 w-10 rounded-bl-lg bg-[#892BFF]/20 flex items-center justify-center">
               <BadgeCheck color="#892BFF" className="h-4 w-4 text-white" />
+            </div> */}
+            <div className="absolute top-2.5 right-2 z-10 flex items-end gap-1">
+              {BOOST_TAGS.filter((tag) => tag.matches(ad)).map(({ id, label, color, Icon }) => (
+                <span
+                  key={id}
+                  className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[12px] font-medium"
+                  style={{                     color,
+                    borderColor: color,
+                    backgroundColor: `${color}33`,
+                  }}
+                >
+                  <Icon className="h-3 w-3" strokeWidth={2} />
+                  {label}
+                </span>
+              ))}
             </div>
             <div className="absolute top-10 w-full h-full px-2.5 rounded-[6px]">
             <Image className="w-full h-full object-cover rounded-[6px]" src={imageUrl} alt={ad.title ?? 'Ad'} width={600} height={600} />
