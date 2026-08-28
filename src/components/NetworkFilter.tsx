@@ -4,6 +4,7 @@ import { Button } from "./ui/button";
 import { ChevronDown, Check, Globe } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 export type Network = "solana" | "ethereum" | "bsc" | "sui" | "base" | "aptos" | "near" | "osmosis";
 
@@ -14,6 +15,7 @@ export default function NetworkFilter({
   selectedNetwork: Network | null;
   onChange: (network: Network | null) => void;
 }) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
 
   const networks = [
@@ -53,7 +55,7 @@ export default function NetworkFilter({
             : "bg-transparent text-[#A1A1AA]"
         }`}
       >
-        All
+        {t("common.all")}
       </Button>
 
       {/* Network images - responsive count */}
@@ -184,7 +186,7 @@ export default function NetworkFilter({
             >
               <div className="flex items-center gap-2">
                 <Globe size={24} className="text-white" />
-                <span className="text-white text-sm">All</span>
+                <span className="text-white text-sm">{t("common.all")}</span>
               </div>
               {selectedNetwork === null ? (
                 <Check size={16} color="#A1A1AA" />

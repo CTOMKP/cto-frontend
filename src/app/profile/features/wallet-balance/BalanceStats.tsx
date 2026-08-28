@@ -1,5 +1,6 @@
 import React from "react";
 import { ChevronUp } from "lucide-react";
+import FiatText from "@/components/FiatText";
 
 export default function BalanceStats() {
   return (
@@ -12,8 +13,9 @@ export default function BalanceStats() {
           fill="#16C784"
         />
         <span className="font-medium">6.00%</span>
-
-        <span className="text-xs text-[#16C784]">($1,5960,324)</span>
+        <span className="text-xs text-[#16C784]">
+          (<FiatText usd={15960324} compact={false} />)
+        </span>
       </span>
     </div>
   );

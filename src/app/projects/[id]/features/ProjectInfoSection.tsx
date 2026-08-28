@@ -1,8 +1,12 @@
+"use client";
+
 import Image from "next/image";
 import ProjectProfileInfoTabs, { Info } from "./ProjectProfileInfoTabs";
 import { ApiCoinItem } from "@/types/api";
 import { compactNumber } from "@/utils/helper/compactNumber";
+import FiatText from "@/components/FiatText";
 import ProjectStatsCard from "./ProjectStatsCard";
+import { useTranslation } from "react-i18next";
 
 interface ProjectInfoSectionProps {
   info: Info;
@@ -17,6 +21,7 @@ export default function ProjectInfoSection({
   projectData,
   formatAge 
 }: ProjectInfoSectionProps) {
+  const { t } = useTranslation();
   return (
     <div className="px-[100px] mt-4">
       <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] w-full p-[1px] rounded-xl inline-block">
@@ -26,29 +31,35 @@ export default function ProjectInfoSection({
           {info === "about" && (
             <div className="mt-4 grid grid-cols-5 gap-[5px]">
               <ProjectStatsCard
-                title="Market cap"
+                title={t("project.marketCap")}
                 showInfoIcon
-                value={`$${compactNumber(
-                  projectData?.marketCap ||
-                    projectData?.metadata?.market?.fdv ||
-                    38700000
-                )}`}
+                value={
+                  <FiatText
+                    usd={
+                      projectData?.marketCap ||
+                      projectData?.metadata?.market?.fdv ||
+                      38700000
+                    }
+                  />
+                }
               />
               <ProjectStatsCard
-                title="Liquidity"
+                title={t("project.liquidity")}
                 value={
                   <>
-                    ${compactNumber(
-                      projectData?.liquidityUsd ||
+                    <FiatText
+                      usd={
+                        projectData?.liquidityUsd ||
                         projectData?.metadata?.market?.liquidityUsd ||
                         3000000
-                    )}{" "}
+                      }
+                    />{" "}
                     <Image loading="lazy" src="/lock.svg" alt="lock" width={24} height={24} />
                   </>
                 }
               />
               <ProjectStatsCard
-                title="Age"
+                title={t("project.age")}
                 showInfoIcon
                 value={
                   projectData?.age
@@ -57,7 +68,7 @@ export default function ProjectInfoSection({
                 }
               />
               <ProjectStatsCard
-                title="Risk"
+                title={t("project.risk")}
                 showInfoIcon
                 value={
                   <>
@@ -86,7 +97,7 @@ export default function ProjectInfoSection({
                 }
               />
               <ProjectStatsCard
-                title="Community score"
+                title={t("project.communityScore")}
                 showInfoIcon
                 value={
                   <>

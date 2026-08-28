@@ -10,8 +10,14 @@ import {
 import { useState, useMemo, useEffect } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import { listingKeys, type ListingTableFilters } from "@/lib/queryKeys";
-import { fetchListingTable } from "@/services/listingPublicService";
+import {
+  buildCombinedListingPage,
+  fetchListingTable,
+  fetchListingTableSources,
+  LISTING_TABLE_PAGE_SIZE,
+} from "@/services/listingPublicService";
 import { Category } from "../../../components/ListingsCategoryFilter";
 import { MemeCategory } from "../../../components/MemeCategoryFilter";
 import { Network } from "../../../components/NetworkFilter";
@@ -23,7 +29,7 @@ import ListingTableHeader from "./ListingTableHeader";
 import ListingTableRow from "./ListingTableRow";
 import ListingFilters from "./ListingFilters";
 import ListingPagination from "./ListingPagination";
-import { slugify } from "@/lib/utils/slugify";
+import { buildProjectHref } from "@/lib/utils/slugify";
 import dynamic from "next/dynamic";
 
 const TokenSwapCard = dynamic(() => import("@/components/TokenSwapCard"), {
@@ -32,13 +38,13 @@ const TokenSwapCard = dynamic(() => import("@/components/TokenSwapCard"), {
 
 
 export default function TopListings() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [category, setCategory] = useState<Category>("new");
   const [memeCategory, setMemeCategory] = useState<MemeCategory>("all");
   const [selectedNetwork, setSelectedNetwork] = useState<Network | null>(null);
   const [page, setPage] = useState<number>(1);
-
-  const [limit] = useState<number>(20);
+  const limit = LISTING_TABLE_PAGE_SIZE;
   const [liveItems, setLiveItems] = useState<MockLikeCoin[]>([]);
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
@@ -55,20 +61,45 @@ export default function TopListings() {
     [page, limit, selectedNetwork],
   );
 
-  const {
-    data,
-    isFetching,
-    isPending,
-    isError,
-    refetch,
-  } = useQuery({
+  const sourcesQuery = useQuery({
+    queryKey: listingKeys.tableSources(tableFilters.chain),
+    queryFn: ({ signal }) => fetchListingTableSources(tableFilters.chain, signal),
+    enabled: !!backendUrl,
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+  });
+
+  const combinedPage = useMemo(
+    () =>
+      buildCombinedListingPage(
+        sourcesQuery.data,
+        page,
+        limit,
+        tableFilters.chain,
+      ),
+    [sourcesQuery.data, page, limit, tableFilters.chain],
+  );
+
+  const needsRemotePage =
+    sourcesQuery.isSuccess &&
+    !combinedPage.fullyLoaded &&
+    combinedPage.loadedCount < Math.min(combinedPage.total, page * limit);
+
+  const remotePageQuery = useQuery({
     queryKey: listingKeys.table(tableFilters),
     queryFn: ({ signal }) => fetchListingTable(tableFilters, signal),
-    enabled: !!backendUrl,
+    enabled: !!backendUrl && needsRemotePage,
     placeholderData: keepPreviousData,
     staleTime: 60_000,
     gcTime: 5 * 60_000,
   });
+
+  const data = needsRemotePage ? remotePageQuery.data : combinedPage;
+  const isError = sourcesQuery.isError || (needsRemotePage && remotePageQuery.isError);
+  const refetch = () => {
+    void sourcesQuery.refetch();
+    if (needsRemotePage) void remotePageQuery.refetch();
+  };
 
   const total = data?.total ?? 0;
   const rawApiItems: ApiCoinItem[] = data?.items ?? [];
@@ -219,14 +250,23 @@ export default function TopListings() {
   const filteredData = listings[category];
 
   const showTableSkeleton =
-    !!backendUrl && !data && (isPending || isFetching);
+    !!backendUrl &&
+    ((!sourcesQuery.data && sourcesQuery.isPending) ||
+      (needsRemotePage && !remotePageQuery.data && remotePageQuery.isPending));
 
-  const handleProjectClick = (projectName: string, projectAddress: string) => {
-    const slug = slugify(projectName) || projectAddress;
+  const handleProjectClick = (
+    projectName: string,
+    projectAddress: string,
+    projectChain?: string,
+    userListingId?: string,
+  ) => {
     router.push(
-      `/projects/${encodeURIComponent(slug)}?address=${encodeURIComponent(
-        projectAddress,
-      )}`,
+      buildProjectHref({
+        name: projectName,
+        address: projectAddress,
+        chain: projectChain,
+        userListingId: userListingId || null,
+      }),
     );
   };
 
@@ -254,7 +294,7 @@ export default function TopListings() {
               className="shrink-0 rounded-md border border-amber-400/50 px-2 py-1 text-xs font-medium hover:bg-amber-500/20"
               onClick={() => refetch()}
             >
-              Retry
+              {t("common.retry")}
             </button>
           </div>
         )}
@@ -268,10 +308,10 @@ export default function TopListings() {
                 height={16}
               />
               {category === "gainers"
-                ? "Top Gainers"
+                ? t("listings.topGainers")
                 : category === "losers"
-                ? "Top Losers"
-                : "New Listings"}
+                ? t("listings.topLosers")
+                : t("listings.newListings")}
               <Image
                 className="mt-0.5"
                 src="/info.svg"
@@ -306,7 +346,7 @@ export default function TopListings() {
                   ) : (
                     (filteredData ?? []).map((coin, index) => (
                       <ListingTableRow
-                        key={index}
+                        key={coin.listingId ?? `${coin.address}-${index}`}
                         coin={coin}
                         onProjectClick={handleProjectClick}
                         onBuyClick={handleBuyClick}

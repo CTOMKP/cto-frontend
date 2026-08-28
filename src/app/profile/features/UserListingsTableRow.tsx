@@ -6,11 +6,13 @@ import { Button } from "@/components/ui/button";
 import { TableRow, TableCell } from "@/components/ui/table";
 import { shortenAddress } from "@/utils/helper/shortenAddress";
 import { compactNumber } from "@/utils/helper/compactNumber";
+import FiatText from "@/components/FiatText";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { MockLikeCoin } from "@/app/listings/features/types/listing";
 import { getChainImage } from "@/app/listings/features/utils/listingUtils";
 import FallbackImage from "@/components/FallbackImage";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useTranslation } from "react-i18next";
 
 interface UserListingsTableRowProps {
   coin: MockLikeCoin;
@@ -21,6 +23,7 @@ export default function UserListingsTableRow({
   coin,
   onListingRowClick,
 }: UserListingsTableRowProps) {
+  const { t } = useTranslation();
   return (
     <TableRow
       className="border-none rounded-lg bg-[#FFFFFF]/5 h-13 hover:!bg-[#FFFFFF1A] cursor-pointer"
@@ -47,11 +50,11 @@ export default function UserListingsTableRow({
       </TableCell>
       <TableCell>
         <div className="flex items-center h-full gap-1">
-            <div className="relative">
+            <div className="relative size-7 shrink-0">
               <FallbackImage
                 src={coin.image && coin.image.trim() !== "" ? coin.image : undefined}
                 alt={coin.name || "token"}
-                className="size-7 rounded-full border-[0.36px] border-white"
+                className="size-7 rounded-full object-cover border-[0.36px] border-white"
                 width={28}
                 height={28}
               />
@@ -219,9 +222,9 @@ export default function UserListingsTableRow({
 
       <TableCell className="flex justify-center">
         <div>
-          <span className="font-medium">${compactNumber(coin.marketCap)}</span>
+          <span className="font-medium"><FiatText usd={coin.marketCap} /></span>
           <span className="flex gap-1 font-medium items-center text-xs">
-            <span>${compactNumber(coin.liquidity)}</span>
+            <FiatText usd={coin.liquidity} />
             <Image
               loading="lazy"
               src="/lock.svg"
@@ -240,7 +243,7 @@ export default function UserListingsTableRow({
               {coin.holders != null && coin.holders > 0 ? (
                 compactNumber(coin.holders)
               ) : (
-                <span className="text-[#FFFFFF]/50 italic">N/A</span>
+                <span className="text-[#FFFFFF]/50 italic">{t("common.na")}</span>
               )}
             </span>
           </div>
@@ -251,7 +254,7 @@ export default function UserListingsTableRow({
 
       <TableCell className="flex justify-center">
         <div className="flex flex-col items-center">
-          <span className="font-medium">${coin.price.amount}</span>
+          <span className="font-medium"><FiatText usd={coin.price.amount} compact={false} /></span>
           <span
             className={`flex font-medium items-center text-xs ${
               coin.price.change["24h"] < 0 ? "text-[#C71624]" : "text-[#16C784]"

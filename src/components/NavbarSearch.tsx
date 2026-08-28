@@ -21,8 +21,9 @@ import { Button } from "./ui/button";
 import { ChevronDown, ChevronUp, ListFilter } from "lucide-react";
 import { shortenAddress } from "@/utils/helper/shortenAddress";
 import Link from "next/link";
-import { compactNumber } from "@/utils/helper/compactNumber";
+import FiatText from "@/components/FiatText";
 import Image from "next/image";
+import { useTranslation } from "react-i18next";
 
 export type Filter = "all" | "memecoins" | "emojicoins";
 
@@ -240,14 +241,15 @@ const history = [
 ]
 
 export default function NavbarSearch() {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState<string | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<Filter>("all");
     const filters: Filter[] = ["all", "memecoins", "emojicoins"];
   
     const labels: Record<Filter, string> = {
-      all: "All",
-      memecoins: "Memecoins",
-      emojicoins: "Emojicoins",
+      all: t("filters.all"),
+      memecoins: t("filters.memecoins"),
+      emojicoins: t("filters.emojicoins"),
     };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -269,7 +271,7 @@ export default function NavbarSearch() {
           <Input
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-7 h-[52px] w-[363px] rounded-[8px] text-base text-white placeholder:text-[#FFFFFF80] border-[0.2px] border-[#FFFFFF20] focus:!border-[0.2px] focus:!border-white focus-visible:ring-0"
-            placeholder="Search Token, Contract or Users"
+            placeholder={t("search.placeholder")}
           />
           <span className="absolute right-2 bg-[#FFFFFF0D] text-[#FFFFFF80] rounded-[4px] flex justify-center items-center text-xs w-[39px] h-[24px]">
             Ctrl k
@@ -280,7 +282,7 @@ export default function NavbarSearch() {
         <DialogHeader className="hidden !flex-row justify-between items-center pb-2 border-b-[0.5px] border-[#FFFFFF20]">
           <div>
             <DialogTitle className="font-bold text-white text-base">
-              Search
+              {t("search.title")}
             </DialogTitle>
           </div>
         </DialogHeader>
@@ -298,7 +300,7 @@ export default function NavbarSearch() {
             <Input
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-7 h-12 w-full rounded-[8px] text-base text-white placeholder:text-[#FFFFFF80] border-[0.2px] border-[#FFFFFF20] focus:!border-[0.2px] focus:!border-white focus-visible:ring-0"
-              placeholder="Search Token, Contract or Users"
+              placeholder={t("search.placeholder")}
             />
             <span className="absolute right-2 bg-[#FFFFFF0D] text-[#FFFFFF80] rounded-[4px] flex justify-center items-center text-xs w-[39px] h-[24px]">
               Ctrl k
@@ -309,7 +311,7 @@ export default function NavbarSearch() {
         </div>
 
         <div className="flex gap-2 items-center my-6">
-          <span className="mr-3 text-sm text-[#FFFFFFB2]">History:</span>
+          <span>History:</span>
           {history.map((history, index) => (
             <span className="py-1 uppercase flex items-center rounded-lg text-base font-medium text-white gap-1 px-2 bg-[#17171C]" key={index}><Image loading="lazy" className="size-4 border-[0.2px] border-[#FFFFFF] rounded-full" src={history.img} alt={history.coin} width={16} height={16} />{history.coin}</span>
           ))}
@@ -339,9 +341,9 @@ export default function NavbarSearch() {
               <TableHead className="!font-bold">
                 <span className="hidden">Watchlist button</span>
               </TableHead>
-              <TableHead className="!font-bold w-70">Name</TableHead>
-              <TableHead className="!font-bold">Price</TableHead>
-              <TableHead className="!font-bold text-end">MC / Liq</TableHead>
+              <TableHead className="!font-bold w-70">{t("common.name")}</TableHead>
+              <TableHead className="!font-bold">{t("common.price")}</TableHead>
+              <TableHead className="!font-bold text-end">{t("listings.mcLiq")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -446,7 +448,7 @@ export default function NavbarSearch() {
                 <TableCell>
                   <div>
                     <span className={`text-xs font-medium`}>
-                      ${coin.price.amount}
+                      <FiatText usd={coin.price.amount} compact={false} />
                     </span>
                     <span
                       className={`flex font-medium items-end text-[10px] ${
@@ -483,10 +485,10 @@ export default function NavbarSearch() {
                   <div className="flex justify-end">
                         <div>
                     <span className={`text-xs font-medium`}>
-                      ${compactNumber(coin.marketCap)}
+                      <FiatText usd={coin.marketCap} />
                     </span>
                     <span className="flex font-medium items-center text-[10px]">
-                      <span>${compactNumber(coin.liquidity)}</span>
+                      <FiatText usd={coin.liquidity} />
                       <Image
                         loading="lazy"
                         src="/lock.svg"

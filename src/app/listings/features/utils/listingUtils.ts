@@ -147,6 +147,7 @@ export function getChainImage(chain: string): string {
     'aptos': '/listings-chains/aptos.png',
     'near': '/listings-chains/near.png',
     'osmosis': '/listings-chains/osmosis.jpg',
+    'movement': '/listings-chains/movement.png',
   };
   return chainMap[chain.toLowerCase()] || '/listings-chains/solana.png';
 }
@@ -185,6 +186,7 @@ export function mapApiCoinItemsToMockLikeCoins(items: ApiCoinItem[]): MockLikeCo
     }
 
     return {
+      listingId: it.metadata?.market?.source === "user-listing" ? it.id : undefined,
       name: it.name || it.symbol || "",
       whale: false,
       age: ageStr,

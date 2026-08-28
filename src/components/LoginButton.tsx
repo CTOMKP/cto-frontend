@@ -3,8 +3,10 @@
 import React from "react";
 import { Button } from "./ui/button";
 import { usePrivyAuth } from "@/hooks/usePrivyAuth";
+import { useTranslation } from "react-i18next";
 
 export default function LoginButton() {
+  const { t } = useTranslation();
   const { login } = usePrivyAuth();
 
   const handleLogin = async () => {
@@ -21,7 +23,7 @@ export default function LoginButton() {
       onClick={handleLogin}
       className="h-10 w-20 rounded-4xl cta-gradient text-base text-white"
     >
-      Login
+      {t("common.login")}
     </Button>
     </div>
   );

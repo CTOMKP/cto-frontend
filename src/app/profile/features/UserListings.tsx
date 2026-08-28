@@ -12,7 +12,7 @@ import { useUserListingsQuery } from "@/hooks/useUserListingsQuery";
 import UserListingsTableHeader from "./UserListingsTableHeader";
 import UserListingsTableRow from "./UserListingsTableRow";
 import UserListingsTableSkeleton from "./UserListingsTableSkeleton";
-import { slugify } from "@/lib/utils/slugify";
+import { buildProjectHref } from "@/lib/utils/slugify";
 import { formatAgeDisplay } from "@/app/listings/features/utils/listingUtils";
 
 function mapMineItemsToTableRows(items: AllUserListings[]): MockLikeCoin[] {
@@ -179,17 +179,13 @@ export default function UserListings() {
       return;
     }
 
-    const slug = slugify(coin.name) || coin.address;
-    if (listingId && status === "PUBLISHED") {
-      router.push(
-        `/projects/${encodeURIComponent(slug)}?address=${encodeURIComponent(coin.address)}&userListingId=${encodeURIComponent(listingId)}`,
-      );
-      return;
-    }
-
-    router.push(
-      `/projects/${encodeURIComponent(slug)}?address=${encodeURIComponent(coin.address)}`,
-    );
+    const href = buildProjectHref({
+      name: coin.name,
+      address: coin.address,
+      chain: coin.chain,
+      userListingId: listingId && status === "PUBLISHED" ? listingId : null,
+    });
+    router.push(href);
   };
 
   return (

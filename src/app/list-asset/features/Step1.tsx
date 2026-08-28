@@ -31,6 +31,9 @@ import dynamic from 'next/dynamic';
 
 /** Lazy: Solana + Movement payment stack (~1MB+) only when pay dialog opens. */
 const PaymentDialog = dynamic(() => import('./PaymentDialog'), { ssr: false });
+import { MEMECOIN_LISTING_FEE_USDC } from './listingPricing';
+import FiatText from '@/components/FiatText';
+import { formatFiat } from '@/lib/formatFiat';
 
 interface Step1Props {
   selectedNetwork: string;
@@ -126,10 +129,8 @@ export const getRiskScoreIcon = (score: number) => {
 
 // Helper function to format currency
 export const formatCurrency = (value: number | undefined) => {
-  if (!value) return "N/A";
-  if (value >= 1000000) return `$${(value / 1000000).toFixed(2)}M`;
-  if (value >= 1000) return `$${(value / 1000).toFixed(2)}K`;
-  return `$${value.toFixed(2)}`;
+  if (value == null || !Number.isFinite(value)) return "N/A";
+  return formatFiat(value, { compact: true });
 };
 
 // Helper function to format number
@@ -589,9 +590,9 @@ export default function Step1({
                             <p><span className='text-white/70'>Created:</span> <span>{metadata?.creation_date ? new Date(metadata.creation_date).toLocaleDateString() : 'N/A'}</span></p>
                           </div>
                           <div className='space-y-4.5'>
-                            <p><span className='text-white/70'>Price:</span> <span>${metadata?.token_price ? metadata.token_price.toFixed(6) : 'N/A'}</span></p>
-                            <p><span className='text-white/70'>Market cap:</span> <span>{formatCurrency(metadata?.market_cap)}</span></p>
-                            <p><span className='text-white/70'>24h volume:</span> <span>{formatCurrency(metadata?.volume_24h)}</span></p>
+                            <p><span className='text-white/70'>Price:</span> <span>{metadata?.token_price != null ? <FiatText usd={metadata.token_price} compact={false} /> : 'N/A'}</span></p>
+                            <p><span className='text-white/70'>Market cap:</span> <span><FiatText usd={metadata?.market_cap} /></span></p>
+                            <p><span className='text-white/70'>24h volume:</span> <span><FiatText usd={metadata?.volume_24h} /></span></p>
                           </div>
                         </div>
                       </div>
@@ -621,7 +622,7 @@ export default function Step1({
                         <div className='text-center space-y-[2px] w-full'>
                           <h3 className='text-white/50 font-bold text-xs'>LP Security</h3>
                           <div className='flex items-center gap-1 justify-center'>
-                            <span className='font-bold text-[24px]'>{formatCurrency(metadata?.lp_amount_usd)}</span>
+                            <span className='font-bold text-[24px]'><FiatText usd={metadata?.lp_amount_usd} /></span>
                             {(metadata?.lp_locked || metadata?.lp_burned) && (
                               <Image loading="lazy" src={'/lock.svg'} alt={'lock'} width={23} height={23} />
                             )}
@@ -715,7 +716,7 @@ export default function Step1({
         onOpenChange={setPaymentDialogOpen}
         projectTitle={(scanResult?.details?.details?.metadata?.token_name || scanResult?.details?.metadata?.token_name || scanResult?.metadata?.token_name) || 'Token Listing'}
         listingId={scanResult?.details?.details?.id || scanResult?.details?.id || '#432738'}
-        listingFee={5}
+        listingFee={MEMECOIN_LISTING_FEE_USDC}
       />
 
       <div className="border border-white/20 rounded-lg px-2 py-4.5">

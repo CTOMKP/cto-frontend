@@ -40,11 +40,16 @@ export type MarketplacePricingCatalog = {
   categories?: Array<{
     id: string;
     name: string;
-    defaultPriceUsd: number;
-    active: boolean;
-    postTypes: Array<'LOOKING_FOR' | 'OFFERING'>;
-    defaultPostType: 'LOOKING_FOR' | 'OFFERING';
-    subcategories: Array<{ id: string; name: string; priceUsd: number; active: boolean }>;
+    defaultPriceUsd?: number;
+    active?: boolean;
+    postTypes?: Array<"LOOKING_FOR" | "OFFERING">;
+    defaultPostType?: "LOOKING_FOR" | "OFFERING";
+    subcategories: Array<{
+      id: string;
+      name: string;
+      priceUsd?: number;
+      active?: boolean;
+    }>;
   }>;
   addons?: Array<{ id: string; name: string; priceUsd: number; active: boolean }>;
   legacyVisibilityTierPricingEnabled?: boolean;

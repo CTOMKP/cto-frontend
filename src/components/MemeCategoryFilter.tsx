@@ -1,6 +1,7 @@
 'use client'
 
 import { Button } from "./ui/button";
+import { useTranslation } from "react-i18next";
 
 export type MemeCategory = "all" | "meme" | "emoji";
 
@@ -11,12 +12,13 @@ export default function MemeCategoryFilter({
   selected: MemeCategory;
   onChange: (category: MemeCategory) => void;
 }) {
+  const { t } = useTranslation();
   const categories: MemeCategory[] = ["all", "meme", "emoji"];
 
   const labels: Record<MemeCategory, string> = {
-    all: "All",
-    meme: "Meme",
-    emoji: "Emoji",
+    all: t("filters.all"),
+    meme: t("filters.meme"),
+    emoji: t("filters.emoji"),
   };
 
   return (

@@ -16,7 +16,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ChevronDown, ChevronRight, ChevronUp } from "lucide-react";
-import { compactNumber } from "@/utils/helper/compactNumber";
+import FiatText from "@/components/FiatText";
+import { useTranslation } from "react-i18next";
 import Link from "next/link";
 import Image from "next/image";
 import { shortenAddress } from "@/utils/helper/shortenAddress";
@@ -222,13 +223,14 @@ const watchListData = [
 ];
 
 export default function WatchList() {
+  const { t } = useTranslation();
   const [selectedFilter, setSelectedFilter] = useState<Filter>("all");
   const filters: Filter[] = ["all", "memecoins", "emojicoins"];
 
   const labels: Record<Filter, string> = {
-    all: "All",
-    memecoins: "Memecoins",
-    emojicoins: "Emojicoins",
+    all: t("filters.all"),
+    memecoins: t("filters.memecoins"),
+    emojicoins: t("filters.emojicoins"),
   };
 
   return (
@@ -257,7 +259,7 @@ export default function WatchList() {
           </div>
 
           <button className="border-[0.2px] gap-1 w-[85px] text-[#A1A1AA] !px-0 border-[#FFFFFF20] rounded-lg h-9 font-medium text-sm flex items-center justify-center">
-            Full view <ChevronRight size={12} />
+            {t("common.fullView")} <ChevronRight size={12} />
           </button>
         </div>
 
@@ -267,9 +269,9 @@ export default function WatchList() {
               <TableHead className="!font-bold">
                 <span className="hidden">Watchlist button</span>
               </TableHead>
-              <TableHead className="!font-bold w-70">Name</TableHead>
-              <TableHead className="!font-bold">Price</TableHead>
-              <TableHead className="!font-bold text-end">MC / Liq</TableHead>
+              <TableHead className="!font-bold w-70">{t("common.name")}</TableHead>
+              <TableHead className="!font-bold">{t("common.price")}</TableHead>
+              <TableHead className="!font-bold text-end">{t("listings.mcLiq")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -374,7 +376,7 @@ export default function WatchList() {
                 <TableCell>
                   <div>
                     <span className={`text-xs font-medium`}>
-                      ${coin.price.amount}
+                      <FiatText usd={coin.price.amount} compact={false} />
                     </span>
                     <span
                       className={`flex font-medium items-end text-[10px] ${
@@ -411,10 +413,10 @@ export default function WatchList() {
                   <div className="flex justify-end">
                         <div>
                     <span className={`text-xs font-medium`}>
-                      ${compactNumber(coin.marketCap)}
+                      <FiatText usd={coin.marketCap} />
                     </span>
                     <span className="flex font-medium items-center text-[10px]">
-                      <span>${compactNumber(coin.liquidity)}</span>
+                      <FiatText usd={coin.liquidity} />
                       <Image
                         src="/lock.svg"
                         alt="gaining-traction"

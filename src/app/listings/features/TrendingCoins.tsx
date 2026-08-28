@@ -12,6 +12,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "../../../components/ui/button";
 import { compactNumber } from "@/utils/helper/compactNumber";
+import FiatText from "@/components/FiatText";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Card,
@@ -22,14 +23,16 @@ import {
 } from "@/components/ui/card";
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import TimeframeFilterBar, {
   Timeframe,
 } from "../../../components/TimeframeFilterBar";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { ApiCoinItem } from "@/types/api";
 import FallbackImage from "@/components/FallbackImage";
-import { formatAgeDisplay, formatAgeYMD } from "./utils/listingUtils";
-import { slugify } from "@/lib/utils/slugify";
+import { formatAgeDisplay, formatAgeYMD, mapApiCoinItemsToMockLikeCoins } from "./utils/listingUtils";
+import { buildProjectHref } from "@/lib/utils/slugify";
+import ProjectPreviewHover from "./ProjectPreviewCard";
 
 // Helper function to create shorter address for TrendingCoins
 function shortenAddressForTrending(address: string): string {
@@ -49,6 +52,7 @@ function getChainImage(chain: string): string {
     'aptos': '/listings-chains/aptos.png',
     'near': '/listings-chains/near.png',
     'osmosis': '/listings-chains/osmosis.jpg',
+    'movement': '/listings-chains/movement.png',
   };
   return chainMap[chain.toLowerCase()] || '/listings-chains/solana.png';
 }
@@ -140,16 +144,22 @@ export default function TrendingCoins({
   apiData: ApiCoinItem[];
   isLoading: boolean;
 }) {
+  const { t } = useTranslation();
   const [timeframe, setTimeframe] = useState<Timeframe>("1h");
   const router = useRouter();
 
-  const handleRowClick = (projectName?: string, projectAddress?: string) => {
+  const handleRowClick = (
+    projectName?: string,
+    projectAddress?: string,
+    chain?: string,
+  ) => {
     if (!projectName || !projectAddress) return;
-    const slug = slugify(projectName) || projectName;
     router.push(
-      `/projects/${encodeURIComponent(slug)}?address=${encodeURIComponent(
-        projectAddress,
-      )}`,
+      buildProjectHref({
+        name: projectName,
+        address: projectAddress,
+        chain,
+      }),
     );
   };
 
@@ -298,7 +308,10 @@ export default function TrendingCoins({
         tier: item.tier || null,
       };
       
-      return convertedItem;
+      return {
+        ...convertedItem,
+        previewCoin: mapApiCoinItemsToMockLikeCoins([item])[0],
+      };
     });
   }, [apiData]);
 
@@ -308,7 +321,7 @@ export default function TrendingCoins({
         <Card className="border-none p-3 bg-[#010101] w-full h-full">
           <CardHeader className="flex justify-between items-center px-0">
             <CardTitle className="flex items-center gap-1 text-base">
-              <span>What&apos;s Hot?</span>
+              <span>{t("listings.whatsHot")}</span>
               <Image
                 className="mt-0.5"
                 src="/info.svg"
@@ -339,7 +352,7 @@ export default function TrendingCoins({
         <Card className="border-none p-3 bg-[#010101] w-full h-full">
           <CardHeader className="flex justify-between items-center px-0">
             <CardTitle className="flex items-center gap-1 text-base">
-              <span>What&apos;s Hot?</span>
+              <span>{t("listings.whatsHot")}</span>
               <Image
                 className="mt-0.5"
                 src="/info.svg"
@@ -357,7 +370,7 @@ export default function TrendingCoins({
           </CardHeader>
           <CardContent className="px-0 -mt-4">
             <div className="w-full h-[200px] flex items-center justify-center text-white/50">
-              No trending data available
+              {t("listings.noTrending")}
             </div>
           </CardContent>
         </Card>
@@ -370,7 +383,7 @@ export default function TrendingCoins({
       <Card className="border-none p-3 bg-[#010101] w-full h-full">
         <CardHeader className="flex justify-between items-center px-0">
           <CardTitle className="flex items-center gap-1 text-base">
-            <span>What&apos;s Hot?</span>
+            <span>{t("listings.whatsHot")}</span>
             <Image
               className="mt-0.5"
               src="/info.svg"
@@ -394,12 +407,12 @@ export default function TrendingCoins({
                 <TableHead className="!font-bold w-8">
                     <span className="hidden">Watchlist button</span>
                 </TableHead>
-                <TableHead className="!font-bold">Name</TableHead>
-                <TableHead className="!font-bold text-center">MC/Liq</TableHead>
-                <TableHead className="!font-bold text-center">Price/24%</TableHead>
-                <TableHead className="!font-bold text-center">Age</TableHead>
-                <TableHead className="!font-bold text-center">Risk score</TableHead>
-                <TableHead className="!font-bold text-right">Holders</TableHead>
+                <TableHead className="!font-bold">{t("common.name")}</TableHead>
+                <TableHead className="!font-bold text-center">{t("listings.mcLiq")}</TableHead>
+                <TableHead className="!font-bold text-center">{t("listings.price24")}</TableHead>
+                <TableHead className="!font-bold text-center">{t("common.age")}</TableHead>
+                <TableHead className="!font-bold text-center">{t("common.riskScore")}</TableHead>
+                <TableHead className="!font-bold text-right">{t("common.holders")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -407,7 +420,7 @@ export default function TrendingCoins({
                 <TableRow
                   key={index}
                   className="border-none cursor-pointer"
-                  onClick={() => handleRowClick(data.name, data.address)}
+                  onClick={() => handleRowClick(data.name, data.address, data.chain)}
                 >
                   <TableCell className="w-8">
                       <div className="flex justify-center">
@@ -431,6 +444,10 @@ export default function TrendingCoins({
                     </TableCell>
                   {/* name */}
                   <TableCell className="!py-1">
+                    <ProjectPreviewHover
+                      coin={data.previewCoin}
+                      onOpenProject={() => handleRowClick(data.name, data.address, data.chain)}
+                    >
                     <div className="flex items-center gap-1">
                       <div className="relative">
                         <FallbackImage
@@ -610,15 +627,16 @@ export default function TrendingCoins({
                         </div>
                       </div>
                     </div>
+                    </ProjectPreviewHover>
                   </TableCell>
                   {/* mc/liq */}
                   <TableCell className="!py-1">
                     <div className="flex flex-col items-center">
                       <span className={`text-xs font-medium`}>
-                        ${compactNumber(data.marketCap)}
+                        <FiatText usd={data.marketCap} />
                       </span>
                       <span className="flex font-medium items-center text-[10px]">
-                        <span>${compactNumber(data.liquidity)}</span>
+                        <FiatText usd={data.liquidity} />
                         <Image
                           src="/lock.svg"
                           alt="gaining-traction"
@@ -632,7 +650,7 @@ export default function TrendingCoins({
                   <TableCell className="!py-1">
                       <div className="flex flex-col items-center">
                         <span className={`font-medium text-xs`}>
-                          ${data.price.amount}
+                          <FiatText usd={data.price.amount} compact={false} />
                         </span>
                         <span
                           className={`flex font-medium items-center text-[10px] ${
