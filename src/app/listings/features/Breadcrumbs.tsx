@@ -1,8 +1,11 @@
+"use client";
+
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   Table,
   TableBody,
@@ -19,13 +22,14 @@ const images = [
 ];
 
 export default function Breadcrumbs() {
+  const { t } = useTranslation();
   return (
     <div className="bg-gradient-to-r from-[rgba(236,72,153,0.3)] to-[rgba(250,204,21,0.3)] p-[1px] w-full rounded-xl lg:max-w-[300px]">
       <Card className="w-full border-none p-3 bg-[#010101] h-full relative">
         <div className="blur-sm">
           <CardHeader className="px-0">
             <CardTitle className="flex items-center gap-1 text-base font-bold">
-              Breadcrumbs{" "}
+              {t("listings.breadcrumbs")}{" "}
               <Image
                 className="mt-0.5"
                 src="/info.svg"
@@ -42,7 +46,7 @@ export default function Breadcrumbs() {
                   <TableHead className="!font-bold">Space Title</TableHead>
                   <TableHead className="!font-bold">
                     <span className="flex items-center gap-1">
-                      Community space
+                      {t("listings.communitySpace")}
                     </span>
                   </TableHead>
                 </TableRow>
@@ -223,7 +227,7 @@ export default function Breadcrumbs() {
         {/* Coming soon overlay - covers entire component to edges */}
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm rounded-xl z-10">
           <div className="bg-white/16 px-2 py-1 rounded-[4px]">
-            <span className="text-white">Coming soon</span>
+            <span className="text-white">{t("common.comingSoon")}</span>
           </div>
         </div>
       </Card>

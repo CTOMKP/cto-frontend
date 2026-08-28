@@ -127,7 +127,7 @@ const FallbackImage: React.FC<Props> = ({
   if (!current || error) {
     return (
       <div 
-        className={`relative flex items-center justify-center size-9 bg-gray-800 rounded-full ${className || ''}`}
+        className={`relative flex items-center justify-center overflow-hidden rounded-full bg-gray-800 ${className || ''}`}
         style={fill ? undefined : { width, height }}
       >
         <svg className="w-6 h-6 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
@@ -196,7 +196,10 @@ const FallbackImage: React.FC<Props> = ({
   }
 
   return (
-    <div className={`relative ${className || ''}`}>
+    <div
+      className={`relative overflow-hidden shrink-0 ${className || ''}`}
+      style={width && height ? { width, height } : undefined}
+    >
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-800 rounded-full">
           <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
@@ -210,8 +213,8 @@ const FallbackImage: React.FC<Props> = ({
           alt={alt}
           width={width}
           height={height}
-          className={`${className || ''} ${loading ? 'opacity-0' : 'opacity-100'}`}
-          style={{ transition: 'opacity 300ms' }}
+          className={`absolute inset-0 h-full w-full object-cover ${loading ? 'opacity-0' : 'opacity-100'}`}
+          style={{ transition: 'opacity 300ms', objectFit: 'cover' }}
           onError={() => setIndex((i) => i + 1)}
           onLoad={() => {
             setLoading(false);
@@ -225,8 +228,8 @@ const FallbackImage: React.FC<Props> = ({
           alt={alt}
           width={width}
           height={height}
-          className={`${className || ''} ${loading ? 'opacity-0' : 'opacity-100'}`}
-          style={{ transition: 'opacity 300ms' }}
+          className={`absolute inset-0 h-full w-full object-cover ${loading ? 'opacity-0' : 'opacity-100'}`}
+          style={{ transition: 'opacity 300ms', objectFit: 'cover' }}
           onError={() => setIndex((i) => i + 1)}
           onLoad={() => {
             setLoading(false);

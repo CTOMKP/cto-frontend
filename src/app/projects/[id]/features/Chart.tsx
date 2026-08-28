@@ -1,9 +1,21 @@
+"use client";
+
 interface ChartProps {
   address?: string;
   chain?: string;
+  height?: number;
+  className?: string;
+  /** When false, the iframe ignores pointer events (hover previews). */
+  interactive?: boolean;
 }
 
-export default function Chart({ address, chain }: ChartProps) {
+export default function Chart({
+  address,
+  chain,
+  height = 530,
+  className,
+  interactive = true,
+}: ChartProps) {
   // Map chain names to gmgn format (lowercase)
   const getGmgnChain = (chainName?: string): string => {
     if (!chainName) return "sol"; // default to solana
@@ -22,9 +34,19 @@ export default function Chart({ address, chain }: ChartProps) {
     return chainMap[chainName.toLowerCase()] || chainName.toLowerCase();
   };
 
-  // Default address if not provided
-  const chartAddress = address || "Df6yfrKC8kZE3KNkrHERKzAetSxbrWeniQfyJY4Jpump";
+  const chartAddress = address?.trim();
   const gmgnChain = getGmgnChain(chain);
+
+  if (!chartAddress) {
+    return (
+      <div
+        className={`flex items-center justify-center bg-white/5 text-sm text-white/40 ${className ?? ""}`}
+        style={{ height }}
+      >
+        Chart unavailable
+      </div>
+    );
+  }
   
   const iframeSrc = `https://www.gmgn.cc/kline/${gmgnChain}/${chartAddress}?theme=dark&interval=60`;
 
@@ -32,10 +54,11 @@ export default function Chart({ address, chain }: ChartProps) {
     <iframe
       src={iframeSrc}
       width="100%"
-      height="530"
-      allowFullScreen
-      className="border-none"
-    ></iframe>
+      height={height}
+      allowFullScreen={interactive}
+      title="Token price chart"
+      className={`border-none ${interactive ? "" : "pointer-events-none"} ${className ?? ""}`}
+    />
   );
 }
 

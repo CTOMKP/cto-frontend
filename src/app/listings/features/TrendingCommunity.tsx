@@ -16,9 +16,11 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ApiCoinItem } from "@/types/api";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import FallbackImage from "@/components/FallbackImage";
-import { formatAgeDisplay, formatAgeYMD } from "./utils/listingUtils";
+import { formatAgeDisplay, formatAgeYMD, mapApiCoinItemsToMockLikeCoins } from "./utils/listingUtils";
 import { buildProjectHref } from "@/lib/utils/slugify";
+import ProjectPreviewHover from "./ProjectPreviewCard";
 
 // Helper function to create shorter address for TrendingCommunity
 function shortenAddressForTrending(address: string): string {
@@ -99,6 +101,7 @@ export default function TrendingCommunity({
   apiData: ApiCoinItem[];
   isLoading: boolean;
 }) {
+  const { t } = useTranslation();
   const router = useRouter();
 
   const handleRowClick = (
@@ -182,6 +185,7 @@ export default function TrendingCommunity({
         // Show "Coming Soon" for community score if it's 0, otherwise show the actual score
         communityScore: communityScore > 0 ? communityScore : 0,
         tier: item.tier || null,
+        previewCoin: mapApiCoinItemsToMockLikeCoins([item])[0],
       };
     });
   }, [apiData]);
@@ -192,7 +196,7 @@ export default function TrendingCommunity({
         <Card className="border-none p-3 bg-[#010101] w-full h-full">
           <CardHeader className="px-0">
             <CardTitle className="flex items-center gap-1 text-base font-bold">
-              Community trending{" "}
+              {t("listings.communityTrending")}{" "}
               <Image
                 className="mt-0.5"
                 src="/info.svg"
@@ -217,7 +221,7 @@ export default function TrendingCommunity({
         <Card className="border-none p-3 bg-[#010101] w-full h-full">
           <CardHeader className="px-0">
             <CardTitle className="flex items-center gap-1 text-base font-bold">
-              Community trending{" "}
+              {t("listings.communityTrending")}{" "}
               <Image
                 className="mt-0.5"
                 src="/info.svg"
@@ -241,7 +245,7 @@ export default function TrendingCommunity({
       <Card className="border-none p-3 bg-[#010101] w-full h-full">
         <CardHeader className="px-0">
           <CardTitle className="flex items-center gap-1 text-base font-bold">
-            Community trending{" "}
+            {t("listings.communityTrending")}{" "}
             <Image
               className="mt-0.5"
               src="/info.svg"
@@ -256,10 +260,10 @@ export default function TrendingCommunity({
             <Table className="w-full min-w-[322px] lg:w-full">
             <TableHeader className="!text-[#FFFFFF]/50">
               <TableRow className="border-none">
-                <TableHead className="!font-bold">Name</TableHead>
+                <TableHead className="!font-bold">{t("common.name")}</TableHead>
                 <TableHead className="!font-bold">
                   <span className="flex justify-end items-center gap-1">
-                    Community score
+                    {t("common.communityScore")}
                   <Image
                     className="mt-0.5"
                     src="/info.svg"
@@ -279,6 +283,10 @@ export default function TrendingCommunity({
                   onClick={() => handleRowClick(data.name, data.address, data.chain)}
                 >
                   <TableCell className="!py-1">
+                    <ProjectPreviewHover
+                      coin={data.previewCoin}
+                      onOpenProject={() => handleRowClick(data.name, data.address, data.chain)}
+                    >
                     <div className="flex items-center gap-1">
                       <div className="relative">
                         <FallbackImage
@@ -432,6 +440,7 @@ export default function TrendingCommunity({
                         </div>
                       </div>
                     </div>
+                    </ProjectPreviewHover>
                   </TableCell>
                   <TableCell className="!py-1">
                     <div className="flex items-center justify-end gap-1">

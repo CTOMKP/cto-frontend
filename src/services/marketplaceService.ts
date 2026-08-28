@@ -35,11 +35,30 @@ function listItemsFromResponse(responseData: Record<string, unknown>): unknown[]
   return normalizeMarketplaceAdList(Array.isArray(raw) ? raw : []);
 }
 
+export type MarketplacePricingCatalog = {
+  currency?: string;
+  categories?: Array<{
+    id: string;
+    name: string;
+    defaultPriceUsd?: number;
+    active?: boolean;
+    postTypes?: Array<"LOOKING_FOR" | "OFFERING">;
+    defaultPostType?: "LOOKING_FOR" | "OFFERING";
+    subcategories: Array<{
+      id: string;
+      name: string;
+      priceUsd?: number;
+      active?: boolean;
+    }>;
+  }>;
+  addons?: Array<{ id: string; name: string; priceUsd: number; active: boolean }>;
+};
+
 export const marketplaceService = {
-  async getPricing() {
+  async getPricing(): Promise<MarketplacePricingCatalog> {
     const res = await apiGet<unknown>(`/api/v1/marketplace/pricing`);
     const responseData = toRecord(unwrapApiData(res));
-    return responseData?.items || responseData || [];
+    return (responseData || {}) as MarketplacePricingCatalog;
   },
 
   async createDraft(payload: Record<string, unknown>) {

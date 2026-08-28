@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MARKETPLACE_CATEGORY_DISPLAY_NAMES, type MarketplaceCategorySlug } from "@/lib/constants/slugs";
 import MarketplaceTrendingFilter, { type Category } from "./features/MarketplaceTrendingFilter";
+import { useTranslation } from "react-i18next";
 
 const tags = [
   "Designer", "Developer", "Raider", "Core Shillers", "Btc", "Meme reviver",
@@ -26,6 +27,7 @@ export default function MarketplaceCategoryView({
 }: {
   category: MarketplaceCategorySlug;
 }) {
+  const { t } = useTranslation();
   const [trending, setTrending] = useState<Category>("for-you");
   const title = MARKETPLACE_CATEGORY_DISPLAY_NAMES[category];
 
@@ -52,11 +54,11 @@ export default function MarketplaceCategoryView({
           <MarketplaceTrendingFilter selected={trending} onChange={(c: Category) => setTrending(c)} />
           <div className="flex items-center gap-2">
             <div className="relative flex items-center">
-              <Input className="border-[0.2px] bg-white/3 pl-7 max-w-50 placeholder:font-medium border-[#FFFFFF20] text-white placeholder:text-[#FFFFFF80] focus:!border-[0.2px] focus:!border-white focus-visible:ring-0" placeholder="search for an Ad" />
+              <Input className="border-[0.2px] bg-white/3 pl-7 max-w-50 placeholder:font-medium border-[#FFFFFF20] text-white placeholder:text-[#FFFFFF80] focus:!border-[0.2px] focus:!border-white focus-visible:ring-0" placeholder={t("marketplace.searchAd")} />
               <Search size={16} color="#FFFFFF50" className="absolute left-2" />
             </div>
             <div className="p-2 bg-white/3 text-sm text-[#FFFFFF80] border-[0.5px] border-[#FFFFFF20] flex items-center gap-1 rounded-lg">
-              <ListFilter size={15} color="#FFFFFF80" /> <span>Filter</span>
+              <ListFilter size={15} color="#FFFFFF80" /> <span>{t("marketplace.filter")}</span>
             </div>
           </div>
         </div>
@@ -100,14 +102,14 @@ export default function MarketplaceCategoryView({
                   </button>
                 </div>
                 <p className="text-sm text-white/60">by <span className="text-white hover:underline break-all text-sm">{ad.by}</span></p>
-                <p className="text-sm text-white/50"><span className="text-white">Skill needed:</span> None</p>
+                <p className="text-sm text-white/50"><span className="text-white">{t("marketplace.skillNeeded")}:</span> None</p>
                 <div className="pt-5 bg-[#060708] px-5 py-4 flex items-center justify-between">
                   <div className="text-center w-1/2 border-r border-white/10">
-                    <p className="text-xs text-white/60 mb-2">Payment</p>
+                    <p className="text-xs text-white/60 mb-2">{t("marketplace.payment")}</p>
                     <p className="text-xs text-white/80">{ad.payment}</p>
                   </div>
                   <div className="text-center w-1/2">
-                    <p className="text-xs text-white/60 mb-2">Price</p>
+                    <p className="text-xs text-white/60 mb-2">{t("marketplace.price")}</p>
                     <p className="text-xs text-white/80">{ad.price}</p>
                   </div>
                 </div>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { useParams } from "next/navigation";
 import { useUserListingDetailQuery } from "@/hooks/useUserListingDetailQuery";
+import FiatText from "@/components/FiatText";
 
 type ListingLike = {
   id: string;
@@ -33,11 +34,6 @@ const compactNumber = (value: unknown) => {
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M`;
   if (value >= 1_000) return `${(value / 1_000).toFixed(2)}K`;
   return value.toLocaleString();
-};
-
-const priceLabel = (value: unknown) => {
-  if (typeof value !== "number" || Number.isNaN(value)) return "N/A";
-  return value < 0.0001 ? value.toFixed(8) : value.toFixed(6);
 };
 
 const parseRejectionReason = (description?: string) => {
@@ -103,10 +99,8 @@ export default function UserListingDetailPage() {
   }
 
   const statusStyle = STATUS_STYLES[listing.status] || "bg-zinc-500/20 text-zinc-200";
-  const price = priceLabel(metadata.token_price);
-  const marketCap = compactNumber(metadata.market_cap);
-  const liquidity = compactNumber(metadata.lp_amount_usd);
-  const volume24h = compactNumber(metadata.volume_24h);
+  const usd = (value: unknown) =>
+    typeof value === "number" && Number.isFinite(value) ? value : null;
   const holders = compactNumber(metadata.holder_count);
 
   return (
@@ -136,19 +130,27 @@ export default function UserListingDetailPage() {
           <div className="mt-5 grid grid-cols-2 md:grid-cols-5 gap-2">
             <div className="rounded-lg border border-white/10 p-3">
               <p className="text-[11px] text-white/60">Price</p>
-              <p className="text-sm font-semibold mt-1">${price}</p>
+              <p className="text-sm font-semibold mt-1">
+                <FiatText usd={usd(metadata.token_price)} compact={false} />
+              </p>
             </div>
             <div className="rounded-lg border border-white/10 p-3">
               <p className="text-[11px] text-white/60">Market Cap</p>
-              <p className="text-sm font-semibold mt-1">{marketCap}</p>
+              <p className="text-sm font-semibold mt-1">
+                <FiatText usd={usd(metadata.market_cap)} />
+              </p>
             </div>
             <div className="rounded-lg border border-white/10 p-3">
               <p className="text-[11px] text-white/60">Liquidity</p>
-              <p className="text-sm font-semibold mt-1">{liquidity}</p>
+              <p className="text-sm font-semibold mt-1">
+                <FiatText usd={usd(metadata.lp_amount_usd)} />
+              </p>
             </div>
             <div className="rounded-lg border border-white/10 p-3">
               <p className="text-[11px] text-white/60">24h Volume</p>
-              <p className="text-sm font-semibold mt-1">{volume24h}</p>
+              <p className="text-sm font-semibold mt-1">
+                <FiatText usd={usd(metadata.volume_24h)} />
+              </p>
             </div>
             <div className="rounded-lg border border-white/10 p-3">
               <p className="text-[11px] text-white/60">Holders</p>

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { ChevronDown, Clock3, Link2 } from "lucide-react";
 import { ApiCoinItem } from "@/types/api";
+import FiatText from "@/components/FiatText";
 import { shortenAddress } from "@/utils/helper/shortenAddress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "react-toastify";
@@ -226,7 +227,7 @@ export default function ProjectHeader({ projectData, formatJoinedDate }: Project
 
             <div className="flex items-center gap-2">
               <span className="font-bold text-[32px]">
-                ${projectData?.priceUsd?.toFixed(6) || "0.3793"}
+                <FiatText usd={projectData?.priceUsd} compact={false} />
               </span>
               <span
                 className={`flex items-center border-[0.12px] p-1 rounded-[34px] font-medium ${

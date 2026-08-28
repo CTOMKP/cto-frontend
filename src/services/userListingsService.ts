@@ -1,7 +1,8 @@
 import { getAuthToken } from '@/lib/authSession';
 import { ApiError } from '@/lib/apiError';
 import { apiDelete, apiGet, apiPost, apiPut, getBackendBaseUrl } from '@/lib/apiClient';
-import { unwrapApiData, unwrapApiJsonBody } from '@/lib/apiResponse';
+import { toRecord, unwrapApiData, unwrapApiJsonBody } from '@/lib/apiResponse';
+import type { AllUserListings } from '@/types/api';
 import {
   normalizePresignPayload,
   putFileToPresignedUrl,
@@ -133,6 +134,72 @@ export interface ScanResult {
   details?: ScanResultDetails;
 }
 
+export type PublicUserListingsPage = {
+  items: AllUserListings[];
+  total: number;
+  page: number;
+  limit: number;
+};
+
+function asUserListing(raw: unknown): AllUserListings {
+  const o = toRecord(raw);
+  const contractAddr = String(o.contractAddr ?? o.contractAddress ?? "");
+  const id = o.id ?? o._id;
+  const scanMetadata = o.scanMetadata ?? o.scan_metadata ?? o.metadata;
+  return {
+    ...(o as unknown as AllUserListings),
+    ...(id != null && id !== "" ? { id: String(id) } : {}),
+    ...(contractAddr ? { contractAddr } : {}),
+    ...(scanMetadata && typeof scanMetadata === "object"
+      ? { scanMetadata: scanMetadata as AllUserListings["scanMetadata"] }
+      : {}),
+  };
+}
+
+function parsePublicUserListingsPage(
+  raw: unknown,
+  page: number,
+  limit: number,
+): PublicUserListingsPage {
+  const payload = unwrapApiJsonBody(raw);
+  if (Array.isArray(payload)) {
+    return {
+      items: payload.map(asUserListing),
+      total: payload.length,
+      page,
+      limit,
+    };
+  }
+  const rec = toRecord(payload);
+  const pagination = toRecord(rec.pagination ?? rec.meta);
+  const itemsRaw = rec.items ?? rec.listings ?? (Array.isArray(rec.data) ? rec.data : undefined);
+  const items = Array.isArray(itemsRaw) ? itemsRaw.map(asUserListing) : [];
+  const total =
+    typeof rec.total === "number"
+      ? rec.total
+      : typeof pagination.total === "number"
+        ? pagination.total
+        : items.length;
+  return {
+    items,
+    total,
+    page:
+      typeof rec.page === "number"
+        ? rec.page
+        : typeof pagination.page === "number"
+          ? pagination.page
+          : page,
+    limit:
+      typeof rec.limit === "number"
+        ? rec.limit
+        : typeof pagination.limit === "number"
+          ? pagination.limit
+          : typeof pagination.perPage === "number"
+            ? pagination.perPage
+            : limit,
+  };
+}
+
 export const userListingsService = {
   /**
    * Scan token for listing eligibility
@@ -237,10 +304,19 @@ export const userListingsService = {
     const res = await apiGet<unknown>(`/api/v1/user-listings/mine/all`, { signal });
     return unwrapApiData(res);
   },
-  async listPublic(page = 1, limit = 20) {
+  async listPublic(
+    page = 1,
+    limit = 20,
+    signal?: AbortSignal,
+    chain?: string | null,
+  ): Promise<PublicUserListingsPage> {
     const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-    const res = await apiGet<unknown>(`/api/v1/user-listings?${params.toString()}`);
-    return unwrapApiData(res);
+    if (chain?.trim()) params.set("chain", chain.trim().toUpperCase());
+    const res = await apiGet<unknown>(`/api/v1/user-listings?${params.toString()}`, {
+      signal,
+      auth: false,
+    });
+    return parsePublicUserListingsPage(res, page, limit);
   },
   async addAd(id: string, payload: { type: string; durationDays: number; startDate?: string }) {
     const res = await apiPost<unknown>(`/api/v1/user-listings/${id}/ads`, payload);

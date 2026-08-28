@@ -32,6 +32,7 @@ import {
   getDiscoveryCategoryHref,
 } from "@/lib/discoveryCategories";
 import { apiPost } from "@/lib/apiClient";
+import { useTranslation } from "react-i18next";
 
 const gradientHoverHandlers = {
   onMouseEnter: (e: React.MouseEvent<HTMLElement>) => {
@@ -44,15 +45,16 @@ const gradientHoverHandlers = {
 };
 
 const discoverNavItems: {
-  label: string;
+  labelKey: "nav.listing" | "nav.discoveryHub";
   href: string;
   revealsCategories?: boolean;
 }[] = [
-  { label: "Listing", href: "/listings" },
-  { label: "Discovery Hub", href: "/categories", revealsCategories: true },
+  { labelKey: "nav.listing", href: "/listings" },
+  { labelKey: "nav.discoveryHub", href: "/categories", revealsCategories: true },
 ];
 
 export default function NavBar() {
+  const { t } = useTranslation();
   const { isAuthenticated, ready, isLoading: authLoading } = usePrivyAuth();
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const [showCategories, setShowCategories] = useState(false);
@@ -123,7 +125,7 @@ export default function NavBar() {
                     }}
                   >
                     <DropdownMenuTrigger className="flex gap-2 items-center font-normal text-base">
-                      Discover{" "}
+                      {t("nav.discover")}{" "}
                       {isDropdownOpen ? (
                         <ChevronUp size={16} />
                       ) : (
@@ -139,7 +141,7 @@ export default function NavBar() {
                       <div className="flex gap-4">
                         <div className="min-w-[220px]">
                           {discoverNavItems.map((item) => (
-                            <NavigationMenuLink key={item.label} className="px-0 block mb-1">
+                            <NavigationMenuLink key={item.labelKey} className="px-0 block mb-1">
                               <Link
                                 href={item.href}
                                 className="block rounded-lg p-[1px] transition-all duration-300"
@@ -157,7 +159,7 @@ export default function NavBar() {
                                     transition: "all 0.3s ease-in-out",
                                   }}
                                 >
-                                  {item.label}
+                                  {t(item.labelKey)}
                                 </div>
                               </Link>
                             </NavigationMenuLink>
@@ -177,9 +179,9 @@ export default function NavBar() {
                                 }}
                               >
                                 <div className="flex items-center justify-between">
-                                  <span className="text-[#FFFFFFB2]">CTO Vision</span>
+                                  <span className="text-[#FFFFFFB2]">{t("nav.ctoVision")}</span>
                                   <span className="text-[#C44FE2] text-[10px] bg-[#C44FE20D] rounded-[3px] px-[7px] py-1.5">
-                                    Soon!
+                                    {t("nav.soon")}
                                   </span>
                                 </div>
                               </div>
@@ -194,7 +196,7 @@ export default function NavBar() {
                           >
                             <div className="pb-4.5 mb-4 border-b-[0.5px] border-[#FFFFFF20]">
                               <span className="text-sm px-2 font-normal text-white">
-                                Categories
+                                {t("nav.categories")}
                               </span>
                             </div>
 
@@ -218,7 +220,9 @@ export default function NavBar() {
                                         transition: "all 0.3s ease-in-out",
                                       }}
                                     >
-                                      {category.name}
+                                      {t(`categories.${category.slug}`, {
+                                        defaultValue: category.name,
+                                      })}
                                     </div>
                                   </Link>
                                 </NavigationMenuLink>
@@ -236,7 +240,7 @@ export default function NavBar() {
                     className={navigationMenuTriggerStyle()}
                   >
                     <Link className="text-base" href="/marketplace">
-                      Marketplace
+                      {t("nav.marketplace")}
                     </Link>
                   </NavigationMenuLink>
                 </NavigationMenuItem>
@@ -246,7 +250,7 @@ export default function NavBar() {
                     className={navigationMenuTriggerStyle()}
                   >
                     <Link className="text-base" href="#">
-                      Forum
+                      {t("nav.forum")}
                     </Link>
                   </NavigationMenuLink>
                 </NavigationMenuItem>
@@ -268,7 +272,7 @@ export default function NavBar() {
                           width={16}
                           height={16}
                         />{" "}
-                        Creator Program
+                        {t("nav.creatorProgram")}
                       </span>
                     </Link>
                   </NavigationMenuLink>

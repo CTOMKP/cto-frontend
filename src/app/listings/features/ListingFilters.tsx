@@ -1,4 +1,7 @@
+"use client";
+
 import { Search } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { CardAction } from "../../../components/ui/card";
 import ListingsCategoryFilter, { Category } from "../../../components/ListingsCategoryFilter";
 import MemeCategoryFilter, { MemeCategory } from "../../../components/MemeCategoryFilter";
@@ -28,6 +31,7 @@ export default function ListingFilters({
   rawApiItems,
   onFilterChange,
 }: ListingFiltersProps) {
+  const { t } = useTranslation();
   return (
     <>
       <CardAction>
@@ -52,7 +56,7 @@ export default function ListingFilters({
           <div className="relative flex items-center">
             <Input
               className="border-[0.2px] pl-7 max-w-50 placeholder:font-medium border-[#FFFFFF20] text-white placeholder:text-[#FFFFFF80] focus:!border-[0.2px] focus:!border-white focus-visible:ring-0"
-              placeholder="Ask Baws anything"
+              placeholder={t("listings.askBaws")}
             />
             <Search size={16} color="#FFFFFF50" className="absolute left-2" />
           </div>

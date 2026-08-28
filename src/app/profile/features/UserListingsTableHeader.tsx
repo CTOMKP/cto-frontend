@@ -4,6 +4,7 @@ import Image from "next/image";
 import { SortField } from "@/app/listings/features/types/listing";
 import SortIcon from "@/app/listings/features/SortIcon";
 import { TableHeader, TableRow, TableHead } from "@/components/ui/table";
+import { useTranslation } from "react-i18next";
 
 interface UserListingsTableHeaderProps {
   sortField: SortField | null;
@@ -16,6 +17,7 @@ export default function UserListingsTableHeader({
   sortDirection,
   onSort,
 }: UserListingsTableHeaderProps) {
+  const { t } = useTranslation();
   return (
     <TableHeader className="!text-[#FFFFFF]/50 !mb-2">
       <TableRow className="border-none">
@@ -27,19 +29,19 @@ export default function UserListingsTableHeader({
           onClick={() => onSort("name")}
         >
           <div className="flex items-center gap-1">
-            Name
+            {t("common.name")}
             <SortIcon field="name" sortField={sortField} sortDirection={sortDirection} />
           </div>
         </TableHead>
         <TableHead className="!font-bold text-center">
-          Status
+          {t("common.status")}
         </TableHead>
         <TableHead
           className="!font-bold text-center cursor-pointer hover:text-white transition-colors"
           onClick={() => onSort("marketCap")}
         >
           <div className="flex items-center justify-center gap-1">
-            MC / Liq
+            {t("listings.mcLiq")}
             <SortIcon field="marketCap" sortField={sortField} sortDirection={sortDirection} />
           </div>
         </TableHead>
@@ -48,7 +50,7 @@ export default function UserListingsTableHeader({
           onClick={() => onSort("holders")}
         >
           <div className="flex items-center justify-center gap-1">
-            Holders
+            {t("common.holders")}
             <SortIcon field="holders" sortField={sortField} sortDirection={sortDirection} />
           </div>
         </TableHead>
@@ -57,7 +59,7 @@ export default function UserListingsTableHeader({
           onClick={() => onSort("age")}
         >
           <div className="flex items-center justify-center gap-1">
-            Age
+            {t("common.age")}
             <SortIcon field="age" sortField={sortField} sortDirection={sortDirection} />
           </div>
         </TableHead>
@@ -66,7 +68,7 @@ export default function UserListingsTableHeader({
           onClick={() => onSort("price")}
         >
           <div className="flex items-center justify-center gap-1">
-            Price / 24%
+            {t("listings.price24")}
             <SortIcon field="price" sortField={sortField} sortDirection={sortDirection} />
           </div>
         </TableHead>
@@ -76,7 +78,7 @@ export default function UserListingsTableHeader({
         >
           <div className="flex items-center gap-1">
             <span className="flex items-center gap-1">
-              Community score
+              {t("common.communityScore")}
               <Image
                 className="mt-0.5"
                 src="/info.svg"
@@ -93,7 +95,7 @@ export default function UserListingsTableHeader({
           onClick={() => onSort("degenAudit")}
         >
           <div className="flex items-center justify-center gap-1">
-            Risk score
+            {t("common.riskScore")}
             <SortIcon field="degenAudit" sortField={sortField} sortDirection={sortDirection} />
           </div>
         </TableHead>

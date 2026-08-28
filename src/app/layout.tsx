@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import PrivyProvider from "@/components/PrivyProvider";
 import "./globals.css";
-import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
 import { Inter } from 'next/font/google';
 
@@ -13,6 +12,7 @@ import MarketTrends from "@/components/MarketTrends";
 import FloatingTokenSwap from "@/components/FloatingTokenSwap";
 import { Dialog } from "@/components/ui/dialog";
 import { QueryProvider } from "@/providers/QueryProvider";
+import { PreferencesProvider } from "@/providers/PreferencesProvider";
 
 const grotesqueArabicPro = localFont({
   src: './fonts/BasisGrotesqueArabicPro-Regular.woff2',
@@ -43,14 +43,16 @@ export default function RootLayout({
       <body className={`${inter.className} ${grotesqueArabicPro.className} antialiased`}>
         <PrivyProvider>
           <QueryProvider>
-            <Dialog>
-              <HeaderAd />
-              <NavBar />
-              <MarketTrends />
-              {children}
-              <WelcomeSlideshow />
-              <FloatingTokenSwap />
-            </Dialog>
+            <PreferencesProvider>
+              <Dialog>
+                <HeaderAd />
+                <NavBar />
+                <MarketTrends />
+                {children}
+                <WelcomeSlideshow />
+                <FloatingTokenSwap />
+              </Dialog>
+            </PreferencesProvider>
           </QueryProvider>
         </PrivyProvider>
         <ToastContainer

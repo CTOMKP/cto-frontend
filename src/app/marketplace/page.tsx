@@ -17,6 +17,7 @@ import MarketplaceCategoryDropdowns, {
 } from "./features/MarketplaceCategoryDropdowns";
 import { Input } from "@/components/ui/input";
 import { getCloudFrontUrl } from "@/utils/helper/image-url-helper";
+import { useTranslation } from "react-i18next";
 
 const MARKETPLACE_ASSET_BASE = '/marketplace';
 
@@ -159,6 +160,7 @@ const BOOST_TAGS = [
 ] as const;
 
 export default function MarketplacePage() {
+  const { t } = useTranslation();
   const [category, setCategory] = useState<Category>("trending");
   const [searchTerm, setSearchTerm] = useState('');
   const [marketTab, setMarketTab] = useState<'forYou' | 'new' | 'trending'>('trending');
@@ -266,19 +268,19 @@ export default function MarketplacePage() {
             className="mt-4 mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-red-500/35 bg-red-500/10 px-3 py-2 text-sm text-red-200/90"
             role="alert"
           >
-            <span>Marketplace ads could not be loaded.</span>
+            <span>{t("marketplace.adsError")}</span>
             <button
               type="button"
               className="shrink-0 rounded-md border border-red-400/40 px-2 py-1 text-xs font-medium hover:bg-red-500/20"
               onClick={() => feedQuery.refetch()}
             >
-              Retry
+              {t("common.retry")}
             </button>
           </div>
         )}
         {feedQuery.isPending && feedQuery.data === undefined && !feedQuery.isError && (
           <p className="mt-4 text-sm text-white/60" aria-live="polite">
-            Loading ads…
+            {t("marketplace.loadingAds")}
           </p>
         )}
         <div className="flex flex-wrap items-center justify-between gap-3 mt-4 mb-8">
@@ -386,14 +388,14 @@ export default function MarketplacePage() {
             </button>
             </div>
             <p className="text-sm text-white/60">by <span className="text-white hover:underline break-all text-sm">{String(ad.user.name ?? '')}</span></p>
-            <p className="text-sm text-white/50"><span className="text-white">Skill needed:</span> {String(ad.category ?? 'Marketplace')} | {String(ad.subCategory ?? ad.category ?? 'General')}</p>
+            <p className="text-sm text-white/50"><span className="text-white">{t("marketplace.skillNeeded")}:</span> {String(ad.category ?? 'Marketplace')} | {String(ad.subCategory ?? ad.category ?? 'General')}</p>
             <div className="pt-5 bg-[#060708] px-5 py-4 flex items-center justify-between">
               <div className="text-center w-1/2 border-r border-white/10">
-              <p className="text-xs text-white/60 mb-2">Payment</p>
+              <p className="text-xs text-white/60 mb-2">{t("marketplace.payment")}</p>
               <p className="text-xs text-white/80">{String(ad.priceCurrency ?? '')}</p>
               </div>
               <div className="text-center w-1/2">
-              <p className="text-xs text-white/60 mb-2">Price</p>
+              <p className="text-xs text-white/60 mb-2">{t("marketplace.price")}</p>
               <p className="text-xs text-white/80">{ad.priceAmount != null ? String(ad.priceAmount) : ''}</p>
               </div>
             </div>

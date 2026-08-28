@@ -15,6 +15,7 @@ import { Checkbox } from "./ui/checkbox";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { ApiCoinItem } from "@/types/api";
+import { useTranslation } from "react-i18next";
 
 // Define filter conditions interface
 // interface FilterConditions {
@@ -67,6 +68,7 @@ export default function FilterButton({
   items: ApiCoinItem[];
   onFilterChange: (filteredItems: ApiCoinItem[]) => void;
 }) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
 
@@ -217,13 +219,13 @@ export default function FilterButton({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger className="p-2 text-sm text-[#FFFFFF80] border-[0.5px] border-[#FFFFFF20] flex items-center gap-1 rounded-lg">
-        <ListFilter size={15} color="#FFFFFF80" /> <span>Filter</span>
+        <ListFilter size={15} color="#FFFFFF80" /> <span>{t("common.filter")}</span>
       </DialogTrigger>
       <DialogContent className="bg-black text-sm border-[2px] p-4 border-[#86868630] text-[#FFFFFF9E] max-w-5xl h-full overflow-auto rounded-xl hover-scrollbar">
         <DialogHeader className="flex !flex-row justify-between items-center pb-2 border-b-[0.5px] border-[#FFFFFF20]">
           <div>
             <DialogTitle className="font-bold text-white text-base">
-              Filter
+              {t("common.filter")}
             </DialogTitle>
           </div>
           <DialogClose>
@@ -249,29 +251,36 @@ export default function FilterButton({
 
         <div className="border-t-[0.5px] border-[#FFFFFF20]"></div>
 
-        {filtersWithInput.map((label, index) => (
-          <div className="flex justify-between" key={index}>
-            <Label border-none
-              className="text-white font-medium text-sm flex items-center"
-            >
-              {label}
-            </Label>
-            <div className="flex gap-4">
+        {filtersWithInput.map((label, index) => {
+          const rangeLabelMap: Record<string, string> = {
+            "Market cap": t("filters.marketCap"),
+            Liquidity: t("filters.liquidity"),
+            "24hr Volume %": t("filters.volume24pct"),
+            Age: t("filters.age"),
+            Holders: t("filters.holders"),
+          };
+          return (
+            <div className="flex justify-between" key={index}>
+              <Label className="text-white font-medium text-sm flex items-center">
+                {rangeLabelMap[label] ?? label}
+              </Label>
+              <div className="flex gap-4">
                 <Input
-              placeholder="Min"
-              className="bg-[#141414] w-27 border-none rounded-lg py-2 px-3 text-white placeholder:text-[#FFFFFF20] placeholder:font-medium"
-              value={rangeFilters[label].min}
-              onChange={(e) => handleRangeChange(label, 'min', e.target.value)}
-            />
-            <Input
-              placeholder="Max"
-              className="bg-[#141414] w-27 border-none rounded-lg py-2 px-3 text-white placeholder:text-[#FFFFFF20] placeholder:font-medium"
-              value={rangeFilters[label].max}
-              onChange={(e) => handleRangeChange(label, 'max', e.target.value)}
-            />
+                  placeholder={t("common.min")}
+                  className="bg-[#141414] w-27 border-none rounded-lg py-2 px-3 text-white placeholder:text-[#FFFFFF20] placeholder:font-medium"
+                  value={rangeFilters[label].min}
+                  onChange={(e) => handleRangeChange(label, "min", e.target.value)}
+                />
+                <Input
+                  placeholder={t("common.max")}
+                  className="bg-[#141414] w-27 border-none rounded-lg py-2 px-3 text-white placeholder:text-[#FFFFFF20] placeholder:font-medium"
+                  value={rangeFilters[label].max}
+                  onChange={(e) => handleRangeChange(label, "max", e.target.value)}
+                />
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         <div className="border-t-[0.5px] border-[#FFFFFF20]"></div>
 
@@ -281,14 +290,14 @@ export default function FilterButton({
               onClick={clearFilters}
               disabled={isApplying}
             >
-              <BrushCleaning size={16} /> Clear filter
+              <BrushCleaning size={16} /> {t("common.clearFilter")}
             </Button>
             <Button 
               className="p-2 rounded-lg cta-gradient w-[140px] text-white font-medium"
               onClick={applyFilters}
               disabled={isApplying}
             >
-              {isApplying ? "Applying..." : "Apply"}
+              {isApplying ? t("common.applying") : t("common.apply")}
             </Button>
         </div>
       </DialogContent>

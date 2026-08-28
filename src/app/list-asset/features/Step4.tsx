@@ -8,11 +8,11 @@ import {
   getTierInfo,
   getRiskScoreColor,
   getRiskScoreIcon,
-  formatCurrency,
   formatNumber,
 } from "./Step1";
 import { Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import FiatText from "@/components/FiatText";
 
 interface Step4Props {
   scanResult: ScanResult | null;
@@ -75,19 +75,20 @@ export default function Step4({ scanResult }: Step4Props) {
             <p>
               <span className="text-white/70">Price:</span>{" "}
               <span>
-                $
-                {metadata?.token_price
-                  ? metadata.token_price.toFixed(6)
-                  : "N/A"}
+                {metadata?.token_price != null ? (
+                  <FiatText usd={metadata.token_price} compact={false} />
+                ) : (
+                  "N/A"
+                )}
               </span>
             </p>
             <p>
               <span className="text-white/70">Market cap:</span>{" "}
-              <span>{formatCurrency(metadata?.market_cap)}</span>
+              <span><FiatText usd={metadata?.market_cap} /></span>
             </p>
             <p>
               <span className="text-white/70">24h volume:</span>{" "}
-              <span>{formatCurrency(metadata?.volume_24h)}</span>
+              <span><FiatText usd={metadata?.volume_24h} /></span>
             </p>
           </div>
         </div>
@@ -126,7 +127,7 @@ export default function Step4({ scanResult }: Step4Props) {
                 <h3 className="text-white/50 font-bold text-xs">LP Security</h3>
                 <div className="flex items-center gap-1 justify-center">
                   <span className="font-bold text-[24px]">
-                    {formatCurrency(metadata?.lp_amount_usd)}
+                    <FiatText usd={metadata?.lp_amount_usd} />
                   </span>
                   {(metadata?.lp_locked || metadata?.lp_burned) && (
                     <Image

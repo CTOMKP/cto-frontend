@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "../../../components/ui/button";
@@ -7,12 +9,15 @@ import {
 } from "@/components/ui/table";
 import { shortenAddress } from "@/utils/helper/shortenAddress";
 import { compactNumber } from "@/utils/helper/compactNumber";
+import FiatText from "@/components/FiatText";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { MockLikeCoin } from "./types/listing";
 import { getChainImage } from "./utils/listingUtils";
 import ListingEngagement from "./ListingEngagement";
 import FallbackImage from "@/components/FallbackImage";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import ProjectPreviewHover from "./ProjectPreviewCard";
+import { useTranslation } from "react-i18next";
 
 interface ListingTableRowProps {
   coin: MockLikeCoin;
@@ -20,15 +25,17 @@ interface ListingTableRowProps {
     projectName: string,
     projectAddress: string,
     projectChain?: string,
+    userListingId?: string,
   ) => void;
   onBuyClick?: (coin: MockLikeCoin) => void;
 }
 
 export default function ListingTableRow({ coin, onProjectClick, onBuyClick }: ListingTableRowProps) {
+  const { t } = useTranslation();
   return (
     <TableRow
       className="border-none rounded-lg bg-[#FFFFFF]/5 h-13 hover:!bg-[#FFFFFF1A] cursor-pointer"
-      onClick={() => onProjectClick(coin.name, coin.address, coin.chain)}
+      onClick={() => onProjectClick(coin.name, coin.address, coin.chain, coin.listingId)}
     >
       <TableCell>
         <div>
@@ -52,12 +59,18 @@ export default function ListingTableRow({ coin, onProjectClick, onBuyClick }: Li
       </TableCell>
       <TableCell>
         <div className="flex items-center justify-between">
-          <div className="flex items-center h-full gap-1">
-            <div className="relative">
+            <ProjectPreviewHover
+              coin={coin}
+              onOpenProject={() =>
+                onProjectClick(coin.name, coin.address, coin.chain, coin.listingId)
+              }
+            >
+            <div className="flex items-center h-full gap-1">
+            <div className="relative size-7 shrink-0">
               <FallbackImage
                 src={coin.image && coin.image.trim() !== "" ? coin.image : undefined}
                 alt={coin.name || "token"}
-                className="size-7 min-w-fit rounded-full border-[0.36px] border-white"
+                className="size-7 rounded-full object-cover border-[0.36px] border-white"
                 width={28}
                 height={28}
               />
@@ -229,7 +242,8 @@ export default function ListingTableRow({ coin, onProjectClick, onBuyClick }: Li
                 </Link>
               </div>
             </div>
-          </div>
+            </div>
+            </ProjectPreviewHover>
 
           <Button 
             className="bg-[#FF4A15]/21 text-[#FF4A15] p-0 h-fit px-1 py-1 ml-5 rounded-[5.5px] font-bold"
@@ -238,7 +252,7 @@ export default function ListingTableRow({ coin, onProjectClick, onBuyClick }: Li
               onBuyClick?.(coin);
             }}
           >
-            Buy
+            {t("common.buy")}
           </Button>
         </div>
       </TableCell>
@@ -247,10 +261,10 @@ export default function ListingTableRow({ coin, onProjectClick, onBuyClick }: Li
       <TableCell className="flex justify-center">
         <div>
           <span className={`font-medium`}>
-            ${compactNumber(coin.marketCap)}
+            <FiatText usd={coin.marketCap} />
           </span>
           <span className="flex gap-1 font-medium items-center text-xs">
-            <span>${compactNumber(coin.liquidity)}</span>
+            <FiatText usd={coin.liquidity} />
             <Image
               loading="lazy"
               src="/lock.svg"
@@ -267,7 +281,7 @@ export default function ListingTableRow({ coin, onProjectClick, onBuyClick }: Li
         <div className="flex justify-center">
           <div className="flex flex-col items-start w-fit">
             <span className={`font-medium w-full text-right`}>
-              {coin.holders && coin.holders > 0 ? compactNumber(coin.holders) : <span className="text-[#FFFFFF]/50 italic">N/A</span>}
+              {coin.holders && coin.holders > 0 ? compactNumber(coin.holders) : <span className="text-[#FFFFFF]/50 italic">{t("common.na")}</span>}
             </span>
           </div>
         </div>
@@ -280,7 +294,7 @@ export default function ListingTableRow({ coin, onProjectClick, onBuyClick }: Li
       <TableCell className="flex justify-center">
         <div className="flex flex-col items-center">
           <span className={`font-medium`}>
-            ${coin.price.amount}
+            <FiatText usd={coin.price.amount} compact={false} />
           </span>
           <span
             className={`flex font-medium items-center text-xs ${

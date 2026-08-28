@@ -4,6 +4,7 @@ import React from "react";
 import { SquareArrowOutUpRight } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { compactNumber } from "@/utils/helper/compactNumber";
+import FiatText from "@/components/FiatText";
 import { ApiCoinItem } from "@/types/api";
 
 interface ActivitiesSectionProps {
@@ -91,7 +92,7 @@ export default function ActivitiesSection({ projectData }: ActivitiesSectionProp
                   <tr className="text-left">
                     <th className="text-xs font-bold text-white/50 py-2 pr-4">Age</th>
                     <th className="text-xs font-bold text-white/50 py-2 pr-4">Type</th>
-                    <th className="text-xs font-bold text-white/50 py-2 pr-4">Value (USD)</th>
+                    <th className="text-xs font-bold text-white/50 py-2 pr-4">Value</th>
                     <th className="text-xs font-bold text-white/50 py-2 pr-4">Amount</th>
                     <th className="text-xs font-bold text-white/50 py-2 pr-4">Price</th>
                     <th className="text-xs font-bold text-white/50 py-2 pr-4">MC</th>
@@ -101,10 +102,10 @@ export default function ActivitiesSection({ projectData }: ActivitiesSectionProp
                 </thead>
                 <tbody>
                   {[
-                    { age: "5m", type: "buy", value: "$100.61", amount: "1.78M", price: "$0.0₅15260", mc: "$0.0₅15260", address: "7RET3F...YGS5", tx: "#" },
-                    { age: "12m", type: "sell", value: "$100.61", amount: "1.78M", price: "$0.0₅15260", mc: "$0.0₅15260", address: "7RET3F...YGS5", tx: "#" },
-                    { age: "22m", type: "buy", value: "$100.61", amount: "1.78M", price: "$0.0₅15260", mc: "$0.0₅15260", address: "7RET3F...YGS5", tx: "#" },
-                    { age: "35m", type: "sell", value: "$100.61", amount: "1.78M", price: "$0.0₅15260", mc: "$0.0₅15260", address: "7RET3F...YGS5", tx: "#" },
+                    { age: "5m", type: "buy", valueUsd: 100.61, amount: "1.78M", priceUsd: 0.00001526, mcUsd: 0.00001526, address: "7RET3F...YGS5", tx: "#" },
+                    { age: "12m", type: "sell", valueUsd: 100.61, amount: "1.78M", priceUsd: 0.00001526, mcUsd: 0.00001526, address: "7RET3F...YGS5", tx: "#" },
+                    { age: "22m", type: "buy", valueUsd: 100.61, amount: "1.78M", priceUsd: 0.00001526, mcUsd: 0.00001526, address: "7RET3F...YGS5", tx: "#" },
+                    { age: "35m", type: "sell", valueUsd: 100.61, amount: "1.78M", priceUsd: 0.00001526, mcUsd: 0.00001526, address: "7RET3F...YGS5", tx: "#" },
                   ].map((row, idx) => (
                     <tr key={idx} className="bg-white/2">
                       <td className="text-xs font-medium text-white py-3 pr-4 whitespace-nowrap">{row.age}</td>
@@ -113,10 +114,16 @@ export default function ActivitiesSection({ projectData }: ActivitiesSectionProp
                           {row.type === "buy" ? "Buy" : "Sell"}
                         </span>
                       </td>
-                      <td className="text-xs font-medium text-white py-3 pr-4 whitespace-nowrap">{row.value}</td>
+                      <td className="text-xs font-medium text-white py-3 pr-4 whitespace-nowrap">
+                        <FiatText usd={row.valueUsd} compact={false} />
+                      </td>
                       <td className="text-xs font-medium text-white py-3 pr-4 whitespace-nowrap">{row.amount}</td>
-                      <td className="text-xs font-medium text-white py-3 pr-4 whitespace-nowrap">{row.price}</td>
-                      <td className="text-xs font-medium text-white py-3 pr-4 whitespace-nowrap">{row.mc}</td>
+                      <td className="text-xs font-medium text-white py-3 pr-4 whitespace-nowrap">
+                        <FiatText usd={row.priceUsd} compact={false} />
+                      </td>
+                      <td className="text-xs font-medium text-white py-3 pr-4 whitespace-nowrap">
+                        <FiatText usd={row.mcUsd} compact={false} />
+                      </td>
                       <td className="text-xs font-medium text-white py-3 pr-4 whitespace-nowrap">{row.address}</td>
                       <td className="text-xs font-medium text-white py-3 pr-0 whitespace-nowrap text-right">
                         <a href={row.tx} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-white/80 hover:text-white">

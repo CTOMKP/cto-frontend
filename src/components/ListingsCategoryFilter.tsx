@@ -1,6 +1,7 @@
 'use client'
 
 import { Button } from "./ui/button";
+import { useTranslation } from "react-i18next";
 
 export type Category = "gainers" | "losers" | "new";
 
@@ -11,12 +12,13 @@ export default function ListingsCategoryFilter({
   selected: Category;
   onChange: (category: Category) => void;
 }) {
+  const { t } = useTranslation();
   const categories: Category[] = ["new", "gainers", "losers"];
 
   const labels: Record<Category, string> = {
-    gainers: "Gainers",
-    losers: "Losers",
-    new: "New Listings",
+    gainers: t("filters.gainers"),
+    losers: t("filters.losers"),
+    new: t("filters.newListings"),
   };
 
   return (

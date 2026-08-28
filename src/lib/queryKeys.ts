@@ -31,6 +31,9 @@ export const listingKeys = {
   highlights: () => [...listingKeys.all, "highlights"] as const,
   table: (filters: ListingTableFilters) =>
     [...listingKeys.all, "table", filters.page, filters.limit, filters.chain ?? "all"] as const,
+  /** Combined table sources (user listings + catalog), independent of page. */
+  tableSources: (chain: string | null) =>
+    [...listingKeys.all, "table-sources", chain ?? "all"] as const,
   /** Authenticated user's listings (profile table). Invalidated with `listingKeys.all`. */
   mine: () => [...listingKeys.all, "mine"] as const,
   /** Public or mine user-listing detail (`/user-listings/[id]`, live page). */

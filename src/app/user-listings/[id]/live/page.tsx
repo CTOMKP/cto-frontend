@@ -5,6 +5,7 @@ import { CheckCircle2, Zap } from "lucide-react";
 import { useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useUserListingDetailQuery } from "@/hooks/useUserListingDetailQuery";
+import FiatText from "@/components/FiatText";
 
 type ListingLike = {
   id: string;
@@ -34,13 +35,8 @@ const formatNumber = (value: unknown) => {
   return value.toLocaleString();
 };
 
-const formatCompactUsd = (value: unknown) => {
-  if (typeof value !== "number" || Number.isNaN(value)) return "N/A";
-  if (value >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(2)}B`;
-  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(2)}M`;
-  if (value >= 1_000) return `$${(value / 1_000).toFixed(2)}K`;
-  return `$${value.toFixed(2)}`;
-};
+const asUsd = (value: unknown) =>
+  typeof value === "number" && Number.isFinite(value) ? value : null;
 
 const riskLevelLabel = (score?: number) => {
   if (typeof score !== "number") return "N/A";
@@ -187,11 +183,11 @@ export default function UserListingLivePage() {
             <h3 className="font-bold text-2xl">Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-lg mt-3">
               <p><span className="text-white/70">Name:</span> {String(metadata.token_name || listing.title || "N/A")}</p>
-              <p><span className="text-white/70">Price:</span> {formatCompactUsd(metadata.token_price)}</p>
+              <p><span className="text-white/70">Price:</span> <FiatText usd={asUsd(metadata.token_price)} compact={false} /></p>
               <p><span className="text-white/70">Ticker:</span> ${String(metadata.token_symbol || "N/A")}</p>
-              <p><span className="text-white/70">Market cap:</span> {formatCompactUsd(metadata.market_cap)}</p>
+              <p><span className="text-white/70">Market cap:</span> <FiatText usd={asUsd(metadata.market_cap)} /></p>
               <p><span className="text-white/70">Age:</span> {String(metadata.age_display || metadata.age_display_short || "N/A")}</p>
-              <p><span className="text-white/70">24h volume:</span> {formatCompactUsd(metadata.volume_24h)}</p>
+              <p><span className="text-white/70">24h volume:</span> <FiatText usd={asUsd(metadata.volume_24h)} /></p>
               <p><span className="text-white/70">Created:</span> {toDateLabel((metadata.creation_date as string | undefined) || null)}</p>
               <p><span className="text-white/70">Chain:</span> {listing.chain || "N/A"}</p>
             </div>
@@ -207,7 +203,7 @@ export default function UserListingLivePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
             <div className="border border-white/15 rounded-lg p-4 text-center">
               <p className="text-white/60 text-sm">LP security</p>
-              <p className="text-2xl font-bold mt-1">{formatCompactUsd(metadata.lp_amount_usd)}</p>
+              <p className="text-2xl font-bold mt-1"><FiatText usd={asUsd(metadata.lp_amount_usd)} /></p>
             </div>
             <div className="border border-white/15 rounded-lg p-4 text-center">
               <p className="text-white/60 text-sm">Holders</p>

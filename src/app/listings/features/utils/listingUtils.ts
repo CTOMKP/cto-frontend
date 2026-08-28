@@ -186,6 +186,7 @@ export function mapApiCoinItemsToMockLikeCoins(items: ApiCoinItem[]): MockLikeCo
     }
 
     return {
+      listingId: it.metadata?.market?.source === "user-listing" ? it.id : undefined,
       name: it.name || it.symbol || "",
       whale: false,
       age: ageStr,
