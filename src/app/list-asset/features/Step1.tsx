@@ -73,36 +73,43 @@ const info = [
 
 // Helper function to get tier display info
 export const getTierInfo = (tier: string | undefined) => {
-  const tierStr = (tier || '').toLowerCase();
+  const rawTier = (tier || '').toLowerCase();
+  const tierStr = ['unclassified', 'unqualified', 'none', ''].includes(rawTier)
+    ? 'unclassified'
+    : rawTier;
   const tierIcons: Record<string, string> = {
     stellar: "/project-categories/stellar.png",
     bloom: "/project-categories/bloom.png",
     sprout: "/project-categories/sprout.png",
     seed: "/project-categories/seed.png",
+    unclassified: "/project-categories/seed.png",
   };
   const tierBgColors: Record<string, string> = {
     seed: "bg-[#6D6D6D]/20",
     sprout: "bg-[#FF5900]/20",
     bloom: "bg-[#15FF00]/20",
     stellar: "bg-[#FFBB00]/20",
+    unclassified: "bg-[#6D6D6D]/20",
   };
   const tierTextColors: Record<string, string> = {
     seed: "text-[#6D6D6D]",
     sprout: "text-[#FF5900]",
     bloom: "text-[#15FF00]",
     stellar: "text-[#FFBB00]",
+    unclassified: "text-[#6D6D6D]",
   };
   const tierNames: Record<string, string> = {
     seed: "Seed",
     sprout: "Sprout",
     bloom: "Bloom",
     stellar: "Stellar",
+    unclassified: "Unclassified",
   };
   return {
-    icon: tierIcons[tierStr] || "/project-categories/sprout.png",
-    bgColor: tierBgColors[tierStr] || "bg-[#FF5900]/20",
-    textColor: tierTextColors[tierStr] || "text-[#FF5900]",
-    name: tierNames[tierStr] || "Sprout",
+    icon: tierIcons[tierStr] || tierIcons.unclassified,
+    bgColor: tierBgColors[tierStr] || tierBgColors.unclassified,
+    textColor: tierTextColors[tierStr] || tierTextColors.unclassified,
+    name: tierNames[tierStr] || tierNames.unclassified,
   };
 };
 
@@ -161,46 +168,6 @@ export default function Step1({
   
   const router = useRouter();
   const { isAuthenticated } = usePrivyAuth();
-
-  /** Matches cto-test-frontend: backend threshold; 50 only when API omits minimum_required_score */
-  const minRequiredScore =
-    scanResult?.minimum_required_score ??
-    scanResult?.details?.minimum_required_score ??
-    (scanResult?.details?.details as { minimum_required_score?: number } | undefined)
-      ?.minimum_required_score ??
-    50;
-
-  const backendEligible =
-    scanResult?.eligible === true ||
-    scanResult?.details?.eligible === true ||
-    (scanResult?.details?.details as { eligible?: boolean } | undefined)
-      ?.eligible === true;
-
-  const provisional =
-    scanResult?.provisional ??
-    scanResult?.details?.provisional ??
-    false;
-
-  const provisionalReason =
-    scanResult?.provisional_reason ??
-    scanResult?.details?.provisional_reason ??
-    null;
-
-  const provisionalMissingData = useMemo(() => {
-    const fromRoot = scanResult?.provisional_missing_data;
-    if (Array.isArray(fromRoot) && fromRoot.length > 0) return fromRoot;
-
-    const fromDetails = scanResult?.details?.provisional_missing_data;
-    if (Array.isArray(fromDetails) && fromDetails.length > 0) return fromDetails;
-
-    const fromVetting =
-      scanResult?.metadata?.vetting_results?.missingData ??
-      scanResult?.details?.metadata?.vetting_results?.missingData ??
-      scanResult?.details?.details?.metadata?.vetting_results?.missingData;
-    if (Array.isArray(fromVetting) && fromVetting.length > 0) return fromVetting;
-
-    return [];
-  }, [scanResult]);
 
   const selectedNetworkMeta = useMemo(
     () =>
@@ -570,7 +537,7 @@ export default function Step1({
                   // Handle nested details.details structure
                   const nestedDetails = scanResult?.details?.details;
                   const tier = nestedDetails?.tier || scanResult?.details?.tier || scanResult?.tier;
-                  const riskScore = nestedDetails?.risk_score || scanResult?.details?.risk_score || scanResult?.risk_score || 0;
+                  const riskScore = nestedDetails?.risk_score ?? scanResult?.details?.risk_score ?? scanResult?.risk_score ?? 0;
                   // const riskLevel = nestedDetails?.risk_level || scanResult?.details?.risk_level || scanResult?.risk_level;
                   const tierInfo = getTierInfo(tier);
                   const metadata = nestedDetails?.metadata || scanResult?.details?.metadata || scanResult?.metadata;
@@ -646,7 +613,7 @@ export default function Step1({
                   // Handle nested details.details structure
                   const nestedDetails = scanResult?.details?.details;
                   const metadata = nestedDetails?.metadata || scanResult?.details?.metadata || scanResult?.metadata;
-                  const riskScore = nestedDetails?.risk_score || scanResult?.details?.risk_score || scanResult?.risk_score || 0;
+                  const riskScore = nestedDetails?.risk_score ?? scanResult?.details?.risk_score ?? scanResult?.risk_score ?? 0;
                   const riskLevel = nestedDetails?.risk_level || scanResult?.details?.risk_level || scanResult?.risk_level || 'UNKNOWN';
                   
                   return (
@@ -661,7 +628,13 @@ export default function Step1({
                             )}
                           </div>
                           <p className='text-white/50 font-bold text-xs'>
-                            {metadata?.lp_locked ? 'Locked' : metadata?.lp_burned ? 'Burned' : 'Unlocked'}
+                            {metadata?.lp_lock_data_status !== 'observed'
+                              ? 'Unverified'
+                              : metadata?.lp_locked
+                              ? 'Locked'
+                              : metadata?.lp_burned
+                              ? 'Burned'
+                              : 'Unlocked'}
                             {metadata?.lp_lock_months ? `: ${metadata.lp_lock_months}mo` : ''}
                           </p>
                         </div>
@@ -695,39 +668,22 @@ export default function Step1({
 
                 <div className='flex flex-col items-center gap-3'>
                   {(() => {
-                    // Check risk score threshold returned by backend
+                    // Eligibility is authoritative because verified evidence, not
+                    // score alone, determines whether a token can be listed.
                     const nestedDetails = scanResult?.details?.details;
-                    const riskScore = nestedDetails?.risk_score || scanResult?.details?.risk_score || scanResult?.risk_score || 0;
-                    const minRequiredScore =
-                      nestedDetails?.minimum_required_score ||
-                      scanResult?.details?.minimum_required_score ||
-                      scanResult?.minimum_required_score ||
-                      50;
                     const backendEligible =
                       nestedDetails?.eligible ??
                       scanResult?.details?.eligible ??
                       scanResult?.eligible ??
                       false;
-                    const provisionalReason =
-                      nestedDetails?.provisional_reason ||
-                      scanResult?.details?.provisional_reason ||
-                      scanResult?.provisional_reason ||
-                      null;
-                    const canProceed = backendEligible === true || riskScore >= minRequiredScore;
+                    const canProceed = backendEligible === true;
                     
                     return (
                       <>
-                        {!!provisionalReason && (
-                          <div className="w-full py-3 px-4 rounded-lg bg-amber-500/20 border border-amber-500/50">
-                            <p className="text-sm text-amber-300 text-center font-medium">
-                              {provisionalReason}
-                            </p>
-                          </div>
-                        )}
                         {!canProceed && (
                           <div className="w-full py-3 px-4 rounded-lg bg-red-500/20 border border-red-500/50">
                             <p className="text-sm text-red-400 text-center font-medium">
-                              ⚠️ Risk score too low. Minimum required: {minRequiredScore}
+                              This token is not eligible for listing because required verification evidence is incomplete or unmet.
                             </p>
                           </div>
                         )}

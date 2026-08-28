@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { marketplaceService, MarketplacePricingCatalog } from '@/services/marketplaceService';
 
 const AdPaymentDialog = dynamic(
   () => import('@/app/marketplace/post-ad/features/AdPaymentDialog'),
@@ -50,34 +51,36 @@ export default function PreviewStep({
   savingDraft = false,
   ensureDraftSaved,
 }: PreviewStepProps) {
+  const [pricingCatalog, setPricingCatalog] = useState<MarketplacePricingCatalog>({});
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     document.getElementById('preview-step-header')?.scrollIntoView({ behavior: 'instant', block: 'start' });
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    marketplaceService.getPricing().then((catalog) => {
+      if (active) setPricingCatalog(catalog);
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
+
   const visibilityIdForPricing = formData.visibility?.trim();
-  const hasValidVisibility =
-    !!visibilityIdForPricing &&
-    ['free', 'plus', 'premium'].includes(visibilityIdForPricing);
+  const hasValidVisibility = visibilityIdForPricing === 'free';
+  const categoryDefinition = pricingCatalog.categories?.find((item) => item.id === formData.category);
+  const normalizedSubcategory = String(formData.subcategory || '').trim().toLowerCase();
+  const subcategoryDefinition = categoryDefinition?.subcategories.find((item) =>
+    item.id.toLowerCase() === normalizedSubcategory || item.name.toLowerCase() === normalizedSubcategory,
+  );
+  const categoryFee = Number(subcategoryDefinition?.priceUsd ?? categoryDefinition?.defaultPriceUsd ?? 0);
+  const addOnPrices = new Map(pricingCatalog.addons?.map((item) => [item.id, Number(item.priceUsd)]) ?? []);
 
   const subtotal = (() => {
-    let total = 0;
-    
-    // Category price (if applicable)
-    // Based on the image, category "Developer" with "FULL STACK" costs $5
-    if (formData.category && formData.subcategory) {
-      total += 5; // Category price
-    }
-    
-    // Visibility pricing (only when a tier is explicitly selected)
-    if (hasValidVisibility && formData.visibility === 'plus') total += 5;
-    if (hasValidVisibility && formData.visibility === 'premium') total += 15;
-    
-    // Boost options pricing
-    if (formData.boostOptions?.['auto-bump']) total += 7;
-    if (formData.boostOptions?.['homepage-spotlight']) total += 20;
-    if (formData.boostOptions?.['urgent-tag']) total += 5;
-    if (formData.boostOptions?.['multi-chain-tag']) total += 10;
+    let total = categoryFee;
+    if (formData.boostOptions?.['auto-bump']) total += addOnPrices.get('AUTO_BUMP_3') ?? 0;
+    if (formData.boostOptions?.['homepage-spotlight']) total += addOnPrices.get('HOMEPAGE_SPOTLIGHT') ?? 0;
+    if (formData.boostOptions?.['urgent-tag']) total += addOnPrices.get('URGENT_TAG') ?? 0;
+    if (formData.boostOptions?.['multi-chain-tag']) total += addOnPrices.get('MULTI_CHAIN_TAG') ?? 0;
 
     return total;
   })();
@@ -85,32 +88,16 @@ export default function PreviewStep({
   const calculateSubtotal = () => subtotal;
 
   const getCategoryName = () => {
-    const categoryMap: Record<string, string> = {
-      'developers': 'Developer',
-      'design-branding': 'Design & Branding',
-      'shilling-marketing': 'Shilling & Marketing',
-      'tokenomics-strategy': 'Tokenomics & Strategy',
-      'advisory-leadership': 'Advisory & Leadership',
-      'community-operations': 'Community & Operations',
-      'project-listings': 'Project Listings (For Takeover)',
-      'nft-art': 'NFT & Art',
-      'tools-services': 'Tools & Services',
-      'writing-content': 'Writing & Content',
-    };
-    return categoryMap[formData.category || ''] || formData.category || 'N/A';
+    return categoryDefinition?.name || formData.category || 'N/A';
   };
 
-  const visibilityOptions = [
-    { id: 'free', description: 'Listed for 28 days', price: '$0' },
-    { id: 'plus', description: 'Highlighted in listings + top for 1 day', price: '$5' },
-    { id: 'premium', description: 'Top for 7 days + featured badge + show on homepage', price: '$15' },
-  ];
+  const visibilityOptions = [{ id: 'free', description: 'Listed for 28 days', price: '$0' }];
 
   const boostOptions = [
-    { id: 'auto-bump', description: 'Pushes your ad to the top every 24h for 3 days', price: '$7' },
-    { id: 'homepage-spotlight', description: 'Displayed on homepage under "Top Picks"', price: '$20' },
-    { id: 'urgent-tag', description: 'Red urgency tag, filterable', price: '$5' },
-    { id: 'multi-chain-tag', description: 'Appear under multiple blockchains', price: '$10' },
+    { id: 'auto-bump', description: 'Pushes your ad to the top every 24h for 3 days', price: `$${addOnPrices.get('AUTO_BUMP_3') ?? 0}` },
+    { id: 'homepage-spotlight', description: 'Displayed on homepage under "Top Picks"', price: `$${addOnPrices.get('HOMEPAGE_SPOTLIGHT') ?? 0}` },
+    { id: 'urgent-tag', description: 'Red urgency tag, filterable', price: `$${addOnPrices.get('URGENT_TAG') ?? 0}` },
+    { id: 'multi-chain-tag', description: 'Appear under multiple blockchains', price: `$${addOnPrices.get('MULTI_CHAIN_TAG') ?? 0}` },
   ];
 
   const visibilityId = visibilityIdForPricing;
@@ -124,7 +111,7 @@ export default function PreviewStep({
   const paymentBreakdown = (() => {
     const items: { label: string; price: number }[] = [];
     if (formData.category && formData.subcategory) {
-      items.push({ label: 'Category', price: 5 });
+      items.push({ label: 'Category', price: categoryFee });
     }
     if (hasValidVisibility && formData.visibility) {
       const visId = formData.visibility;
@@ -133,7 +120,7 @@ export default function PreviewStep({
         plus: 'Visibility: Plus',
         premium: 'Visibility: Premium',
       };
-      const visPrices: Record<string, number> = { free: 0, plus: 5, premium: 15 };
+      const visPrices: Record<string, number> = { free: 0 };
       items.push({ label: visLabels[visId] ?? 'Visibility', price: visPrices[visId] ?? 0 });
     }
     const boostLabels: Record<string, string> = {
@@ -143,10 +130,10 @@ export default function PreviewStep({
       'multi-chain-tag': 'Multi-Chain Tag',
     };
     const boostPrices: Record<string, number> = {
-      'auto-bump': 7,
-      'homepage-spotlight': 20,
-      'urgent-tag': 5,
-      'multi-chain-tag': 10,
+      'auto-bump': addOnPrices.get('AUTO_BUMP_3') ?? 0,
+      'homepage-spotlight': addOnPrices.get('HOMEPAGE_SPOTLIGHT') ?? 0,
+      'urgent-tag': addOnPrices.get('URGENT_TAG') ?? 0,
+      'multi-chain-tag': addOnPrices.get('MULTI_CHAIN_TAG') ?? 0,
     };
     (Object.keys(boostPrices) as (keyof typeof boostPrices)[]).forEach((id) => {
       if (formData.boostOptions?.[id]) {

@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Upload, Plus } from 'lucide-react';
+import { marketplaceService, MarketplacePricingCatalog } from '@/services/marketplaceService';
 
 export interface ProjectDetailsData {
   category?: string;
@@ -44,9 +45,12 @@ const categoryIdToName: Record<string, string> = {
   'advisory-leadership': 'Advisory & Leadership',
   'community-operations': 'Community & Operations',
   'project-listings': 'Project Listings (For Takeover)',
+  'project-takeovers': 'Project Listings (For Takeover)',
   'nft-art': 'NFT & Art',
   'tools-services': 'Tools & Services',
   'writing-content': 'Writing & Content',
+  'collaborations-partnerships': 'Collaborations & Partnerships',
+  'other-experimental': 'Other / Experimental',
 };
 
 const AD_TITLE_MIN = 6;
@@ -132,8 +136,16 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
   const [deadline, setDeadline] = useState(() => toDateValue(initialData?.deadline || ''));
   const minDate = getTodayLocal();
   const [noFixedDeadline, setNoFixedDeadline] = useState(initialData?.noFixedDeadline || false);
-  const [visibility, setVisibility] = useState(initialData?.visibility ?? '');
+  const [visibility, setVisibility] = useState('free');
   const [boostOptions, setBoostOptions] = useState<Record<string, boolean>>(initialData?.boostOptions || {});
+  const [pricingCatalog, setPricingCatalog] = useState<MarketplacePricingCatalog>({});
+  useEffect(() => {
+    let active = true;
+    marketplaceService.getPricing().then((catalog) => {
+      if (active) setPricingCatalog(catalog);
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
   const MAX_IMAGES = 3;
   const [images, setImages] = useState<(File | null)[]>(() => {
     const from = initialData?.images ?? [];
@@ -192,19 +204,28 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
   };
 
   const calculateSubtotal = () => {
-    let total = 0;
-    // Category fee (chosen in step 1) - same as PreviewStep
-    if (initialData?.category && initialData?.subcategory) {
-      total += 5;
-    }
-    if (visibility === 'plus') total += 5;
-    if (visibility === 'premium') total += 15;
-    if (boostOptions['auto-bump']) total += 7;
-    if (boostOptions['homepage-spotlight']) total += 20;
-    if (boostOptions['urgent-tag']) total += 5;
-    if (boostOptions['multi-chain-tag']) total += 10;
+    const category = pricingCatalog.categories?.find((item) => item.id === initialData?.category);
+    const normalizedSubcategory = String(initialData?.subcategory || '').trim().toLowerCase();
+    const subcategory = category?.subcategories.find((item) =>
+      item.id.toLowerCase() === normalizedSubcategory || item.name.toLowerCase() === normalizedSubcategory,
+    );
+    let total = Number(subcategory?.priceUsd ?? category?.defaultPriceUsd ?? 0);
+    const addOnPrices = new Map(pricingCatalog.addons?.map((item) => [item.id, Number(item.priceUsd)]) ?? []);
+    if (boostOptions['auto-bump']) total += addOnPrices.get('AUTO_BUMP_3') ?? 0;
+    if (boostOptions['homepage-spotlight']) total += addOnPrices.get('HOMEPAGE_SPOTLIGHT') ?? 0;
+    if (boostOptions['urgent-tag']) total += addOnPrices.get('URGENT_TAG') ?? 0;
+    if (boostOptions['multi-chain-tag']) total += addOnPrices.get('MULTI_CHAIN_TAG') ?? 0;
     return total;
   };
+
+  const addOnPrice = (id: string) => pricingCatalog.addons?.find((item) => item.id === id)?.priceUsd;
+  const visibilityOptions = [{ id: 'free', description: 'Listed for 28 days', price: '$0' }];
+  const boostOptionDefinitions = [
+    { id: 'auto-bump', description: 'Pushes your ad to the top every 24h for 3 days', price: addOnPrice('AUTO_BUMP_3') },
+    { id: 'homepage-spotlight', description: 'Displayed on homepage under "Top Picks"', price: addOnPrice('HOMEPAGE_SPOTLIGHT') },
+    { id: 'urgent-tag', description: 'Red urgency tag, filterable', price: addOnPrice('URGENT_TAG') },
+    { id: 'multi-chain-tag', description: 'Appear under multiple blockchains', price: addOnPrice('MULTI_CHAIN_TAG') },
+  ].map((option) => ({ ...option, price: option.price == null ? '—' : `$${option.price}` }));
 
   const hasAtLeastOneImage = imagePreviews.some((src) => !!src);
   const trimmedProjectName = projectName.trim();
@@ -601,11 +622,7 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
           </h3>
           <div className='border-t-[0.2px] border-0 border-white/20 mt-5 mb-6'></div>
           <div className="space-y-3">
-            {[
-              { id: 'free', description: 'Listed for 28 days', price: '$0' },
-              { id: 'plus', description: 'Highlighted in listings + top for 1 day', price: '$5' },
-              { id: 'premium', description: 'Top for 7 days + featured badge + show on homepage', price: '$15' },
-            ].map((option) => {
+            {visibilityOptions.map((option) => {
               const isSelected = visibility === option.id;
               return (
                 <div
@@ -637,12 +654,7 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
           </h3>
           <div className='border-t-[0.2px] border-0 border-white/20 mt-5 mb-6'></div>
           <div className="space-y-3">
-            {[
-              { id: 'auto-bump', description: 'Pushes your ad to the top every 24h for 3 days', price: '$7' },
-              { id: 'homepage-spotlight', description: 'Displayed on homepage under "Top Picks"', price: '$20' },
-              { id: 'urgent-tag', description: 'Red urgency tag, filterable', price: '$5' },
-              { id: 'multi-chain-tag', description: 'Appear under multiple blockchains', price: '$10' },
-            ].map((option) => {
+            {boostOptionDefinitions.map((option) => {
               const isSelected = boostOptions[option.id];
               return (
                 <div

@@ -26,11 +26,10 @@ import solanaWalletService from '@/services/solanaWalletService';
 import {
   getPrivySolanaPayWallet,
   resolvePrivySolanaAddress,
-  signAndBroadcastSolanaPayPreferPrivyHook,
+  signSolanaPayPreferPrivyHook,
   type PrivySolanaSignTransaction,
   type SolanaSignerWallet,
 } from '@/lib/solanaTransaction';
-import { getDefaultSolanaRpcUrl } from '@/lib/solanaRpc';
 import { MoonLoader } from 'react-spinners';
 import { MEMECOIN_LISTING_FEE_USDC } from './listingPricing';
 
@@ -67,6 +66,7 @@ export default function PaymentDialog({
   const [copiedAddress, setCopiedAddress] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [solanaQuoteAmount, setSolanaQuoteAmount] = useState(1);
   const movementWalletQuery = useResolvedMovementWallet({ preferStorage: true });
   const { wallets: solanaScopedWallets } = useSolanaWallets();
   const solanaPayWallet = useMemo(
@@ -101,7 +101,22 @@ export default function PaymentDialog({
         : '';
   const solanaAddrKey = solanaDisplayAddress ?? '';
 
-  const totalAmount = listingFee;
+  const totalAmount = paymentMethod === 'SOL' ? solanaQuoteAmount : listingFee;
+
+  useEffect(() => {
+    if (!open || !listingId) return;
+    let cancelled = false;
+    solanaPaymentService.getListingQuote(listingId)
+      .then((quote) => {
+        const data = ((quote as { data?: unknown })?.data || quote) as { amountDisplay?: number };
+        const amount = Number(data.amountDisplay);
+        if (!cancelled && Number.isFinite(amount) && amount >= 0) setSolanaQuoteAmount(amount);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [open, listingId]);
 
   const displayUsdcBalance = paymentMethod === 'SOL' ? solanaUsdc : movementUsdc;
   const displayWalletAddress = paymentMethod === 'SOL' ? solanaAddress : movementAddress;
@@ -262,7 +277,6 @@ export default function PaymentDialog({
           walletAddress: solanaPayWallet.address,
           hasSignTransaction: typeof solWalletProbe.signTransaction === 'function',
           hasProviderSign: typeof solWalletProbe.provider?.signTransaction === 'function',
-          rpcUrl: getDefaultSolanaRpcUrl(),
         });
         const paymentResult = await solanaPaymentService.createListingPayment(actualListingId);
         console.log('[memecoin listing][Solana] createListingPayment raw', paymentResult);
@@ -277,6 +291,13 @@ export default function PaymentDialog({
         if (!paymentData?.success) {
           throw new Error(String(paymentData?.message || 'Failed to create payment'));
         }
+        if (paymentData.alreadyCompleted) {
+          toast.success('Payment already verified!');
+          setIsProcessing(false);
+          setCurrentStep(3);
+          onPaymentSuccess?.();
+          return;
+        }
         const txBase64 = paymentData.transaction as string | undefined;
         if (!txBase64) {
           throw new Error('Transaction data missing');
@@ -285,12 +306,20 @@ export default function PaymentDialog({
         console.log(
           '[memecoin listing][Solana] sign+broadcast: Privy useSignTransaction(bytes+chain) first (cto-test SolanaWalletActivity pattern)',
         );
-        const txHash = await signAndBroadcastSolanaPayPreferPrivyHook({
+        const signedTransaction = await signSolanaPayPreferPrivyHook({
           unsignedTxBase64: txBase64,
           wallet: solanaPayWallet,
           signTransactionHook: privySignSolanaTransaction as unknown as PrivySolanaSignTransaction,
-          rpcUrl: getDefaultSolanaRpcUrl(),
+          chainId: paymentData.chainId as "solana:devnet" | "solana:mainnet" | undefined,
         });
+        const broadcastResult = await solanaPaymentService.broadcastPayment(
+          String(paymentData.paymentId),
+          signedTransaction,
+        );
+        const broadcastData = ((broadcastResult as { data?: unknown })?.data || broadcastResult) as
+          { txHash?: string };
+        const txHash = broadcastData.txHash;
+        if (!txHash) throw new Error('Backend did not return a Solana transaction hash');
         console.log('[memecoin listing][Solana] tx signed, sent, confirmed', txHash);
         toast.success('Transaction submitted! Verifying payment...');
         // Wait before verify so the backend/indexer can see the Solana signature.

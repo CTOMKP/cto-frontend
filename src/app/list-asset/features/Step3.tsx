@@ -94,27 +94,14 @@ export default function Step3({
     }
 
     const nested = scanResult.details?.details as
-      | { risk_score?: number; eligible?: boolean; minimum_required_score?: number }
+      | { eligible?: boolean }
       | undefined;
-    const riskScore = Number(
-      scanResult.risk_score ??
-        nested?.risk_score ??
-        scanResult.details?.risk_score ??
-        0,
-    );
-    const minRequired =
-      scanResult.minimum_required_score ??
-      scanResult.details?.minimum_required_score ??
-      nested?.minimum_required_score ??
-      50;
     const backendEligible =
       scanResult.eligible === true ||
       scanResult.details?.eligible === true ||
       nested?.eligible === true;
-    if (!backendEligible && riskScore < minRequired) {
-      toast.error(
-        `Listing requires eligibility or a risk score of at least ${minRequired}.`,
-      );
+    if (!backendEligible) {
+      toast.error('This token is not eligible for listing. Complete verification and tier requirements are mandatory.');
       return;
     }
 

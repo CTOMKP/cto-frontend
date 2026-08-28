@@ -1,4 +1,4 @@
-import { apiPost } from "@/lib/apiClient";
+import { apiGet, apiPost } from "@/lib/apiClient";
 import { unwrapApiData } from "@/lib/apiResponse";
 
 /** Same unwrap as cto-test-frontend axios `return res.data?.data || res.data` (one `.data` step on the JSON body). */
@@ -7,18 +7,25 @@ function solanaPaymentBody<T = unknown>(raw: unknown): T {
 }
 
 export const solanaPaymentService = {
+  async getListingQuote(listingId: string) {
+    const res = await apiGet<unknown>(`/api/v1/payment/solana/listing/${listingId}/quote`);
+    return solanaPaymentBody(res);
+  },
+
   async createListingPayment(listingId: string) {
     const res = await apiPost<unknown>(`/api/v1/payment/solana/listing/${listingId}`, {});
     return solanaPaymentBody(res);
   },
 
-  async verifyPayment(paymentId: string, txHash: string) {
-    const res = await apiPost<unknown>(`/api/v1/payment/solana/verify/${paymentId}`, { txHash });
+  async broadcastPayment(paymentId: string, signedTransaction: string) {
+    const res = await apiPost<unknown>(`/api/v1/payment/solana/broadcast/${paymentId}`, {
+      signedTransaction,
+    });
     return solanaPaymentBody(res);
   },
 
-  async createMarketplaceAdPayment(adId: string, amountUsd: number) {
-    const res = await apiPost<unknown>(`/api/v1/payment/solana/marketplace-ad/${adId}`, { amountUsd });
+  async verifyPayment(paymentId: string, txHash: string) {
+    const res = await apiPost<unknown>(`/api/v1/payment/solana/verify/${paymentId}`, { txHash });
     return solanaPaymentBody(res);
   },
 

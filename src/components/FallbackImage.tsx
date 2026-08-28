@@ -74,14 +74,12 @@ const FallbackImage: React.FC<Props> = ({
     
     const img = new window.Image();
     
-    // Set crossOrigin for cross-origin requests (backend API URLs and CloudFront URLs)
+    // Backend image endpoints require an anonymous CORS request. Public CloudFront
+    // mascot assets are display-only here and should load as normal images.
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
-    const cloudfrontDomain = process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN || 'd2cjbd1iqkwr9j.cloudfront.net';
     if (current.startsWith('http') && (
       current.includes(backendUrl) || 
-      current.includes('/api/v1/images/view/') ||
-      current.includes(cloudfrontDomain) ||
-      current.includes('cloudfront.net')
+      current.includes('/api/v1/images/view/')
     )) {
       img.crossOrigin = 'anonymous';
     }
@@ -112,15 +110,12 @@ const FallbackImage: React.FC<Props> = ({
     };
   }, [current, index, candidates.length, onLoad]);
 
-  // Check if this is a cross-origin URL that needs special handling
-  // CloudFront URLs and backend API URLs are cross-origin
+  // Only backend image endpoints need explicit anonymous CORS handling.
+  // Public CloudFront mascot URLs can render through the normal unoptimized path.
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ctomarketplace.com';
-  const cloudfrontDomain = process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN || 'd2cjbd1iqkwr9j.cloudfront.net';
   const isCrossOrigin = current && current.startsWith('http') && (
     current.includes(backendUrl) || 
-    current.includes('/api/v1/images/view/') ||
-    current.includes(cloudfrontDomain) ||
-    current.includes('cloudfront.net')
+    current.includes('/api/v1/images/view/')
   );
 
   // Show placeholder if no image or error

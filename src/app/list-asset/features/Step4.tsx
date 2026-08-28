@@ -26,9 +26,9 @@ export default function Step4({ scanResult }: Step4Props) {
   const tier =
     nestedDetails?.tier || scanResult?.details?.tier || scanResult?.tier;
   const riskScore =
-    nestedDetails?.risk_score ||
-    scanResult?.details?.risk_score ||
-    scanResult?.risk_score ||
+    nestedDetails?.risk_score ??
+    scanResult?.details?.risk_score ??
+    scanResult?.risk_score ??
     0;
 //   const riskLevel =
 //     nestedDetails?.risk_level ||
@@ -110,9 +110,9 @@ export default function Step4({ scanResult }: Step4Props) {
           scanResult?.details?.metadata ||
           scanResult?.metadata;
         const riskScore =
-          nestedDetails?.risk_score ||
-          scanResult?.details?.risk_score ||
-          scanResult?.risk_score ||
+          nestedDetails?.risk_score ??
+          scanResult?.details?.risk_score ??
+          scanResult?.risk_score ??
           0;
         const riskLevel =
           nestedDetails?.risk_level ||
@@ -140,7 +140,9 @@ export default function Step4({ scanResult }: Step4Props) {
                   )}
                 </div>
                 <p className="text-white/50 font-bold text-xs">
-                  {metadata?.lp_locked
+                  {metadata?.lp_lock_data_status !== "observed"
+                    ? "Unverified"
+                    : metadata?.lp_locked
                     ? "Locked"
                     : metadata?.lp_burned
                     ? "Burned"

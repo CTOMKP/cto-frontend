@@ -12,42 +12,15 @@ import { getMascotImageUrl } from '@/lib/image-url-helper';
 import { getAuthToken } from '@/lib/authSession';
 import { useRouter } from 'next/navigation';
 import { useSessionStore } from '@/lib/sessionStore';
+import type { MascotAssignment } from '@/services/pfpService';
 
 interface CardRevealProps {
   selectedCardId: number | null;
+  mascotTrait: string;
+  assignment: MascotAssignment;
   onClose?: () => void;
   onImageSaved?: (imageUrl: string) => void;
 }
-
-// Trait mapping - maps card IDs to trait names
-const TRAIT_MAP: Record<number, string> = {
-  1: 'CTO',
-  2: 'DEGEN',
-  3: 'DEV',
-  4: 'WHALE',
-  5: 'ARTIST',
-};
-
-// Available trait variants for randomization
-const TRAIT_VARIANTS: Record<string, string[]> = {
-  'CTO': ['CTO', 'CTO2'],
-  'DEGEN': ['DEGEN', 'DEGEN2'],
-  'DEV': ['DEV'],
-  'WHALE': ['WHALE', 'WHALE2', 'WHALE3', 'EARLYADT.WHALE'],
-  'ARTIST': ['ARTIST', 'ARTIST2', 'ARTIST3'],
-  'HACKER': ['HACKER', 'HACKER2', 'HACKER3'],
-  'MOD': ['MOD', 'MOD2', 'MOD3'],
-  'VISIONARY': ['VISIONARY', 'VISIONARY2'],
-};
-
-// Get trait image path with random variant selection
-const getTraitImage = (traitName: string, cardId: number): string => {
-  const variants = TRAIT_VARIANTS[traitName] || [traitName];
-  // Use cardId to deterministically select a variant (so same card always shows same variant)
-  const variantIndex = (cardId - 1) % variants.length;
-  const selectedVariant = variants[variantIndex] || traitName;
-  return `mascots/TRAITS/${selectedVariant}.png`;
-};
 
 /**
  * Composite mascot layers into a single canvas image (without stage layer)
@@ -113,7 +86,7 @@ const compositeMascotImage = async (
   });
 };
 
-export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageSaved }) => {
+export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, mascotTrait, assignment, onImageSaved }) => {
   const sessionUserId = useSessionStore((s) => s.userId);
   const [isSaving, setIsSaving] = useState(false);
   const [isAutoSaved, setIsAutoSaved] = useState(false);
@@ -124,14 +97,19 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageS
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const traitName = selectedCardId ? (TRAIT_MAP[selectedCardId] || 'CTO') : 'CTO';
+  const isFinishedPfp = assignment.assetVersion === 'v2';
+  const traitName = isFinishedPfp
+    ? `Mascot #${mascotTrait.replace(/^V2_/, '')}`
+    : mascotTrait;
   // Use CloudFront CDN URLs for better performance
   const baseSkinPath = getMascotImageUrl('mascots/SKIN/BASE SKIN.png');
   const stagePath = getMascotImageUrl('mascots/STAGE/STAGE.png');
-  const traitPath = getMascotImageUrl(getTraitImage(traitName, selectedCardId || 0));
+  const traitPath = getMascotImageUrl(assignment.assetPath);
 
   // Track if all images are loaded
-  const allImagesLoaded = imagesLoaded.base && imagesLoaded.stage && imagesLoaded.trait;
+  const allImagesLoaded = isFinishedPfp
+    ? imagesLoaded.trait
+    : imagesLoaded.base && imagesLoaded.stage && imagesLoaded.trait;
 
   const resolveUserId = useCallback((): string | null => {
     if (sessionUserId) return sessionUserId;
@@ -166,7 +144,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageS
     }, 2000);
 
     return () => clearTimeout(fallbackTimer);
-  }, [selectedCardId]);
+  }, [selectedCardId, mascotTrait]);
 
   // Auto-save when images are loaded (card is revealed) - waits for all images to load
   useEffect(() => {
@@ -182,9 +160,14 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageS
           return;
         }
 
-        // Composite the mascot layers into a single image file (without stage)
-        const file = await compositeMascotImageMemo(baseSkinPath, traitPath);
-        setCompositeFile(file); // Store for reuse in manual save
+        // Finished v2 PFPs already exist in S3. Legacy v1 assignments still
+        // need their base and trait layers composited before upload.
+        let imageToSave: File | string = traitPath;
+        if (!isFinishedPfp) {
+          const file = await compositeMascotImageMemo(baseSkinPath, traitPath);
+          setCompositeFile(file);
+          imageToSave = file;
+        }
 
         // Get user ID from localStorage only
         const resolvedUserId = resolveUserId() ?? undefined;
@@ -194,7 +177,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageS
         }
 
         // Upload and save the PFP automatically (silently, without setting isSaving)
-        const result = await pfpService.savePFP(file, resolvedUserId);
+        const result = await pfpService.savePFP(imageToSave, resolvedUserId);
 
         if (result.success) {
           setIsAutoSaved(true);
@@ -220,7 +203,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageS
     if (selectedCardId && allImagesLoaded) {
       autoSavePFP();
     }
-  }, [selectedCardId, allImagesLoaded, isAutoSaved, isSaving, baseSkinPath, traitPath, compositeMascotImageMemo, resolveUserId, hasAuthToken]);
+  }, [selectedCardId, allImagesLoaded, isAutoSaved, isSaving, baseSkinPath, traitPath, isFinishedPfp, compositeMascotImageMemo, resolveUserId, hasAuthToken]);
 
   const handleSavePFP = async () => {
     if (!selectedCardId) return;
@@ -233,13 +216,16 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageS
 
     setIsSaving(true);
     try {
-      // Reuse existing composite file if available, otherwise create it
-      let fileToSave = compositeFile;
-
-      if (!fileToSave) {
-        // Only regenerate if we don't have a stored file
-        fileToSave = await compositeMascotImageMemo(baseSkinPath, traitPath);
-        setCompositeFile(fileToSave);
+      // Finished v2 PFPs can be saved by URL. Legacy v1 assignments retain
+      // the existing composition and upload behavior.
+      let imageToSave: File | string = traitPath;
+      if (!isFinishedPfp) {
+        let fileToSave = compositeFile;
+        if (!fileToSave) {
+          fileToSave = await compositeMascotImageMemo(baseSkinPath, traitPath);
+          setCompositeFile(fileToSave);
+        }
+        imageToSave = fileToSave;
       }
 
       // Get user ID from localStorage only
@@ -249,7 +235,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageS
       }
 
       // Upload and save the PFP
-      const result = await pfpService.savePFP(fileToSave, userId);
+      const result = await pfpService.savePFP(imageToSave, userId);
 
       if (result.success) {
         setIsAutoSaved(true);
@@ -286,6 +272,8 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageS
         {/* Composite Mascot Image */}
         <div className="relative w-[221px] mx-auto h-[326px] mb-6 flex items-center justify-center">
           {/* Base Skin Layer (background) */}
+          {!isFinishedPfp && (
+          <React.Fragment>
           <div className="absolute inset-0 z-10 pointer-events-none">
             <Image
               key={`base-${selectedCardId}`}
@@ -323,6 +311,9 @@ export const CardReveal: React.FC<CardRevealProps> = ({ selectedCardId, onImageS
             />
           </div>
           
+          </React.Fragment>
+          )}
+
           {/* Trait Layer (foreground) */}
           <div className="absolute inset-0 z-20 pointer-events-none">
             <Image

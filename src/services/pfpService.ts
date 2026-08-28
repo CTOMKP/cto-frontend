@@ -1,4 +1,3 @@
-import { ApiError } from '@/lib/apiError';
 import { apiGet, apiPost } from '@/lib/apiClient';
 import { toRecord, unwrapApiData } from '@/lib/apiResponse';
 import {
@@ -8,6 +7,7 @@ import {
   USER_AVATAR_URL_KEY,
 } from '@/lib/authSession';
 import { useSessionStore } from '@/lib/sessionStore';
+import { authService } from '@/services/authService';
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
 
@@ -16,6 +16,14 @@ export interface PFPCard {
   img: string;
   name?: string;
   traits?: Record<string, unknown>;
+}
+
+export interface MascotAssignment {
+  mascotKey: string;
+  assetVersion: 'v1' | 'v2';
+  assetPath: string;
+  assignedAt?: string;
+  catalogSize?: number;
 }
 
 
@@ -53,6 +61,36 @@ class PFPService {
   }
 
 
+
+  async getOrCreateMascotAssignment(): Promise<MascotAssignment> {
+    const response = await apiPost<unknown>(
+      API_BASE + '/api/v1/pfp/assignment',
+      {},
+    );
+    const data = toRecord(unwrapApiData(response));
+    const mascotKey = typeof data.mascotKey === 'string' ? data.mascotKey.trim() : '';
+    const assetVersion = data.assetVersion === 'v2' ? 'v2' : 'v1';
+    const providedAssetPath =
+      typeof data.assetPath === 'string' ? data.assetPath.trim() : '';
+    // Keep the frontend compatible during a staggered deployment where the
+    // legacy backend may still return only mascotKey.
+    const assetPath =
+      providedAssetPath ||
+      (assetVersion === 'v1' ? `mascots/TRAITS/${mascotKey}.png` : '');
+    if (!mascotKey || !/^[A-Za-z0-9._-]+$/.test(mascotKey)) {
+      throw new Error('Backend returned an invalid mascot assignment');
+    }
+    if (!assetPath || !/^mascots\/[A-Za-z0-9._/-]+$/.test(assetPath)) {
+      throw new Error('Backend returned an invalid mascot asset path');
+    }
+    return {
+      mascotKey,
+      assetVersion,
+      assetPath,
+      assignedAt: typeof data.assignedAt === 'string' ? data.assignedAt : undefined,
+      catalogSize: typeof data.catalogSize === 'number' ? data.catalogSize : undefined,
+    };
+  }
 
   /**
    * Upload profile image using presigned URL (similar to old project)
@@ -202,28 +240,11 @@ class PFPService {
         imageUrl = imageFileOrUrl;
       }
 
-      // Save the image URL to user profile
-      console.log(`💾 Saving PFP to backend: ${imageUrl.substring(0, 100)}...`);
-      const response = await apiPost<unknown>(
-        `${API_BASE}/api/v1/pfp/save`,
-        { imageUrl },
-      );
-
-      const saveData = toRecord(unwrapApiData(response));
-      console.log('📦 Backend save response:', {
-        dataKeys: Object.keys(saveData),
-        success: saveData?.success,
-        message: saveData?.message,
-        avatarUrl: saveData?.avatarUrl,
-        fullResponse: saveData,
+      // Persist through the shared profile endpoint used by both CTO and CP.
+      const updated = await authService.updateUser(userId ?? "", {
+        avatarUrl: imageUrl,
       });
-
-      if (saveData?.success) {
-        // Use backend's avatarUrl if provided, otherwise use our constructed imageUrl
-        // Backend might return avatarUrl, imageUrl, or url field
-        const finalAvatarUrl = String(
-          saveData?.avatarUrl || saveData?.imageUrl || saveData?.url || imageUrl,
-        );
+      const finalAvatarUrl = updated.avatarUrl || imageUrl;
 
         localStorage.setItem(PROFILE_AVATAR_URL_KEY, finalAvatarUrl);
         localStorage.setItem(USER_AVATAR_URL_KEY, finalAvatarUrl);
@@ -239,29 +260,15 @@ class PFPService {
           }, 100);
         }
         
-        return {
-          success: true,
-          message: String(saveData.message || 'PFP saved successfully'),
-          imageUrl: finalAvatarUrl,
-        };
-      }
-
-      throw new Error(String(saveData?.message || `Failed to save PFP. Response: ${JSON.stringify(saveData)}`));
+      return {
+        success: true,
+        message: 'PFP saved successfully',
+        imageUrl: finalAvatarUrl,
+      };
     } catch (error: unknown) {
       console.error('❌ Failed to save PFP:', error);
       let message = 'Failed to save PFP';
-      if (error instanceof ApiError) {
-        const body = error.body as { message?: string; error?: string } | undefined;
-        console.error('❌ API error details:', {
-          status: error.status,
-          data: error.body,
-          message: body?.message,
-        });
-        message = body?.message || body?.error || message;
-        if (error.status === 500) {
-          message = `Backend error: ${message}. Check backend logs for details.`;
-        }
-      } else if (error instanceof Error) {
+      if (error instanceof Error) {
         message = error.message || message;
       }
       throw new Error(message);
@@ -283,4 +290,3 @@ class PFPService {
 }
 
 export const pfpService = new PFPService();
-

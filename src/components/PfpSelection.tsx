@@ -9,6 +9,8 @@ import { toast } from "react-toastify";
 import { CardReveal } from "./pfp/CardReveal";
 import { MoonLoader } from "react-spinners";
 
+import type { MascotAssignment } from '@/services/pfpService';
+
 const sharelinks = [
   {
     icon: "/social-icons/reddit.svg",
@@ -28,6 +30,8 @@ const sharelinks = [
   }
 ]
 
+
+
 const PfpSelection = () => {
   const [phase, setPhase] = useState<"stacked" | "spread" | "selected">(
     "stacked"
@@ -37,6 +41,9 @@ const PfpSelection = () => {
   const [cards, setCards] = useState<PFPCard[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [savedImageUrl, setSavedImageUrl] = useState<string | null>(null);
+  const [revealedMascotAssignment, setRevealedMascotAssignment] = useState<MascotAssignment | null>(null);
+  const [isAssigningMascot, setIsAssigningMascot] = useState(false);
+  const revealedMascotTrait = revealedMascotAssignment?.mascotKey ?? null;
 
   // Fetch cards on mount
   useEffect(() => {
@@ -68,16 +75,27 @@ const PfpSelection = () => {
 
   const handleSelect = (id: number) => {
     setSelectedCardId(id);
+    setRevealedMascotAssignment(null);
+    setIsRevealed(false);
   };
 
-  const handleReveal = () => {
-    if (!selectedCardId) return;
-    
-    // Just transition to reveal the card - no API call needed
-    setIsRevealed(false); // Trigger exit animation of placeholder
-    setTimeout(() => {
-      setIsRevealed(true); // Show mascot reveal with entrance animation
-    }, 500); // Matches exit duration
+  const handleReveal = async () => {
+    if (!selectedCardId || isAssigningMascot) return;
+
+    setIsAssigningMascot(true);
+    try {
+      const assignment = await pfpService.getOrCreateMascotAssignment();
+      setRevealedMascotAssignment(assignment);
+      setIsRevealed(false); // Trigger exit animation of placeholder
+      setTimeout(() => {
+        setIsRevealed(true); // Show mascot reveal with entrance animation
+      }, 500); // Matches exit duration
+    } catch (error) {
+      console.error('Failed to assign mascot:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to assign mascot');
+    } finally {
+      setIsAssigningMascot(false);
+    }
   };
 
   const handleHarvest = () => {
@@ -294,7 +312,7 @@ const PfpSelection = () => {
             </motion.div>
           )}
 
-          {phase === "selected" && selectedCardId && isRevealed && (
+          {phase === "selected" && selectedCardId && isRevealed && revealedMascotTrait && (
             <motion.div
               key="mascot-reveal"
               initial={{ opacity: 0, y: 200, scale: 0.7 }}
@@ -307,7 +325,9 @@ const PfpSelection = () => {
               }}
             >
               <CardReveal 
-                selectedCardId={selectedCardId} 
+                selectedCardId={selectedCardId}
+                assignment={revealedMascotAssignment!}
+                mascotTrait={revealedMascotTrait}
                 onImageSaved={(imageUrl) => setSavedImageUrl(imageUrl)}
               />
             </motion.div>
@@ -333,12 +353,12 @@ const PfpSelection = () => {
       : 
         <Button
         onClick={phase === "selected" ? handleReveal : handleHarvest}
-          disabled={!selectedCardId}
+          disabled={!selectedCardId || isAssigningMascot}
           className={`cta-gradient w-full mt-6 transition-all duration-300 ${
             !selectedCardId ? "opacity-50 cursor-not-allowed" : ""
           }`}
         >
-        {phase === "selected" ? "Reveal" : "Harvest"}
+        {phase === "selected" ? (isAssigningMascot ? "Revealing..." : "Reveal") : "Harvest"}
       </Button>}
     </div>
     </div>

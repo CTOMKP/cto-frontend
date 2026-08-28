@@ -1,18 +1,21 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { marketplaceService } from '@/services/marketplaceService';
 
 interface Category {
   id: string;
   name: string;
   subcategories: string[];
+  postTypes?: Array<'LOOKING_FOR' | 'OFFERING'>;
+  defaultPostType?: 'LOOKING_FOR' | 'OFFERING';
 }
 
-const categories: Category[] = [
+const fallbackCategories: Category[] = [
   {
     id: 'developers',
     name: 'Developers',
@@ -141,6 +144,7 @@ const TAB_PANEL_CLASS =
   'mt-14 border-[0.2px] border-white/20 rounded-lg p-6 w-[664px] mx-auto';
 
 function CategorySubcategoryForm({
+  categories,
   selectedCategory,
   selectedSubcategory,
   subcategoryInputOpen,
@@ -151,6 +155,7 @@ function CategorySubcategoryForm({
   onToggleSubcategoryInput,
   onCreatePost,
 }: {
+  categories: Category[];
   selectedCategory: string | null;
   selectedSubcategory: string;
   subcategoryInputOpen: boolean;
@@ -269,18 +274,36 @@ function CategorySubcategoryForm({
 }
 
 export default function CategorySelectionStep({ onNext }: CategorySelectionStepProps) {
+  const [categories, setCategories] = useState<Category[]>(fallbackCategories);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
   const [subcategoryInputOpen, setSubcategoryInputOpen] = useState(false);
   const [postType, setPostType] = useState<'LOOKING_FOR' | 'OFFERING'>('LOOKING_FOR');
 
+  useEffect(() => {
+    let active = true;
+    marketplaceService.getPricing().then((catalog) => {
+      if (!active || !catalog.categories?.length) return;
+      setCategories(catalog.categories.filter((category) => category.active !== false).map((category) => ({
+        id: category.id,
+        name: category.name,
+        subcategories: category.subcategories.filter((subcategory) => subcategory.active !== false).map((subcategory) => subcategory.name),
+        postTypes: category.postTypes,
+        defaultPostType: category.defaultPostType,
+      })));
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
+
   const selectedCategoryData = categories.find((cat) => cat.id === selectedCategory);
   const tabValue = postType === 'OFFERING' ? 'offering' : 'looking-for';
 
   const handleCategorySelect = (categoryId: string) => {
+    const category = categories.find((item) => item.id === categoryId);
     setSelectedCategory(categoryId);
     setSelectedSubcategory('');
     setSubcategoryInputOpen(true);
+    if (category?.defaultPostType) setPostType(category.defaultPostType);
   };
 
   const handleSubcategorySelect = (subcategory: string) => {
@@ -299,6 +322,7 @@ export default function CategorySelectionStep({ onNext }: CategorySelectionStepP
   };
 
   const formProps = {
+    categories,
     selectedCategory,
     selectedSubcategory,
     subcategoryInputOpen,
@@ -320,12 +344,14 @@ export default function CategorySelectionStep({ onNext }: CategorySelectionStepP
           <TabsList className="flex gap-2 mb-8 bg-transparent p-2 h-11 border-[0.2px] border-white/20 rounded-lg">
             <TabsTrigger
               value="looking-for"
+              disabled={!!selectedCategoryData?.postTypes && !selectedCategoryData.postTypes.includes('LOOKING_FOR')}
               className="flex-1 py-3 px-4 rounded-lg font-medium transition-colors data-[state=active]:bg-[#17171C] data-[state=active]:text-white data-[state=inactive]:bg-black data-[state=inactive]:text-[#A1A1AA]"
             >
               Looking for
             </TabsTrigger>
             <TabsTrigger
               value="offering"
+              disabled={!!selectedCategoryData?.postTypes && !selectedCategoryData.postTypes.includes('OFFERING')}
               className="flex-1 py-3 px-4 rounded-lg font-medium transition-colors data-[state=active]:bg-[#17171C] data-[state=active]:text-white data-[state=inactive]:bg-black data-[state=inactive]:text-[#A1A1AA]"
             >
               Offering

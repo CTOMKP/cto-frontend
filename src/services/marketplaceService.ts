@@ -52,6 +52,7 @@ export type MarketplacePricingCatalog = {
     }>;
   }>;
   addons?: Array<{ id: string; name: string; priceUsd: number; active: boolean }>;
+  legacyVisibilityTierPricingEnabled?: boolean;
 };
 
 export const marketplaceService = {

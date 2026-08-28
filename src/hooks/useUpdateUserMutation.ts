@@ -15,8 +15,8 @@ export function useUpdateUserMutation() {
   return useMutation({
     mutationFn: ({ userId, updates }: UpdateUserVariables) =>
       authService.updateUser(userId, updates),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: profileKeys.all });
+    onSuccess: (updated) => {
+      queryClient.setQueryData(profileKeys.detail(), updated);
     },
     onError: (error) => {
       const message = isApiError(error)

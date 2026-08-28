@@ -77,6 +77,7 @@ export default function NavBar() {
       if (!code) throw new Error("Backend did not return a handoff code");
 
       const destination = new URL(creatorProgramUrl, window.location.origin);
+      destination.pathname = "/auth/callback";
       destination.searchParams.set("handoff", code);
       window.location.assign(destination.toString());
     } catch (error) {
