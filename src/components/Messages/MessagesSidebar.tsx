@@ -1,7 +1,11 @@
 import React from "react";
 import Image from "next/image";
-import { Clock, Search } from "lucide-react";
-import type { MessageThread } from "@/types/messages";
+import { Search } from "lucide-react";
+import type {
+  InboxFilter,
+  MessageThread,
+  UserSearchResult,
+} from "@/types/messages";
 
 function formatRelativeTime(iso?: string): string {
   if (!iso) return "";
@@ -40,12 +44,36 @@ function sidebarAvatarUrl(
   );
 }
 
+function threadTitle(
+  t: MessageThread,
+  currentUserId: number | null,
+): string {
+  const counterpart =
+    currentUserId != null && t.posterId === currentUserId
+      ? t.applicant
+      : t.poster;
+  if (t.type === "GENERAL") {
+    return counterpart?.name || counterpart?.email || "General conversation";
+  }
+  return (typeof t.ad?.title === "string" && t.ad.title) || "Conversation";
+}
+
 export default function MessagesSidebar({
   threads,
   activeThreadId,
   currentUserId,
   loadingThreads,
   polling,
+  inboxFilter,
+  onInboxFilterChange,
+  hasUnreadGeneral,
+  hasUnreadMarketplace,
+  searchQuery,
+  onSearchQueryChange,
+  generalUserResults,
+  searchingGeneralUsers,
+  creatingGeneral,
+  onStartGeneralConversation,
   onSelectThread,
 }: {
   threads: MessageThread[];
@@ -53,28 +81,137 @@ export default function MessagesSidebar({
   currentUserId: number | null;
   loadingThreads?: boolean;
   polling?: boolean;
+  inboxFilter: InboxFilter;
+  onInboxFilterChange: (filter: InboxFilter) => void;
+  hasUnreadGeneral: boolean;
+  hasUnreadMarketplace: boolean;
+  searchQuery: string;
+  onSearchQueryChange: (value: string) => void;
+  generalUserResults: UserSearchResult[];
+  searchingGeneralUsers: boolean;
+  creatingGeneral: boolean;
+  onStartGeneralConversation: (user: UserSearchResult) => void;
   onSelectThread: (threadId: string) => void;
 }) {
+  const query = searchQuery.trim().toLowerCase();
+  const visibleThreads = query
+    ? threads.filter((t) => {
+        const title = threadTitle(t, currentUserId).toLowerCase();
+        const preview = String(t.lastMessagePreview || "").toLowerCase();
+        return title.includes(query) || preview.includes(query);
+      })
+    : threads;
+
   return (
     <aside className="w-[360px] h-screen overflow-auto hover-scrollbar bg-[#000000] p-2.5">
       <div className="">
         <div className="relative flex items-center">
           <input
+            value={searchQuery}
+            onChange={(event) => onSearchQueryChange(event.target.value)}
             className="w-full pl-8 bg-[#0D0D0D] rounded-lg px-3 py-2 text-sm outline-none placeholder:text-white/30"
-            placeholder="Search messages"
+            placeholder={
+              inboxFilter === "GENERAL"
+                ? "Search messages or people"
+                : "Search messages"
+            }
+            autoComplete="off"
           />
-          <Search className="h-4 w-4 absolute left-2 text-white/70" />
+          <Search className="h-4 w-4 absolute left-2 text-white/30" />
         </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {(["GENERAL", "MARKETPLACE"] as const).map((tab) => {
+            const active = inboxFilter === tab;
+            const hasUnread =
+              tab === "GENERAL" ? hasUnreadGeneral : hasUnreadMarketplace;
+            return (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => onInboxFilterChange(tab)}
+                className={`flex h-7 items-center justify-center gap-1.5 rounded-[4px] py-2 text-sm font-medium text-white ${
+                  active
+                    ? "cta-gradient"
+                    : "bg-[#181818]"
+                }`}
+              >
+                {tab === "GENERAL" ? "General" : "Marketplace"}
+                {hasUnread ? (
+                  <span className="size-1.5 rounded-full bg-[#16C784]" />
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onInboxFilterChange("ARCHIVED")}
+          className="mt-2 w-full rounded-[4px] bg-gradient-to-r from-[#FF0075]/30 via-[#FF4A15]/30 to-[#FFCB45]/30 p-px"
+        >
+          <span
+            className={`flex h-7 w-full items-center justify-center py-2 rounded-[4px] bg-[#000000] text-sm ${
+              inboxFilter === "ARCHIVED" ? "text-white/80" : "text-white/50"
+            }`}
+          >
+            Archive
+          </span>
+        </button>
+
+        {inboxFilter === "GENERAL" &&
+        (searchingGeneralUsers || generalUserResults.length > 0) ? (
+          <div className="mt-3 space-y-1 rounded-lg border border-white/10 bg-[#111] p-2">
+            {searchingGeneralUsers ? (
+              <div className="px-1 py-1 text-[10px] text-white/40">Searching people…</div>
+            ) : null}
+            {generalUserResults.map((candidate) => (
+              <button
+                key={candidate.id}
+                type="button"
+                disabled={creatingGeneral}
+                onClick={() => onStartGeneralConversation(candidate)}
+                className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs hover:bg-white/5 disabled:opacity-40"
+              >
+                {candidate.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={candidate.avatarUrl}
+                    alt=""
+                    className="h-7 w-7 rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="h-7 w-7 rounded-full bg-white/10" />
+                )}
+                <span>
+                  <span className="block font-medium text-white">
+                    {candidate.name || "Unnamed user"}
+                  </span>
+                  <span className="block text-[10px] text-white/40">
+                    Start conversation
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
 
       <div className="h-[calc(100vh-160px)] overflow-auto hover-scrollbar mt-4 space-y-2.5">
-        {threads.length === 0 && !loadingThreads ? (
-          <div className="p-4 text-sm text-white/50">No conversations</div>
+        {visibleThreads.length === 0 && !loadingThreads ? (
+          <div className="p-4 text-center text-sm text-white/50">No conversations</div>
         ) : (
-          threads.map((t) => {
+          visibleThreads.map((t) => {
             const isActive = t.id === activeThreadId;
+            const counterpart =
+              currentUserId != null && t.posterId === currentUserId
+                ? t.applicant
+                : t.poster;
             const title =
-              (typeof t.ad?.title === "string" && t.ad.title) || "Conversation";
+              t.type === "GENERAL"
+                ? counterpart?.name || counterpart?.email || "General conversation"
+                : (typeof t.ad?.title === "string" && t.ad.title) ||
+                  "Conversation";
             const avatarUrl = sidebarAvatarUrl(t, currentUserId);
             const preview =
               (typeof t.lastMessagePreview === "string" && t.lastMessagePreview) ||

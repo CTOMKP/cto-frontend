@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { SendHorizontal, Paperclip } from "lucide-react";
+import { SendHorizontal, Paperclip, PanelRight, PanelRightClose } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ChatMessage, MessageThread } from "@/types/messages";
 
@@ -31,6 +31,58 @@ const EMOJI_LIST = [
 
 function renderMessageBody(body: string) {
   const text = String(body || "");
+  const attachmentPrefix = "Attachment:";
+  const lineBreakIndex = text.indexOf("\n");
+  const possibleFileName =
+    lineBreakIndex > attachmentPrefix.length
+      ? text.slice(attachmentPrefix.length, lineBreakIndex).trim()
+      : "";
+  const possibleFileUrl =
+    lineBreakIndex >= 0 ? text.slice(lineBreakIndex + 1).trim() : "";
+  const isAttachment =
+    text.startsWith(attachmentPrefix) &&
+    Boolean(possibleFileName) &&
+    /^https?:\/\//i.test(possibleFileUrl);
+
+  if (isAttachment) {
+    const lowerFileName = possibleFileName.toLowerCase();
+    const isImage = [".png", ".jpg", ".jpeg", ".gif", ".webp"].some((extension) =>
+      lowerFileName.endsWith(extension),
+    );
+    return (
+      <div className="space-y-2">
+        {isImage ? (
+          <a
+            href={possibleFileUrl}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={possibleFileUrl}
+              alt={possibleFileName}
+              className="max-h-64 w-auto max-w-full rounded-xl object-contain"
+              loading="lazy"
+            />
+          </a>
+        ) : null}
+        <a
+          href={possibleFileUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center justify-between gap-3 rounded-xl border border-black/10 bg-black/5 px-3 py-2 no-underline"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <span className="min-w-0 truncate font-medium">
+            Attachment: {possibleFileName}
+          </span>
+          <span className="shrink-0 text-xs underline">Open file</span>
+        </a>
+      </div>
+    );
+  }
+
   const segments = text.split(/(https?:\/\/[^\s]+)/g);
   return segments.map((segment, idx) => {
     if (/^https?:\/\/[^\s]+$/i.test(segment)) {
@@ -79,6 +131,12 @@ export default function MessagesChatPanel({
   onOpenUserProfile,
   loadingMessages,
   contentBlockedDisclaimer,
+  canArchive,
+  isArchived,
+  onArchiveToggle,
+  showDetailsToggle,
+  detailsOpen,
+  onToggleDetails,
 }: {
   headerTitle: string;
   messages: ChatMessage[];
@@ -97,6 +155,12 @@ export default function MessagesChatPanel({
   onOpenUserProfile: (senderId: number) => void;
   loadingMessages?: boolean;
   contentBlockedDisclaimer?: string | null;
+  canArchive?: boolean;
+  isArchived?: boolean;
+  onArchiveToggle?: () => void;
+  showDetailsToggle?: boolean;
+  detailsOpen?: boolean;
+  onToggleDetails?: () => void;
 }) {
   const endRef = useRef<HTMLDivElement | null>(null);
   const [messageAvatarErrors, setMessageAvatarErrors] = useState<
@@ -191,6 +255,30 @@ export default function MessagesChatPanel({
         <div className="flex gap-3 items-center">
           <span>Subject:</span>
           <span className="truncate w-full bg-[#222222] overflow-auto py-2.5 px-4 rounded-[4px] hover-scrollbar">{headerTitle}</span>
+          {canArchive && onArchiveToggle ? (
+            <button
+              type="button"
+              onClick={onArchiveToggle}
+              className="shrink-0 rounded-full border border-white/10 px-3 py-1.5 text-xs text-white/60 hover:text-white"
+            >
+              {isArchived ? "Restore" : "Archive"}
+            </button>
+          ) : null}
+          {showDetailsToggle && onToggleDetails ? (
+            <button
+              type="button"
+              onClick={onToggleDetails}
+              className="shrink-0 rounded-full border border-white/10 p-2 text-white/60 hover:text-white"
+              aria-label={detailsOpen ? "Close listing details" : "Open listing details"}
+              title={detailsOpen ? "Close details" : "Open details"}
+            >
+              {detailsOpen ? (
+                <PanelRightClose className="size-4" />
+              ) : (
+                <PanelRight className="size-4" />
+              )}
+            </button>
+          ) : null}
         </div>
         </div>
 
@@ -200,7 +288,7 @@ export default function MessagesChatPanel({
               <div className="text-xs text-white/50">Loading messages…</div>
             ) : null}
             {!loadingMessages && items.length === 0 ? (
-              <div className="text-white/50 text-sm">No messages yet.</div>
+              <div className="text-white/50 text-center text-sm">No messages yet.</div>
             ) : null}
             {items.map((m) => {
               const mine = isMine(m);

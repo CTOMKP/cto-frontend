@@ -30,6 +30,7 @@ import ListingTableRow from "./ListingTableRow";
 import ListingFilters from "./ListingFilters";
 import ListingPagination from "./ListingPagination";
 import { buildProjectHref } from "@/lib/utils/slugify";
+import { useFavorites } from "@/hooks/useFavorites";
 import dynamic from "next/dynamic";
 
 const TokenSwapCard = dynamic(() => import("@/components/TokenSwapCard"), {
@@ -40,6 +41,7 @@ const TokenSwapCard = dynamic(() => import("@/components/TokenSwapCard"), {
 export default function TopListings() {
   const { t } = useTranslation();
   const router = useRouter();
+  const favorites = useFavorites();
   const [category, setCategory] = useState<Category>("new");
   const [memeCategory, setMemeCategory] = useState<MemeCategory>("all");
   const [selectedNetwork, setSelectedNetwork] = useState<Network | null>(null);
@@ -350,6 +352,11 @@ export default function TopListings() {
                         coin={coin}
                         onProjectClick={handleProjectClick}
                         onBuyClick={handleBuyClick}
+                        isWatchlisted={favorites.isCoinFavorited(coin)}
+                        watchlistPending={favorites.isCoinPending(coin)}
+                        onWatchlistToggle={(item) => {
+                          void favorites.toggleCoin(item);
+                        }}
                       />
                     ))
                   )}

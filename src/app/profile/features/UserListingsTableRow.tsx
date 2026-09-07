@@ -11,7 +11,8 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import { MockLikeCoin } from "@/app/listings/features/types/listing";
 import { getChainImage } from "@/app/listings/features/utils/listingUtils";
 import FallbackImage from "@/components/FallbackImage";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import ProjectTierBadge from "@/components/ProjectTierBadge";
+import CopyAddressButton from "@/components/CopyAddressButton";
 import { useTranslation } from "react-i18next";
 
 interface UserListingsTableRowProps {
@@ -76,127 +77,17 @@ export default function UserListingsTableRow({
                 >
                   {coin.name.length > 15 ? `${coin.name.substring(0, 15)}...` : coin.name}
                 </span>
-                {(() => {
-                  const rawTier = coin.tier;
-                  if (!rawTier || rawTier === null || rawTier === undefined) return null;
-                  const tierStr = String(rawTier).trim().toLowerCase();
-                  if (
-                    tierStr === "none" ||
-                    tierStr === "null" ||
-                    tierStr === "undefined" ||
-                    tierStr === "" ||
-                    tierStr === "—" ||
-                    tierStr === "----" ||
-                    tierStr === "------" ||
-                    tierStr.startsWith("---") ||
-                    tierStr === "n/a" ||
-                    tierStr === "na" ||
-                    /^[-—]+$/.test(tierStr)
-                  )
-                    return null;
-
-                  const tier = tierStr;
-                  const tierIcons: Record<string, string> = {
-                    stellar: "/project-categories/stellar.png",
-                    bloom: "/project-categories/bloom.png",
-                    sprout: "/project-categories/sprout.png",
-                    seed: "/project-categories/seed.png",
-                  };
-                  const tierBgColors: Record<string, string> = {
-                    seed: "bg-[#6D6D6D]/20",
-                    sprout: "bg-[#FF5900]/20",
-                    bloom: "bg-[#15FF00]/20",
-                    stellar: "bg-[#FFBB00]/20",
-                  };
-                  const tierDescriptions: Record<string, string> = {
-                    seed: "Entry-level tier, 14-21 days old with minimal liquidity and early activity",
-                    sprout: "Mid-level tier, >21 days old, with moderate liquidity and stability",
-                    bloom: "Premium tier, >1 month old, with significant liquidity and security",
-                    stellar: "Elite tier, >1 month old, with significant liquidity and security",
-                  };
-                  const tierLpRequirements: Record<string, { lp: string; lpLockBurn: string }> = {
-                    seed: { lp: ">$10,000", lpLockBurn: ">30% / 6mo" },
-                    sprout: { lp: ">$20,000", lpLockBurn: ">30% / 18mo" },
-                    bloom: { lp: ">$50,000", lpLockBurn: ">30% / 24mo" },
-                    stellar: { lp: ">$100,000", lpLockBurn: ">30% / 36mo" },
-                  };
-                  const iconPath = tierIcons[tier] || "/project-categories/bloom.png";
-                  const bgColor = tierBgColors[tier] || "bg-[#15FF00]/20";
-                  const description = tierDescriptions[tier] || "";
-                  const lpRequirements = tierLpRequirements[tier] || { lp: "", lpLockBurn: "" };
-                  const tierName = tier.charAt(0).toUpperCase() + tier.slice(1);
-
-                  return (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className={`${bgColor} rounded-[4px] p-[3px] cursor-help`}>
-                          <Image
-                            loading="lazy"
-                            src={iconPath}
-                            width={8.36}
-                            height={8.36}
-                            alt={tier}
-                          />
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent className="bg-[#010101] p-2 rounded-lg border-[0.5px] border-white max-w-[180px]">
-                        <div className="flex flex-col gap-1">
-                          <div className="flex justify-between items-center">
-                            <span className="font-semibold text-white">{tierName}</span>
-                            <span className={`${bgColor} rounded-[4px] p-[3px] cursor-help`}>
-                              <Image
-                                loading="lazy"
-                                src={iconPath}
-                                width={8.36}
-                                height={8.36}
-                                alt={tier}
-                              />
-                            </span>
-                          </div>
-                          {description && (
-                            <p className="text-xs font-medium text-white/70 w-full text-wrap">
-                              {description}
-                            </p>
-                          )}
-                          {lpRequirements.lp && (
-                            <>
-                              <div className="flex flex-col gap-0.5 mt-1 ">
-                                <span className="text-xs font-medium flex justify-between items-center text-white/70">
-                                  <span className="text-white/70">Lp: </span>{" "}
-                                  <span>{lpRequirements.lp}</span>
-                                </span>
-                                <span className="text-xs font-medium flex justify-between items-center text-white/70">
-                                  <span className="text-white/70">Lp lock/burn: </span>{" "}
-                                  <span>{lpRequirements.lpLockBurn}</span>
-                                </span>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  );
-                })()}
+                <ProjectTierBadge tier={coin.tier} />
               </div>
               <div className="flex items-center gap-0.5">
                 <span className="text-[#FFFFFF]/50 text-xs uppercase">
                   {shortenAddress(coin.address)}
                 </span>
-                <Button
-                  className="p-0 h-fit w-fit"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigator.clipboard.writeText(coin.address);
-                  }}
-                >
-                  <Image
-                    loading="lazy"
-                    src="/copy.svg"
-                    alt="copy"
-                    width={7.85}
-                    height={8.38}
-                  />
-                </Button>
+                <CopyAddressButton
+                  address={coin.address}
+                  iconSize={8}
+                  className="p-0 h-fit w-fit bg-transparent hover:bg-transparent shadow-none"
+                />
                 <Link href={coin.links?.twitter || "#"} onClick={(e) => e.stopPropagation()}>
                   <Image loading="lazy" src="/x.svg" alt="x" height={8} width={8} />
                 </Link>

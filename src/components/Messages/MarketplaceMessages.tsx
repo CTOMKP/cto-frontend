@@ -20,8 +20,10 @@ import dynamic from "next/dynamic";
 import type {
   ChatMessage,
   EscrowSummary,
+  InboxFilter,
   MessageReaction,
   MessageThread,
+  UserSearchResult,
 } from "@/types/messages";
 
 const EscrowCreateModal = dynamic(
@@ -53,12 +55,21 @@ function readNumberOrString(v: unknown): number | string | undefined {
 
 function coerceThread(o: Record<string, unknown>): MessageThread {
   const id = o.id != null ? String(o.id) : "";
+  const type = o.type === "GENERAL" ? "GENERAL" : "MARKETPLACE";
+  const unreadRaw = Number(o.unreadCount ?? 0);
   return {
     ...o,
     id,
+    type,
     posterId: Number(o.posterId ?? 0),
     applicantId: Number(o.applicantId ?? 0),
+    unreadCount: Number.isFinite(unreadRaw) ? unreadRaw : 0,
+    isArchived: o.isArchived === true,
   } as MessageThread;
+}
+
+function inboxHasUnread(items: MessageThread[]): boolean {
+  return items.some((thread) => Number(thread.unreadCount ?? 0) > 0);
 }
 
 function listItemsFromResponse(resUnknown: unknown): unknown[] {
@@ -155,6 +166,18 @@ export default function MarketplaceMessages({
   const [escrowViewOpen, setEscrowViewOpen] = useState(false);
   const [showEscrowProposed, setShowEscrowProposed] = useState(false);
   const [polling, setPolling] = useState(false);
+  const [inboxFilter, setInboxFilter] = useState<InboxFilter>("MARKETPLACE");
+  const [generalUserQuery, setGeneralUserQuery] = useState("");
+  const [generalUserResults, setGeneralUserResults] = useState<UserSearchResult[]>(
+    [],
+  );
+  const [searchingGeneralUsers, setSearchingGeneralUsers] = useState(false);
+  const [creatingGeneral, setCreatingGeneral] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [inboxHasUnreadByType, setInboxHasUnreadByType] = useState({
+    GENERAL: false,
+    MARKETPLACE: false,
+  });
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const threadsRef = useRef<MessageThread[]>([]);
@@ -175,15 +198,48 @@ export default function MarketplaceMessages({
     return Number.isFinite(n) && n > 0 ? n : null;
   }, [initialProfileUserId]);
 
+  const loadInboxUnreadFlags = useCallback(async () => {
+    const unreadFor = async (type: "GENERAL" | "MARKETPLACE") => {
+      const resUnknown: unknown = await messagesService.listThreads({
+        type,
+        archived: false,
+      });
+      const items = listItemsFromResponse(resUnknown)
+        .map((item) => coerceThread(toRecord(item) ?? {}))
+        .filter((thread) => thread.id.length > 0);
+      return inboxHasUnread(items);
+    };
+
+    try {
+      const [general, marketplace] = await Promise.all([
+        unreadFor("GENERAL"),
+        unreadFor("MARKETPLACE"),
+      ]);
+      setInboxHasUnreadByType({ GENERAL: general, MARKETPLACE: marketplace });
+    } catch {
+      // best-effort badge state
+    }
+  }, []);
+
   const loadThreads = useCallback(async () => {
-    const resUnknown: unknown = await messagesService.listThreads();
+    const resUnknown: unknown = await messagesService.listThreads(
+      inboxFilter === "ARCHIVED"
+        ? { archived: true }
+        : { type: inboxFilter, archived: false },
+    );
     const itemsArray = listItemsFromResponse(resUnknown);
     const next = itemsArray
       .map((item) => coerceThread(toRecord(item) ?? {}))
       .filter((t) => t.id.length > 0);
     setThreads(next);
+    if (inboxFilter === "GENERAL" || inboxFilter === "MARKETPLACE") {
+      setInboxHasUnreadByType((prev) => ({
+        ...prev,
+        [inboxFilter]: inboxHasUnread(next),
+      }));
+    }
     return next;
-  }, []);
+  }, [inboxFilter]);
 
   const loadActiveThread = useCallback(async (threadId: string) => {
     setLoadingMessages(true);
@@ -217,6 +273,12 @@ export default function MarketplaceMessages({
 
       try {
         await messagesService.markRead(threadId);
+        setThreads((prev) =>
+          prev.map((thread) =>
+            thread.id === threadId ? { ...thread, unreadCount: 0 } : thread,
+          ),
+        );
+        void loadInboxUnreadFlags();
       } catch {
         // ignore
       }
@@ -225,10 +287,12 @@ export default function MarketplaceMessages({
     } finally {
       setLoadingMessages(false);
     }
-  }, []);
+  }, [loadInboxUnreadFlags]);
+
+  const isMarketplaceConversation = activeThread?.type !== "GENERAL";
 
   const refreshEscrowForActiveThread = useCallback(async () => {
-    if (!activeThreadId) return null;
+    if (!activeThreadId || !isMarketplaceConversation) return null;
     try {
       const resUnknown = await escrowService.getLatestByConversation(
         activeThreadId,
@@ -247,10 +311,13 @@ export default function MarketplaceMessages({
       setCurrentEscrow(null);
       return null;
     }
-  }, [activeThreadId]);
+  }, [activeThreadId, isMarketplaceConversation]);
 
   useEffect(() => {
-    if (!activeThreadId) return;
+    if (!activeThreadId || !isMarketplaceConversation) {
+      setCurrentEscrow(null);
+      return;
+    }
     let alive = true;
     setCurrentEscrow(null);
     escrowService
@@ -276,7 +343,7 @@ export default function MarketplaceMessages({
     return () => {
       alive = false;
     };
-  }, [activeThreadId]);
+  }, [activeThreadId, isMarketplaceConversation]);
 
   // Load thread list once on mount
   useEffect(() => {
@@ -285,6 +352,7 @@ export default function MarketplaceMessages({
       try {
         setLoadingThreads(true);
         await loadThreads();
+        await loadInboxUnreadFlags();
       } catch (e) {
         if (!cancelled)
           setError(
@@ -300,21 +368,45 @@ export default function MarketplaceMessages({
     return () => {
       cancelled = true;
     };
-  }, [loadThreads]);
+  }, [loadThreads, loadInboxUnreadFlags]);
 
-  // Sync selection from URL, or default to first thread (avoid depending on full `threads` to prevent poll resets)
-  const firstThreadId = threads[0]?.id;
+  const hasInitialThread = Boolean(
+    initialThreadId && threads.some((t) => t.id === initialThreadId),
+  );
   useEffect(() => {
-    if (threads.length === 0) {
-      if (!initialThreadId) setActiveThreadId(null);
-      return;
-    }
     if (initialThreadId) {
-      setActiveThreadId(initialThreadId);
-      return;
+      if (hasInitialThread) {
+        setActiveThreadId(initialThreadId);
+        const listed = threadsRef.current.find(
+          (thread) => thread.id === initialThreadId,
+        );
+        setDetailsOpen(listed?.type !== "GENERAL");
+        return;
+      }
+      let cancelled = false;
+      messagesService
+        .getThread(initialThreadId)
+        .then((resUnknown) => {
+          if (cancelled) return;
+          const { conversation } = normalizeGetThreadResponse(resUnknown);
+          if (!conversation?.id) return;
+          const thread = coerceThread(conversation);
+          if (thread.isArchived) setInboxFilter("ARCHIVED");
+          else setInboxFilter(thread.type === "GENERAL" ? "GENERAL" : "MARKETPLACE");
+          setActiveThreadId(thread.id);
+          setActiveThread(thread);
+          setDetailsOpen(thread.type !== "GENERAL");
+        })
+        .catch(() => undefined);
+      return () => {
+        cancelled = true;
+      };
     }
-    if (firstThreadId) setActiveThreadId(firstThreadId);
-  }, [initialThreadId, threads.length, firstThreadId]);
+    if (threadsRef.current.length === 0) {
+      setActiveThreadId(null);
+      setDetailsOpen(false);
+    }
+  }, [initialThreadId, hasInitialThread]);
 
   useEffect(() => {
     if (!activeThreadId) return;
@@ -344,12 +436,12 @@ export default function MarketplaceMessages({
   useEffect(() => {
     const t = setInterval(() => {
       setPolling(true);
-      loadThreads()
+      Promise.all([loadThreads(), loadInboxUnreadFlags()])
         .catch(() => void 0)
         .finally(() => setPolling(false));
     }, 15000);
     return () => clearInterval(t);
-  }, [loadThreads]);
+  }, [loadThreads, loadInboxUnreadFlags]);
 
   useEffect(() => {
     const token = getAuthToken();
@@ -392,11 +484,14 @@ export default function MarketplaceMessages({
     socket.on("messages.new", (payload: unknown) => {
       const p = toRecord(payload);
       const convoId = p?.conversationId ?? p?.threadId;
-      if (
-        activeThreadId &&
+      const isOtherThread =
+        Boolean(activeThreadId) &&
         convoId != null &&
-        String(convoId) !== String(activeThreadId)
-      ) {
+        String(convoId) !== String(activeThreadId);
+      if (isOtherThread || !activeThreadId) {
+        void loadInboxUnreadFlags();
+      }
+      if (isOtherThread) {
         return;
       }
       const msgUnknown = p?.message ?? p;
@@ -464,7 +559,7 @@ export default function MarketplaceMessages({
       mounted = false;
       socket.disconnect();
     };
-  }, [backendUrl, activeThreadId]);
+  }, [backendUrl, activeThreadId, loadInboxUnreadFlags]);
 
   const isPoster = useMemo(() => {
     if (!activeThread || currentUserId == null) return false;
@@ -472,9 +567,16 @@ export default function MarketplaceMessages({
   }, [activeThread, currentUserId]);
 
   const headerTitle = useMemo(() => {
+    if (activeThread?.type === "GENERAL") {
+      const counterpart =
+        currentUserId != null && activeThread.posterId === currentUserId
+          ? activeThread.applicant
+          : activeThread.poster;
+      return counterpart?.name || counterpart?.email || "General conversation";
+    }
     const t = activeThread?.ad?.title;
     return typeof t === "string" && t.length > 0 ? t : "Conversation";
-  }, [activeThread?.ad?.title]);
+  }, [activeThread, currentUserId]);
 
   const posterAvatarSrc = useMemo(() => {
     if (!activeThread) return "";
@@ -509,6 +611,114 @@ export default function MarketplaceMessages({
 
   const onSelectThread = (threadId: string) => {
     setActiveThreadId(threadId);
+    const thread =
+      threads.find((item) => item.id === threadId) ??
+      (activeThread?.id === threadId ? activeThread : null);
+    setDetailsOpen(thread?.type !== "GENERAL");
+  };
+
+  const changeInboxFilter = (nextFilter: InboxFilter) => {
+    if (nextFilter === inboxFilter) return;
+    if (initialThreadId) router.push("/messages");
+    setInboxFilter(nextFilter);
+    setActiveThreadId(null);
+    setActiveThread(null);
+    setMessages([]);
+    setCurrentEscrow(null);
+    setDetailsOpen(false);
+  };
+
+  useEffect(() => {
+    const query = generalUserQuery.trim();
+    if (inboxFilter !== "GENERAL" || query.length < 2) {
+      setGeneralUserResults([]);
+      setSearchingGeneralUsers(false);
+      return;
+    }
+    let alive = true;
+    setSearchingGeneralUsers(true);
+    const timeout = window.setTimeout(() => {
+      messagesService
+        .searchUsers(query)
+        .then((response) => {
+          if (!alive) return;
+          const obj = toRecord(response);
+          const items = obj?.items ?? response;
+          const next: UserSearchResult[] = [];
+          for (const item of Array.isArray(items) ? items : []) {
+            const rec = toRecord(item);
+            if (!rec || rec.id == null) continue;
+            next.push({
+              id: Number(rec.id),
+              name: typeof rec.name === "string" ? rec.name : null,
+              avatarUrl:
+                typeof rec.avatarUrl === "string" ? rec.avatarUrl : null,
+            });
+          }
+          setGeneralUserResults(next);
+        })
+        .catch(() => {
+          if (alive) setGeneralUserResults([]);
+        })
+        .finally(() => {
+          if (alive) setSearchingGeneralUsers(false);
+        });
+    }, 300);
+    return () => {
+      alive = false;
+      window.clearTimeout(timeout);
+    };
+  }, [generalUserQuery, inboxFilter]);
+
+  const handleCreateGeneral = async (user: UserSearchResult) => {
+    try {
+      setCreatingGeneral(true);
+      const response = await messagesService.createGeneral(user.id);
+      const obj = toRecord(response);
+      const conversationRaw = obj?.conversation ?? obj?.thread ?? response;
+      const conversation = coerceThread(toRecord(conversationRaw) ?? {});
+      if (!conversation.id) {
+        throw new Error("Unable to start conversation");
+      }
+      setInboxFilter("GENERAL");
+      setThreads((prev) => [
+        conversation,
+        ...prev.filter((item) => item.id !== conversation.id),
+      ]);
+      setActiveThreadId(conversation.id);
+      setActiveThread(conversation);
+      setDetailsOpen(false);
+      setGeneralUserQuery("");
+      setGeneralUserResults([]);
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? e.message : "Unable to start conversation",
+      );
+    } finally {
+      setCreatingGeneral(false);
+    }
+  };
+
+  const handleArchiveState = async () => {
+    if (!activeThread) return;
+    try {
+      if (inboxFilter === "ARCHIVED" || activeThread.isArchived) {
+        await messagesService.restoreThread(activeThread.id);
+        toast.success("Conversation restored");
+      } else {
+        await messagesService.archiveThread(activeThread.id);
+        toast.success("Conversation archived. Open the Archived tab to restore it.");
+      }
+      setActiveThreadId(null);
+      setActiveThread(null);
+      setMessages([]);
+      setDetailsOpen(false);
+      await loadThreads();
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? e.message : "Unable to update conversation",
+      );
+    }
   };
 
   const draftContentViolations = useMemo(
@@ -722,6 +932,16 @@ export default function MarketplaceMessages({
             currentUserId={currentUserId}
             loadingThreads={loadingThreads}
             polling={polling}
+            inboxFilter={inboxFilter}
+            onInboxFilterChange={changeInboxFilter}
+            hasUnreadGeneral={inboxHasUnreadByType.GENERAL}
+            hasUnreadMarketplace={inboxHasUnreadByType.MARKETPLACE}
+            searchQuery={generalUserQuery}
+            onSearchQueryChange={setGeneralUserQuery}
+            generalUserResults={generalUserResults}
+            searchingGeneralUsers={searchingGeneralUsers}
+            creatingGeneral={creatingGeneral}
+            onStartGeneralConversation={handleCreateGeneral}
             onSelectThread={onSelectThread}
           />
         </div>
@@ -746,8 +966,15 @@ export default function MarketplaceMessages({
             contentBlockedDisclaimer={
               draftBlockedDisclaimer || null
             }
+            canArchive={Boolean(activeThread)}
+            isArchived={inboxFilter === "ARCHIVED" || Boolean(activeThread?.isArchived)}
+            onArchiveToggle={handleArchiveState}
+            showDetailsToggle={Boolean(activeThread) && isMarketplaceConversation}
+            detailsOpen={detailsOpen}
+            onToggleDetails={() => setDetailsOpen((open) => !open)}
           />
         </div>
+        {detailsOpen && activeThread && isMarketplaceConversation ? (
         <div className="h-screen overflow-auto hover-scrollbar shrink-0">
           <MessagesDetailsPanel
             thread={activeThread}
@@ -755,7 +982,9 @@ export default function MarketplaceMessages({
             selectedProfileUserId={selectedProfileUserId}
             currentEscrow={currentEscrow}
             isPoster={isPoster}
+            isMarketplaceConversation={isMarketplaceConversation}
             onEscrowPrimary={onEscrowPrimary}
+            onClose={() => setDetailsOpen(false)}
             onBackToThread={
               selectedProfileUserId && activeThreadId
                 ? () => router.push(`/messages/${activeThreadId}`)
@@ -763,9 +992,10 @@ export default function MarketplaceMessages({
             }
           />
         </div>
+        ) : null}
       </div>
 
-      {showEscrowProposed && (
+      {isMarketplaceConversation && showEscrowProposed && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
           <div className="rounded-2xl border border-white/10 bg-black/90 px-10 py-6 text-center">
             <p className="text-sm text-zinc-400">Escrow deal proposed</p>
@@ -786,14 +1016,14 @@ export default function MarketplaceMessages({
         </div>
       )}
 
-      {escrowModalOpen ? (
+      {isMarketplaceConversation && escrowModalOpen ? (
         <EscrowCreateModal
           onClose={() => setEscrowModalOpen(false)}
           onSubmit={createEscrow}
         />
       ) : null}
 
-      {escrowViewOpen ? (
+      {isMarketplaceConversation && escrowViewOpen ? (
         <EscrowViewModal
           escrow={currentEscrow}
           onClose={() => setEscrowViewOpen(false)}

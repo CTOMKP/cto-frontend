@@ -15,7 +15,8 @@ import { MockLikeCoin } from "./types/listing";
 import { getChainImage } from "./utils/listingUtils";
 import ListingEngagement from "./ListingEngagement";
 import FallbackImage from "@/components/FallbackImage";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import ProjectTierBadge from "@/components/ProjectTierBadge";
+import CopyAddressButton from "@/components/CopyAddressButton";
 import ProjectPreviewHover from "./ProjectPreviewCard";
 import { useTranslation } from "react-i18next";
 
@@ -28,9 +29,19 @@ interface ListingTableRowProps {
     userListingId?: string,
   ) => void;
   onBuyClick?: (coin: MockLikeCoin) => void;
+  isWatchlisted?: boolean;
+  watchlistPending?: boolean;
+  onWatchlistToggle?: (coin: MockLikeCoin) => void;
 }
 
-export default function ListingTableRow({ coin, onProjectClick, onBuyClick }: ListingTableRowProps) {
+export default function ListingTableRow({
+  coin,
+  onProjectClick,
+  onBuyClick,
+  isWatchlisted = false,
+  watchlistPending = false,
+  onWatchlistToggle,
+}: ListingTableRowProps) {
   const { t } = useTranslation();
   return (
     <TableRow
@@ -43,12 +54,15 @@ export default function ListingTableRow({ coin, onProjectClick, onBuyClick }: Li
             className="p-1"
             onClick={(e) => {
               e.stopPropagation();
-              // Add your watchlist logic here
+              onWatchlistToggle?.(coin);
             }}
+            disabled={watchlistPending}
+            title={isWatchlisted ? "Remove from watchlist" : "Add to watchlist"}
+            aria-pressed={isWatchlisted}
           >
             <Image
               loading="lazy"
-              src="/white-watchlist.svg"
+              src={isWatchlisted ? "/watchlist-active.svg" : "/white-watchlist.svg"}
               alt="watchlist"
               className="bg-transparent size-4 min-w-fit"
               width={16}
@@ -59,13 +73,13 @@ export default function ListingTableRow({ coin, onProjectClick, onBuyClick }: Li
       </TableCell>
       <TableCell>
         <div className="flex items-center justify-between">
+            <div className="flex items-center h-full gap-1">
             <ProjectPreviewHover
               coin={coin}
               onOpenProject={() =>
                 onProjectClick(coin.name, coin.address, coin.chain, coin.listingId)
               }
             >
-            <div className="flex items-center h-full gap-1">
             <div className="relative size-7 shrink-0">
               <FallbackImage
                 src={coin.image && coin.image.trim() !== "" ? coin.image : undefined}
@@ -83,135 +97,20 @@ export default function ListingTableRow({ coin, onProjectClick, onBuyClick }: Li
                 height={14}
               />
             </div>
+            </ProjectPreviewHover>
 
             <div>
               <div className="flex items-center gap-1">
                 <span className="font-medium capitalize max-w-[120px] truncate" title={coin.name}>
                   {coin.name.length > 15 ? `${coin.name.substring(0, 15)}...` : coin.name}
                 </span>
-                {/* Tier Badge */}
-                {(() => {
-                  const rawTier = coin.tier;
-                  
-                  // Normalize tier - handle all invalid formats
-                  if (!rawTier || rawTier === null || rawTier === undefined) {
-                    return null;
-                  }
-                  
-                  const tierStr = String(rawTier).trim().toLowerCase();
-                  
-                  // Check for all invalid tier values (including dash variations)
-                  if (tierStr === 'none' || tierStr === 'null' || tierStr === 'undefined' || 
-                      tierStr === '' || tierStr === '—' || tierStr === '----' || tierStr === '------' ||
-                      tierStr.startsWith('---') || tierStr === 'n/a' || tierStr === 'na' ||
-                      /^[-—]+$/.test(tierStr)) { // Match any string that's only dashes/em-dashes
-                    return null;
-                  }
-                  
-                  const tier = tierStr;
-                  const tierIcons: Record<string, string> = {
-                    stellar: "/project-categories/stellar.png",
-                    bloom: "/project-categories/bloom.png",
-                    sprout: "/project-categories/sprout.png",
-                    seed: "/project-categories/seed.png",
-                  };
-                  
-                  const tierBgColors: Record<string, string> = {
-                    seed: "bg-[#6D6D6D]/20",
-                    sprout: "bg-[#FF5900]/20",
-                    bloom: "bg-[#15FF00]/20",
-                    stellar: "bg-[#FFBB00]/20",
-                  };
-                  
-                  const tierDescriptions: Record<string, string> = {
-                    seed: "Entry-level tier, 14-21 days old with minimal liquidity and early activity",
-                    sprout: "Mid-level tier, >21 days old, with moderate liquidity and stability",
-                    bloom: "Premium tier, >1 month old, with significant liquidity and security",
-                    stellar: "Elite tier, >1 month old, with significant liquidity and security",
-                  };
-                  
-                  const tierLpRequirements: Record<string, { lp: string; lpLockBurn: string }> = {
-                    seed: { lp: ">$10,000", lpLockBurn: ">30% / 6mo" },
-                    sprout: { lp: ">$20,000", lpLockBurn: ">30% / 18mo" },
-                    bloom: { lp: ">$50,000", lpLockBurn: ">30% / 24mo" },
-                    stellar: { lp: ">$100,000", lpLockBurn: ">30% / 36mo" },
-                  };
-                  
-                  const iconPath = tierIcons[tier] || "/project-categories/bloom.png";
-                  const bgColor = tierBgColors[tier] || "bg-[#15FF00]/20";
-                  const description = tierDescriptions[tier] || "";
-                  const lpRequirements = tierLpRequirements[tier] || { lp: "", lpLockBurn: "" };
-                  const tierName = tier.charAt(0).toUpperCase() + tier.slice(1);
-                  
-                  return (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className={`${bgColor} rounded-[4px] p-[3px] cursor-help`}>
-                          <Image
-                            loading="lazy"
-                            src={iconPath}
-                            width={8.36}
-                            height={8.36}
-                            alt={tier}
-                          />
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent className="bg-[#010101] p-2 rounded-lg border-[0.5px] border-white max-w-[180px]">
-                        <div className="flex flex-col gap-1">
-                          <div className="flex justify-between items-center">
-                          <span className="font-semibold text-white">{tierName}</span>
-                          <span className={`${bgColor} rounded-[4px] p-[3px] cursor-help`}>
-                          <Image
-                            loading="lazy"
-                            src={iconPath}
-                            width={8.36}
-                            height={8.36}
-                            alt={tier}
-                          />
-                        </span>
-                          </div>
-                          {description && (
-                            <p className="text-xs font-medium text-white/70 w-full text-wrap">{description}</p>
-                          )}
-                          {lpRequirements.lp && (
-                            <>
-                              <div className="flex flex-col gap-0.5 mt-1 ">
-                                <span className="text-xs font-medium flex justify-between items-center text-white/70">
-                                  <span className="text-white/70">Lp: </span> <span>{lpRequirements.lp}</span>
-                                </span>
-                                <span className="text-xs font-medium flex justify-between items-center text-white/70">
-                                  <span className="text-white/70">Lp lock/burn: </span> <span>{lpRequirements.lpLockBurn}</span>
-                                </span>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  );
-                })()}
+                <ProjectTierBadge tier={coin.tier} />
               </div>
               <div className="flex items-center gap-1">
                 <span className="text-[#FFFFFF]/50 text-xs uppercase">
                   {shortenAddress(coin.address)}
                 </span>
-                <Button 
-                  type="button"
-                  className="p-0 size-3 min-w-3 h-3 shrink-0"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigator.clipboard.writeText(coin.address);
-                  }}
-                >
-                  <Image
-                    loading="lazy"
-                    src="/copy.svg"
-                    alt="copy"
-                    className="size-3 min-w-3 shrink-0"
-                    width={12}
-                    height={12}
-                  />
-                </Button>
+                <CopyAddressButton address={coin.address} />
                 <Link 
                   href={coin.website || "#"}
                   className="inline-flex size-3 min-w-3 shrink-0"
@@ -243,7 +142,6 @@ export default function ListingTableRow({ coin, onProjectClick, onBuyClick }: Li
               </div>
             </div>
             </div>
-            </ProjectPreviewHover>
 
           <Button 
             className="bg-[#FF4A15]/21 text-[#FF4A15] p-0 h-fit px-1 py-1 ml-5 rounded-[5.5px] font-bold"
