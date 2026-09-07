@@ -27,6 +27,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSessionStore } from "@/lib/sessionStore";
 import { getCloudFrontUrl } from "@/utils/helper/image-url-helper";
+import { useFavorites } from "@/hooks/useFavorites";
+import { typedFavoriteKey } from "@/services/favoritesService";
 
 const CHAIN_ICON: Record<string, string> = {
   solana: "/listings-chains/solana.png",
@@ -106,7 +108,9 @@ export default function MarketplaceAdDetail({ adId: adIdFromPage }: { adId: stri
         : "Failed to load ad"
       : null;
   const [carouselIndex, setCarouselIndex] = useState(0);
-  const [saved, setSaved] = useState(false);
+  const favorites = useFavorites();
+  const adFavoriteKey = adId ? typedFavoriteKey("MARKETPLACE_AD", adId) : "";
+  const saved = Boolean(adFavoriteKey && favorites.isFavorited(adFavoriteKey));
   const [liked, setLiked] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
@@ -283,7 +287,20 @@ export default function MarketplaceAdDetail({ adId: adIdFromPage }: { adId: stri
             </div>
 
             <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-[#86868630]">
-              <Button variant="outline" className="border-white/20 text-white hover:bg-white/10" onClick={() => setSaved(!saved)}>{saved ? "Saved" : "Save to watchlist"}</Button>
+              <Button
+                variant="outline"
+                className="border-white/20 text-white hover:bg-white/10"
+                disabled={!adId || favorites.isPending(adFavoriteKey)}
+                onClick={() =>
+                  void favorites.toggle({
+                    key: adFavoriteKey,
+                    targetType: "MARKETPLACE_AD",
+                    targetId: adId,
+                  })
+                }
+              >
+                {saved ? "Saved" : "Save to watchlist"}
+              </Button>
               {isCreatorViewingOwnAd ? (
                 <span
                   className="ml-auto gap-2 rounded-lg flex items-center justify-center p-2 bg-white/10 text-white/50 cursor-not-allowed"

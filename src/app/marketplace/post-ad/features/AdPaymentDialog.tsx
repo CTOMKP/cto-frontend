@@ -27,10 +27,16 @@ import { isApiError } from '@/lib/apiError';
 import solanaWalletService from '@/services/solanaWalletService';
 import {
   getPrivySolanaPayWallet,
+  isUserCancelledWalletError,
   resolvePrivySolanaAddress,
   signSolanaPayPreferPrivyHook,
   type PrivySolanaSignTransaction,
 } from '@/lib/solanaTransaction';
+
+function restoreDocumentInteraction() {
+  if (typeof document === 'undefined') return;
+  document.body.style.pointerEvents = '';
+}
 
 interface AdPaymentDialogProps {
   open: boolean;
@@ -93,6 +99,30 @@ export default function AdPaymentDialog({
   );
   const solanaAvailable = !!solanaPayWallet;
   const userPickedPaymentRef = useRef(false);
+  const payAttemptRef = useRef(0);
+
+  const abortInFlightPay = () => {
+    payAttemptRef.current += 1;
+    setIsProcessing(false);
+    restoreDocumentInteraction();
+  };
+
+  const selectPaymentMethod = (method: 'USDC' | 'SOL') => {
+    userPickedPaymentRef.current = true;
+    abortInFlightPay();
+    setPaymentMethod(method);
+  };
+
+  useEffect(() => {
+    if (open) return;
+    abortInFlightPay();
+    restoreDocumentInteraction();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || isProcessing) return;
+    restoreDocumentInteraction();
+  }, [open, isProcessing]);
 
   /** Default: USDC on Solana when a Solana wallet exists; otherwise Movement. Re-sync when dialog opens or Solana becomes available until the user picks a method. */
   useEffect(() => {
@@ -244,14 +274,18 @@ export default function AdPaymentDialog({
       }
     }
 
+    const payAttempt = ++payAttemptRef.current;
+    const stillCurrent = () => payAttempt === payAttemptRef.current;
     setIsProcessing(true);
     let actualAdId: string;
     try {
       if (ensureDraftSaved) {
         const nextId = await ensureDraftSaved();
+        if (!stillCurrent()) return;
         if (!nextId) {
           toast.error('Draft not created. Please try again.');
           setIsProcessing(false);
+          restoreDocumentInteraction();
           return;
         }
         actualAdId = String(nextId).replace('#', '');
@@ -259,13 +293,16 @@ export default function AdPaymentDialog({
         if (!adsId) {
           toast.error('Invalid Ad Id. Please try again.');
           setIsProcessing(false);
+          restoreDocumentInteraction();
           return;
         }
         actualAdId = String(adsId).replace('#', '');
       }
     } catch {
+      if (!stillCurrent()) return;
       toast.error('Failed to save draft before payment.');
       setIsProcessing(false);
+      restoreDocumentInteraction();
       return;
     }
 
@@ -275,6 +312,7 @@ export default function AdPaymentDialog({
           throw new Error('No Solana wallet found. Please connect a Solana wallet in Privy.');
         }
         const paymentResponse = await marketplaceService.createPayment(actualAdId, "SOLANA");
+        if (!stillCurrent()) return;
         const responseData = ((paymentResponse as { data?: unknown } | undefined)?.data ||
           paymentResponse) as Record<string, unknown>;
         const paymentData = ((responseData.payment as Record<string, unknown> | undefined) ||
@@ -307,6 +345,7 @@ export default function AdPaymentDialog({
           signTransactionHook: privySignSolanaTransaction as unknown as PrivySolanaSignTransaction,
           chainId: paymentData.chainId as "solana:devnet" | "solana:mainnet" | undefined,
         });
+        if (!stillCurrent()) return;
         if (!resolvedPaymentId) throw new Error('Payment id missing');
         const broadcast = await solanaPaymentService.broadcastPayment(resolvedPaymentId, signedTransaction) as
           { txHash?: string; data?: { txHash?: string } };
@@ -448,14 +487,22 @@ export default function AdPaymentDialog({
           setIsProcessing(false);
         }
       } catch (txError) {
+        if (isUserCancelledWalletError(txError)) throw txError;
         console.error("Transaction failed:", txError);
         const error = txError as Error;
         const errorMsg = error.message || "Transaction cancelled or failed";
         toast.error(errorMsg);
         setIsProcessing(false);
+        restoreDocumentInteraction();
         return;
       }
     } catch (error: unknown) {
+      if (!stillCurrent()) return;
+      restoreDocumentInteraction();
+      if (isUserCancelledWalletError(error)) {
+        toast.info('Transaction cancelled. You can switch payment method and try again.');
+        return;
+      }
       const msg =
         error instanceof Error ? error.message :
         isApiError(error) ? error.message :
@@ -465,7 +512,10 @@ export default function AdPaymentDialog({
         : msg;
       toast.error(friendlyMsg);
     } finally {
-      setIsProcessing(false);
+      if (stillCurrent()) {
+        setIsProcessing(false);
+        restoreDocumentInteraction();
+      }
     }
   };
 
@@ -477,6 +527,7 @@ export default function AdPaymentDialog({
   };
 
   const handleClose = () => {
+    abortInFlightPay();
     onOpenChange(false);
     setTimeout(() => {
       setCurrentStep(1);
@@ -485,8 +536,24 @@ export default function AdPaymentDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="bg-[#010101] border-white/20 text-white p-6 max-h-full overflow-auto hover-scrollbar">
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen && !isProcessing) handleClose();
+      }}
+    >
+      <DialogContent
+        className="bg-[#010101] border-white/20 text-white p-6 max-h-full overflow-auto hover-scrollbar"
+        onPointerDownOutside={(e) => {
+          if (isProcessing) e.preventDefault();
+        }}
+        onInteractOutside={(e) => {
+          if (isProcessing) e.preventDefault();
+        }}
+        onEscapeKeyDown={(e) => {
+          if (isProcessing) e.preventDefault();
+        }}
+      >
         {currentStep === 1 && (
           <>
             <DialogHeader className="flex flex-row items-center justify-between pb-4 border-b-[0.3px] border-white/20">
@@ -613,10 +680,7 @@ export default function AdPaymentDialog({
                           name="paymentMethod-ad"
                           value="SOL"
                           checked={paymentMethod === 'SOL'}
-                          onChange={() => {
-                            userPickedPaymentRef.current = true;
-                            setPaymentMethod('SOL');
-                          }}
+                          onChange={() => selectPaymentMethod('SOL')}
                           disabled={!solanaAvailable}
                           className="w-4 h-4 shrink-0"
                         />
@@ -633,10 +697,7 @@ export default function AdPaymentDialog({
                           name="paymentMethod-ad"
                           value="USDC"
                           checked={paymentMethod === 'USDC'}
-                          onChange={() => {
-                            userPickedPaymentRef.current = true;
-                            setPaymentMethod('USDC');
-                          }}
+                          onChange={() => selectPaymentMethod('USDC')}
                           className="w-4 h-4 shrink-0"
                         />
                         <span className="text-[#8D8D8D] text-sm">

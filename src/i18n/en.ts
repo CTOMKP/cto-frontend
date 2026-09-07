@@ -40,6 +40,7 @@ export const en = {
     status: "Status",
     watchlist: "Watchlist",
     fullView: "Full view",
+    watchlistEmpty: "Your watchlist is empty. Star a listing to save it here.",
     loading: "Loading…",
     none: "None",
     payment: "Payment",
@@ -96,6 +97,7 @@ export const en = {
     liq: "Liq",
     age: "Age",
     risk: "Risk",
+    detailedView: "Detailed view",
   },
   search: {
     placeholder: "Search Token, Contract or Users",

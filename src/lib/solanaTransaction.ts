@@ -201,6 +201,37 @@ function encodeSolanaTxBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
+/** Wallet / Privy user dismissed the sign prompt (do not treat as a hook failure). */
+export function isUserCancelledWalletError(error: unknown): boolean {
+  if (error == null) return false;
+  const rec = typeof error === "object" ? (error as Record<string, unknown>) : null;
+  const code = rec?.code;
+  if (code === 4001 || code === "4001" || code === 4000) return true;
+  if (typeof code === "string" && /reject|cancel|denied|exit/i.test(code)) return true;
+  if (rec?.error && rec.error !== error && isUserCancelledWalletError(rec.error)) return true;
+  if (rec?.cause && rec.cause !== error && isUserCancelledWalletError(rec.cause)) return true;
+  const msg = [
+    rec?.message,
+    rec?.name,
+    rec?.shortMessage,
+    rec?.type,
+    rec?.errorCode,
+    rec?.reason,
+    typeof error === "string" ? error : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  return /user rejected|user denied|user cancelled|user canceled|user exited|rejected the request|denied transaction|request rejected|approval denied|transaction cancelled|transaction canceled|user cancel|closed the modal|closed the window|sign rejected|signing rejected|exited the request|action_rejected|user_exited|user_rejected|rejected by user/i.test(
+    msg,
+  );
+}
+
+function rethrowIfUserCancelled(error: unknown): void {
+  if (isUserCancelledWalletError(error)) {
+    throw error instanceof Error ? error : new Error("Transaction cancelled");
+  }
+}
+
 /**
  * Sign a server-built payment without exposing the production RPC credential in
  * the browser. The signed bytes are broadcast by the authenticated backend.
@@ -222,11 +253,13 @@ export async function signSolanaPayPreferPrivyHook(params: {
     if (!signedBytes) throw new Error("Unable to parse signed Solana transaction bytes.");
     return encodeSolanaTxBase64(signedBytes);
   } catch (hookError) {
+    rethrowIfUserCancelled(hookError);
     console.warn("[Solana pay] useSignTransaction failed, falling back to wallet.signTransaction", hookError);
     let signedTx: VersionedTransaction | Transaction;
     try {
       signedTx = await signWithWallet(params.wallet, VersionedTransaction.deserialize(bytes));
-    } catch {
+    } catch (versionedError) {
+      rethrowIfUserCancelled(versionedError);
       signedTx = await signWithWallet(params.wallet, Transaction.from(bytes));
     }
     return encodeSolanaTxBase64(signedTx.serialize());
@@ -254,6 +287,7 @@ export async function signAndBroadcastSolanaPayPreferPrivyHook(params: {
       rpcUrl,
     });
   } catch (hookErr) {
+    rethrowIfUserCancelled(hookErr);
     console.warn("[Solana pay] useSignTransaction failed, falling back to wallet.signTransaction", hookErr);
     return signAndBroadcastSolanaBase64Tx({ unsignedTxBase64, wallet, rpcUrl });
   }

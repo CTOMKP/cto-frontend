@@ -34,8 +34,18 @@ export type ThreadAdSummary = {
   [key: string]: unknown;
 };
 
+export type MessageInboxType = "GENERAL" | "MARKETPLACE";
+export type InboxFilter = "GENERAL" | "MARKETPLACE" | "ARCHIVED";
+
+export type UserSearchResult = {
+  id: number;
+  name?: string | null;
+  avatarUrl?: string | null;
+};
+
 export type MessageThread = {
   id: string;
+  type?: MessageInboxType;
   ad?: ThreadAdSummary | null;
   posterId: number;
   applicantId: number;
@@ -45,6 +55,7 @@ export type MessageThread = {
   lastMessagePreview?: string;
   updatedAt?: string;
   unreadCount?: number;
+  isArchived?: boolean;
   escrow?: EscrowSummary | null;
   [key: string]: unknown;
 };
@@ -66,9 +77,28 @@ export type ChatMessage = {
   [key: string]: unknown;
 };
 
+export type EscrowStatus =
+  | "PROPOSED"
+  | "AWAITING_PAYMENT"
+  | "FUNDED"
+  | "IN_PROGRESS"
+  | "ACTIVE"
+  | "PAID"
+  | "SUBMITTED"
+  | "WORK_SUBMITTED"
+  | "DELIVERED"
+  | "UNDER_REVIEW"
+  | "DISPUTED"
+  | "COMPLETED"
+  | "RELEASED"
+  | "REFUNDED"
+  | "DECLINED"
+  | "CANCELLED"
+  | "EXPIRED";
+
 export type EscrowSummary = {
   id?: string;
-  status?: string;
+  status?: EscrowStatus | string;
   title?: string;
   totalAmount?: number;
   currency?: string;

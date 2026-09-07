@@ -1,9 +1,12 @@
+"use client";
+
 import Image from "next/image";
 import { ChevronDown, Clock3, Link2 } from "lucide-react";
+import { useFavorites } from "@/hooks/useFavorites";
 import { ApiCoinItem } from "@/types/api";
 import FiatText from "@/components/FiatText";
 import { shortenAddress } from "@/utils/helper/shortenAddress";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import ProjectTierBadge from "@/components/ProjectTierBadge";
 import { toast } from "react-toastify";
 import { getChainImage } from "@/app/listings/features/utils/listingUtils";
 import {
@@ -17,6 +20,7 @@ interface ProjectHeaderProps {
 }
 
 export default function ProjectHeader({ projectData, formatJoinedDate }: ProjectHeaderProps) {
+  const favorites = useFavorites();
   const chainSlug = normalizeChainSlug(projectData?.chain);
   const chainLabel = CHAIN_DISPLAY_NAMES[chainSlug] ?? chainSlug;
   const displayName =
@@ -92,106 +96,7 @@ export default function ProjectHeader({ projectData, formatJoinedDate }: Project
               </span>
 
               <div className="flex items-center gap-1">
-                {(() => {
-                  const rawTier = projectData?.tier;
-                  
-                  // Normalize tier - handle all invalid formats
-                  if (!rawTier || rawTier === null || rawTier === undefined) {
-                    return null;
-                  }
-                  
-                  const tierStr = String(rawTier).trim().toLowerCase();
-                  
-                  // Check for all invalid tier values (including dash variations)
-                  if (tierStr === 'none' || tierStr === 'null' || tierStr === 'undefined' || 
-                      tierStr === '' || tierStr === '—' || tierStr === '----' || tierStr === '------' ||
-                      tierStr.startsWith('---') || tierStr === 'n/a' || tierStr === 'na' ||
-                      /^[-—]+$/.test(tierStr)) { // Match any string that's only dashes/em-dashes
-                    return null;
-                  }
-                  
-                  const tier = tierStr;
-                  const tierIcons: Record<string, string> = {
-                    stellar: "/project-categories/stellar.png",
-                    bloom: "/project-categories/bloom.png",
-                    sprout: "/project-categories/sprout.png",
-                    seed: "/project-categories/seed.png",
-                  };
-                  
-                  const tierBgColors: Record<string, string> = {
-                    seed: "bg-[#6D6D6D]/20",
-                    sprout: "bg-[#FF5900]/20",
-                    bloom: "bg-[#15FF00]/20",
-                    stellar: "bg-[#FFBB00]/20",
-                  };
-                  
-                  const tierDescriptions: Record<string, string> = {
-                    seed: "Entry-level tier, 14-21 days old with minimal liquidity and early activity",
-                    sprout: "Mid-level tier, >21 days old, with moderate liquidity and stability",
-                    bloom: "Premium tier, >1 month old, with significant liquidity and security",
-                    stellar: "Elite tier, >1 month old, with significant liquidity and security",
-                  };
-                  
-                  const tierLpRequirements: Record<string, { lp: string; lpLockBurn: string }> = {
-                    seed: { lp: ">$10,000", lpLockBurn: ">30% / 6mo" },
-                    sprout: { lp: ">$20,000", lpLockBurn: ">30% / 18mo" },
-                    bloom: { lp: ">$50,000", lpLockBurn: ">30% / 24mo" },
-                    stellar: { lp: ">$100,000", lpLockBurn: ">30% / 36mo" },
-                  };
-                  
-                  const iconPath = tierIcons[tier] || "/project-categories/bloom.png";
-                  const bgColor = tierBgColors[tier] || "bg-[#15FF00]/20";
-                  const description = tierDescriptions[tier] || "";
-                  const lpRequirements = tierLpRequirements[tier] || { lp: "", lpLockBurn: "" };
-                  const tierName = tier.charAt(0).toUpperCase() + tier.slice(1);
-                  
-                  return (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className={`${bgColor} rounded-[4px] p-[3px] cursor-help`}>
-                          <Image
-                            loading="lazy"
-                            src={iconPath}
-                            width={14}
-                            height={14}
-                            alt={tier}
-                          />
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent className="bg-[#010101] p-2 rounded-lg border-[0.5px] border-white max-w-[180px]">
-                        <div className="flex flex-col gap-1">
-                          <div className="flex justify-between items-center">
-                          <span className="font-semibold text-white">{tierName}</span>
-                          <span className={`${bgColor} rounded-[4px] p-[3px] cursor-help`}>
-                          <Image
-                            loading="lazy"
-                            src={iconPath}
-                            width={8.36}
-                            height={8.36}
-                            alt={tier}
-                          />
-                        </span>
-                          </div>
-                          {description && (
-                            <p className="text-xs font-medium text-white/70 w-full text-wrap">{description}</p>
-                          )}
-                          {lpRequirements.lp && (
-                            <>
-                              <div className="flex flex-col gap-0.5 mt-1 ">
-                                <span className="text-xs font-medium flex justify-between items-center text-white/70">
-                                  <span className="text-white/70">Lp: </span> <span>{lpRequirements.lp}</span>
-                                </span>
-                                <span className="text-xs font-medium flex justify-between items-center text-white/70">
-                                  <span className="text-white/70">Lp lock/burn: </span> <span>{lpRequirements.lpLockBurn}</span>
-                                </span>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  );
-                })()}
+                <ProjectTierBadge tier={projectData?.tier} iconSize={14} />
               </div>
               <div className="flex items-center gap-1">
                 <span className="bg-[#FFFFFF]/5 rounded-[26px] flex items-center justify-center px-1.5 h-6">
@@ -226,6 +131,44 @@ export default function ProjectHeader({ projectData, formatJoinedDate }: Project
             </span>
 
             <div className="flex items-center gap-2">
+              {projectData?.contractAddress ? (
+                <button
+                  type="button"
+                  className="size-9 flex items-center justify-center rounded-full bg-[#FFFFFF0D] hover:bg-[#FFFFFF1A]"
+                  disabled={favorites.isCoinPending({
+                    address: projectData.contractAddress,
+                    chain: projectData.chain,
+                  })}
+                  title={
+                    favorites.isCoinFavorited({
+                      address: projectData.contractAddress,
+                      chain: projectData.chain,
+                    })
+                      ? "Remove from watchlist"
+                      : "Add to watchlist"
+                  }
+                  onClick={() =>
+                    void favorites.toggleCoin({
+                      address: projectData.contractAddress,
+                      chain: projectData.chain,
+                    })
+                  }
+                >
+                  <Image
+                    src={
+                      favorites.isCoinFavorited({
+                        address: projectData.contractAddress,
+                        chain: projectData.chain,
+                      })
+                        ? "/watchlist-active.svg"
+                        : "/white-watchlist.svg"
+                    }
+                    alt="watchlist"
+                    width={16}
+                    height={16}
+                  />
+                </button>
+              ) : null}
               <span className="font-bold text-[32px]">
                 <FiatText usd={projectData?.priceUsd} compact={false} />
               </span>

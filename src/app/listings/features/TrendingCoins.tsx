@@ -13,7 +13,8 @@ import Image from "next/image";
 import { Button } from "../../../components/ui/button";
 import { compactNumber } from "@/utils/helper/compactNumber";
 import FiatText from "@/components/FiatText";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import ProjectTierBadge from "@/components/ProjectTierBadge";
+import CopyAddressButton from "@/components/CopyAddressButton";
 import {
   Card,
   CardAction,
@@ -444,11 +445,11 @@ export default function TrendingCoins({
                     </TableCell>
                   {/* name */}
                   <TableCell className="!py-1">
-                    <ProjectPreviewHover
-                      coin={data.previewCoin}
-                      onOpenProject={() => handleRowClick(data.name, data.address, data.chain)}
-                    >
                     <div className="flex items-center gap-1">
+                      <ProjectPreviewHover
+                        coin={data.previewCoin}
+                        onOpenProject={() => handleRowClick(data.name, data.address, data.chain)}
+                      >
                       <div className="relative">
                         <FallbackImage
                           className="size-7 rounded-full border-[0.36px] border-white object-cover"
@@ -468,134 +469,20 @@ export default function TrendingCoins({
                         />
                         )}
                       </div>
+                      </ProjectPreviewHover>
 
                       <div>
                         <div className="flex items-center gap-1">
                           <span className="font-medium capitalize max-w-[80px] truncate" title={data.name}>
                             {data.name.length > 10 ? `${data.name.substring(0, 10)}...` : data.name}
                           </span>
-                          {/* Tier Badge */}
-                          {(() => {
-                            const rawTier = data.tier;
-                            
-                            // Normalize tier - handle all invalid formats
-                            if (!rawTier || rawTier === null || rawTier === undefined) {
-                              return null;
-                            }
-                            
-                            const tierStr = String(rawTier).trim().toLowerCase();
-                            
-                            // Check for all invalid tier values (including dash variations)
-                            if (tierStr === 'none' || tierStr === 'null' || tierStr === 'undefined' || 
-                                tierStr === '' || tierStr === '—' || tierStr === '----' || tierStr === '------' ||
-                                tierStr.startsWith('---') || tierStr === 'n/a' || tierStr === 'na' ||
-                                /^[-—]+$/.test(tierStr)) { // Match any string that's only dashes/em-dashes
-                              return null;
-                            }
-                            
-                            const tier = tierStr;
-                            const tierIcons: Record<string, string> = {
-                              stellar: "/project-categories/stellar.png",
-                              bloom: "/project-categories/bloom.png",
-                              sprout: "/project-categories/sprout.png",
-                              seed: "/project-categories/seed.png",
-                            };
-                            
-                            const tierBgColors: Record<string, string> = {
-                              seed: "bg-[#6D6D6D]/20",
-                              sprout: "bg-[#FF5900]/20",
-                              bloom: "bg-[#15FF00]/20",
-                              stellar: "bg-[#FFBB00]/20",
-                            };
-                            
-                            const tierDescriptions: Record<string, string> = {
-                              seed: "Entry-level tier, 14-21 days old with minimal liquidity and early activity",
-                              sprout: "Mid-level tier, >21 days old, with moderate liquidity and stability",
-                              bloom: "Premium tier, >1 month old, with significant liquidity and security",
-                              stellar: "Elite tier, >1 month old, with significant liquidity and security",
-                            };
-                            
-                            const tierLpRequirements: Record<string, { lp: string; lpLockBurn: string }> = {
-                              seed: { lp: ">$10,000", lpLockBurn: ">30% / 6mo" },
-                              sprout: { lp: ">$20,000", lpLockBurn: ">30% / 18mo" },
-                              bloom: { lp: ">$50,000", lpLockBurn: ">30% / 24mo" },
-                              stellar: { lp: ">$100,000", lpLockBurn: ">30% / 36mo" },
-                            };
-                            
-                            const iconPath = tierIcons[tier] || "/project-categories/bloom.png";
-                            const bgColor = tierBgColors[tier] || "bg-[#15FF00]/20";
-                            const description = tierDescriptions[tier] || "";
-                            const lpRequirements = tierLpRequirements[tier] || { lp: "", lpLockBurn: "" };
-                            const tierName = tier.charAt(0).toUpperCase() + tier.slice(1);
-                            
-                            return (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className={`${bgColor} rounded-[4px] p-[3px] cursor-help`}>
-                                    <Image
-                                      loading="lazy"
-                                      src={iconPath}
-                                      width={8.36}
-                                      height={8.36}
-                                      alt={tier}
-                                    />
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent className="bg-[#010101] p-2 rounded-lg border-[0.5px] border-white max-w-[180px]">
-                                  <div className="flex flex-col gap-1">
-                                    <div className="flex justify-between items-center">
-                                      <span className="font-semibold text-white">{tierName}</span>
-                                      <span className={`${bgColor} rounded-[4px] p-[3px] cursor-help`}>
-                                        <Image
-                                          loading="lazy"
-                                          src={iconPath}
-                                          width={8.36}
-                                          height={8.36}
-                                          alt={tier}
-                                        />
-                                      </span>
-                                    </div>
-                                    {description && (
-                                      <p className="text-xs font-medium text-white/70 w-full text-wrap">{description}</p>
-                                    )}
-                                    {lpRequirements.lp && (
-                                      <>
-                                        <div className="flex flex-col gap-0.5 mt-1 ">
-                                          <span className="text-xs font-medium flex justify-between items-center text-white/70">
-                                            <span className="text-white/70">Lp: </span> <span>{lpRequirements.lp}</span>
-                                          </span>
-                                          <span className="text-xs font-medium flex justify-between items-center text-white/70">
-                                            <span className="text-white/70">Lp lock/burn: </span> <span>{lpRequirements.lpLockBurn}</span>
-                                          </span>
-                                        </div>
-                                      </>
-                                    )}
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            );
-                          })()}
+                          <ProjectTierBadge tier={data.tier} />
                         </div>
                         <div className="flex items-center gap-1">
                           <span className="text-[#FFFFFF]/50 text-xs uppercase" title={data.address}>
                             {shortenAddressForTrending(data.address)}
                           </span>
-                          <Button
-                            type="button"
-                            className="p-0 size-3 min-w-3 h-3 shrink-0 text-white"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (data.address) navigator.clipboard.writeText(data.address);
-                            }}
-                          >
-                            <Image
-                              src="/copy.svg"
-                              alt="copy"
-                              className="size-3 min-w-3 shrink-0"
-                              width={12}
-                              height={12}
-                            />
-                          </Button>
+                          <CopyAddressButton address={data.address} />
                           <Link
                             href="#"
                             className="inline-flex size-3 min-w-3 shrink-0"
@@ -627,7 +514,6 @@ export default function TrendingCoins({
                         </div>
                       </div>
                     </div>
-                    </ProjectPreviewHover>
                   </TableCell>
                   {/* mc/liq */}
                   <TableCell className="!py-1">

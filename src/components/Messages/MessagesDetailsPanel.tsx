@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useEffect } from "react";
 import Image from "next/image";
-import { Star } from "lucide-react";
+import { Star, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { EscrowSummary, MessageThread } from "@/types/messages";
 import {
@@ -66,7 +66,9 @@ export default function MessagesDetailsPanel({
   selectedProfileUserId,
   currentEscrow,
   isPoster,
+  isMarketplaceConversation = true,
   onEscrowPrimary,
+  onClose,
   onBackToThread,
 }: {
   thread: MessageThread | null;
@@ -75,7 +77,9 @@ export default function MessagesDetailsPanel({
   selectedProfileUserId: number | null;
   currentEscrow: EscrowSummary | null;
   isPoster: boolean;
+  isMarketplaceConversation?: boolean;
   onEscrowPrimary: () => void;
+  onClose?: () => void;
   onBackToThread?: () => void;
 }) {
   const [profileAvatarError, setProfileAvatarError] = useState(false);
@@ -228,7 +232,20 @@ export default function MessagesDetailsPanel({
 
   return (
     <aside className="w-[380px] min-w-0 shrink-0 bg-black/40">
-      <div className="h-full min-h-screen min-w-0 max-w-full overflow-auto hover-scrollbar p-5 pt-25">
+      <div className="h-full min-h-screen min-w-0 max-w-full overflow-auto hover-scrollbar p-5 pt-10">
+        {onClose ? (
+          <div className="mb-6 flex justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full border border-white/10 p-1.5 text-white/50 hover:text-white"
+              aria-label="Close listing details"
+              title="Close details"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+        ) : null}
         <div className="flex flex-col items-center text-center mb-4">
           <div className="relative size-[115px] rounded-full bg-white/5 overflow-hidden shrink-0 border border-white/10">
             {profileAvatarSrc && !profileAvatarError ? (
@@ -327,6 +344,7 @@ export default function MessagesDetailsPanel({
             </ul>
           </div>
 
+          {isMarketplaceConversation ? (
           <div className="border-t-[0.5px] border-white/20 pt-5 mt-5">
           <div className="text-xs text-white mb-2">Requirements</div>
             <Button
@@ -341,12 +359,22 @@ export default function MessagesDetailsPanel({
                   ? "Set up escrow"
                   : "No escrow set yet"}
             </Button>
+            {hasEscrow && currentEscrow?.status ? (
+              <div className="text-[11px] text-white/50 mt-2 text-center">
+                Status: {String(currentEscrow.status).replace(/_/g, " ")}
+              </div>
+            ) : null}
             {escrowDisabled ? (
               <div className="text-[11px] text-white/50 mt-2 text-center">
                 Poster has not created an escrow yet
               </div>
             ) : null}
           </div>
+          ) : (
+            <div className="border-t-[0.5px] border-white/20 pt-5 mt-5 text-xs text-white/50">
+              General conversation
+            </div>
+          )}
 
           <div className="border-t-[0.5px] border-white/20 pt-5 mt-5">
             <div className="text-xs text-white/50 mb-2">Reviews</div>

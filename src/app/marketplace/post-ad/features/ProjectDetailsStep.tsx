@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Upload, Plus } from 'lucide-react';
+import { Upload, Plus, Calendar } from 'lucide-react';
 import { marketplaceService, MarketplacePricingCatalog } from '@/services/marketplaceService';
 
 export interface ProjectDetailsData {
@@ -573,14 +573,21 @@ export default function ProjectDetailsStep({ onNext, onBack, initialData }: Proj
           <div className="flex items-center justify-between">
             <label className="text-sm font-semibold text-white">Deadline</label>
             <div>
-              <Input
-                type="date"
-                min={minDate}
-                value={deadline}
-                onChange={(e) => setDeadline(e.target.value)}
-                disabled={noFixedDeadline}
-                className="w-[250px] bg-[#141414] border-none text-white placeholder:text-[#606060] [color-scheme:dark]"
-              />
+              <div
+                className={`relative flex h-9 w-[250px] items-center justify-between rounded-md bg-[#141414] px-3 ${
+                  noFixedDeadline ? 'pointer-events-none opacity-50' : ''
+                }`}
+              >
+                <Input
+                  type="date"
+                  min={minDate}
+                  value={deadline}
+                  onChange={(e) => setDeadline(e.target.value)}
+                  disabled={noFixedDeadline}
+                  className="h-9 min-w-0 flex-1 border-none bg-transparent p-0 shadow-none text-white [color-scheme:dark] focus-visible:ring-0 [&::-webkit-datetime-edit]:flex-1 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:h-4 [&::-webkit-calendar-picker-indicator]:w-4 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-clear-button]:hidden [&::-webkit-inner-spin-button]:hidden"
+                />
+                <Calendar className="pointer-events-none size-4 shrink-0 text-white/80" aria-hidden />
+              </div>
               <p className="text-xs text-white/60 mt-1">Select a date from today onward</p>
               <div className="flex items-center gap-2 mt-2">
                 <Checkbox
