@@ -29,6 +29,30 @@ import { useSessionStore } from "@/lib/sessionStore";
 import { getCloudFrontUrl } from "@/utils/helper/image-url-helper";
 import { useFavorites } from "@/hooks/useFavorites";
 import { typedFavoriteKey } from "@/services/favoritesService";
+import {
+  MARKETPLACE_CATEGORY_DISPLAY_NAMES,
+  isValidMarketplaceCategorySlug,
+} from "@/lib/constants/slugs";
+import { MARKETPLACE_FALLBACK_CATEGORIES } from "@/app/marketplace/features/MarketplaceCategoryDropdowns";
+import MarketplaceSimilarAds from "@/app/marketplace/features/MarketplaceSimilarAds";
+import MarketplacePopularAds from "@/app/marketplace/features/MarketplacePopularAds";
+
+function adCategoryLabel(raw: unknown): string {
+  if (raw == null) return "";
+  const value = String(raw).trim();
+  if (!value) return "";
+  const slug = value.toLowerCase().replace(/\s+/g, "-");
+  if (isValidMarketplaceCategorySlug(slug)) {
+    return MARKETPLACE_CATEGORY_DISPLAY_NAMES[slug];
+  }
+  const fallback = MARKETPLACE_FALLBACK_CATEGORIES.find(
+    (c) =>
+      c.id === value ||
+      c.id === slug ||
+      c.name.toLowerCase() === value.toLowerCase(),
+  );
+  return fallback?.name ?? value;
+}
 
 const CHAIN_ICON: Record<string, string> = {
   solana: "/listings-chains/solana.png",
@@ -123,6 +147,29 @@ export default function MarketplaceAdDetail({ adId: adIdFromPage }: { adId: stri
     setCarouselIndex(0);
   }, [adId]);
 
+  useEffect(() => {
+    if (!adId) return;
+    console.log("[marketplace/[id]] clicked ad id:", adId);
+    console.log("[marketplace/[id]] query:", {
+      isPending: adQuery.isPending,
+      isFetching: adQuery.isFetching,
+      isError: adQuery.isError,
+      isSuccess: adQuery.isSuccess,
+      error: adQuery.error,
+    });
+    if (adQuery.data === undefined) return;
+    const data = adQuery.data;
+    console.log("[marketplace/[id]] full ad data:", data);
+    if (data && typeof data === "object") {
+      console.log("[marketplace/[id]] ad keys:", Object.keys(data as object));
+    }
+    try {
+      console.log("[marketplace/[id]] full ad JSON:", JSON.parse(JSON.stringify(data)));
+    } catch (serializeError) {
+      console.log("[marketplace/[id]] could not serialize ad:", serializeError);
+    }
+  }, [adId, adQuery.data, adQuery.isPending, adQuery.isFetching, adQuery.isError, adQuery.isSuccess, adQuery.error]);
+
   const images: string[] = Array.isArray(ad?.images)
     ? (ad.images as string[]).map(toImageUrl).filter(Boolean)
     : ad?.image
@@ -131,6 +178,13 @@ export default function MarketplaceAdDetail({ adId: adIdFromPage }: { adId: stri
   const title = (ad?.title as string) || (ad?.adTitle as string) || "Ad";
   const description = (ad?.description as string) || "";
   const tags = Array.isArray(ad?.tags) ? (ad.tags as string[]) : [];
+  const categoryLabel = adCategoryLabel(ad?.category);
+  const subCategoryLabel = String(ad?.subCategory ?? ad?.subcategory ?? "").trim();
+  const offerTypeLabel = String(ad?.offerType ?? "").trim();
+  const metaChips = [categoryLabel, subCategoryLabel, offerTypeLabel]
+    .map((label) => String(label || "").trim())
+    .filter(Boolean)
+    .filter((label, index, list) => list.findIndex((item) => item.toLowerCase() === label.toLowerCase()) === index);
   const chain = ((ad?.chain as string) || "").toLowerCase();
   const chainIcon = CHAIN_ICON[chain] || "/listings-chains/solana.png";
   const priceAmount = ad?.priceAmount != null ? Number(ad.priceAmount) : null;
@@ -141,6 +195,11 @@ export default function MarketplaceAdDetail({ adId: adIdFromPage }: { adId: stri
   const contactLinks = (ad?.contactInfo as Record<string, string> | undefined)
     ? Object.entries(ad?.contactInfo as Record<string, string>).filter(([, v]) => v && typeof v === "string")
     : [];
+  const creatorUser =
+    ad?.user && typeof ad.user === "object" && !Array.isArray(ad.user)
+      ? (ad.user as { id?: number | string; name?: string | null })
+      : null;
+  const posterName = String(creatorUser?.name ?? "").trim().replace(/^@+/, "");
   const currentUserId = useMemo(() => {
     const raw = sessionUserId;
     const n = raw ? Number(raw) : NaN;
@@ -251,6 +310,11 @@ export default function MarketplaceAdDetail({ adId: adIdFromPage }: { adId: stri
                 <h1 className="text-2xl lg:text-3xl font-bold text-white">{title}</h1>
                 <Image src={chainIcon} alt={chain || "chain"} width={24} height={24} className="rounded-full" />
               </div>
+              {posterName ? (
+                <p className="mt-2 text-sm text-white/60">
+                  by <span className="text-white break-all">@{posterName}</span>
+                </p>
+              ) : null}
               <div className="flex flex-wrap gap-0.5 mt-2">
                 {tags.length > 0 ? tags.map((tag) => (
                   <span key={tag} className="bg-[#131313]/86 p-2 text-xs text-white rounded-[3px]">#{tag}</span>
@@ -260,14 +324,14 @@ export default function MarketplaceAdDetail({ adId: adIdFromPage }: { adId: stri
               </div>
             </div>
 
-            <div className="p-6 space-y-6 border border-[#FFFFFF]/8 rounded-lg min-w-0 overflow-hidden">
+            <div className="p-6 border border-[#FFFFFF]/8 rounded-lg min-w-0 overflow-hidden">
               {description ? (
                 <p className="text-white/80 text-sm leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere] max-w-full">
                   {description}
                 </p>
               ) : null}
               {contactLinks.length > 0 && (
-                <div className="flex flex-col gap-2">
+                <div className={`flex flex-col gap-2 ${description || metaChips.length > 0 ? "mt-6" : ""}`}>
                   {contactLinks.map(([label, href]) => (
                     <a key={label} href={href.startsWith("http") ? href : `https://${href}`} target="_blank" rel="noopener noreferrer" className="inline-flex justify-center text-center bg-[#0FFFBB0D] rounded-[4px] p-2.5 items-center w-full gap-1.5 text-sm text-white/80 hover:text-white hover:underline">
                       <ExternalLink className="h-4 w-4 shrink-0" /> {href}
@@ -275,6 +339,18 @@ export default function MarketplaceAdDetail({ adId: adIdFromPage }: { adId: stri
                   ))}
                 </div>
               )}
+              {metaChips.length > 0 ? (
+                <div className={`flex flex-wrap items-center justify-start gap-3 ${description ? "mt-6" : ""}`}>
+                  {metaChips.map((label) => (
+                    <span
+                      key={label}
+                      className="inline-flex h-11 w-fit border-white/20 border items-center rounded-lg bg-[#151515] p-3 text-base text-white"
+                    >
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
             </div>
 
             <div className="border border-white/10 p-4 rounded-lg">
@@ -357,6 +433,16 @@ export default function MarketplaceAdDetail({ adId: adIdFromPage }: { adId: stri
               <button type="button" className="p-2 size-12 rounded-full flex justify-center items-center text-white/70 cta-gradient hover:text-white" aria-label="Send"><Send className="h-5 w-5" /></button>
             </div>
           </div>
+        </div>
+
+        <div className="mt-10 space-y-10">
+          <MarketplaceSimilarAds
+            currentAdId={adId}
+            category={String(ad?.category ?? "")}
+            subCategory={String(ad?.subCategory ?? ad?.subcategory ?? "")}
+            offerType={String(ad?.offerType ?? "")}
+          />
+          <MarketplacePopularAds excludeAdId={adId} />
         </div>
       </div>
     </div>

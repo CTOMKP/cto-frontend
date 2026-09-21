@@ -133,7 +133,16 @@ export const marketplaceService = {
 
   async getPublicAd(id: string, signal?: AbortSignal) {
     const res = await apiGet<unknown>(`/api/v1/marketplace/ads/${id}`, { signal });
-    return parseMarketplaceAdDetailResponse(res);
+    const parsed = parseMarketplaceAdDetailResponse(res);
+    console.log("[marketplace getPublicAd] id:", id);
+    console.log("[marketplace getPublicAd] raw response:", res);
+    console.log("[marketplace getPublicAd] parsed ad:", parsed);
+    try {
+      console.log("[marketplace getPublicAd] parsed ad JSON:", JSON.parse(JSON.stringify(parsed)));
+    } catch {
+      /* ignore circular serialize */
+    }
+    return parsed;
   },
 
   /**
