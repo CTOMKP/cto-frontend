@@ -44,10 +44,19 @@ export const listingKeys = {
   coin: (key: string) => [...listingKeys.all, "coin", key] as const,
 };
 
+export type MarketplacePublicListParams = {
+  page?: number;
+  limit?: number;
+  category?: string;
+  subCategory?: string;
+};
+
 /** Marketplace ads list + detail (not token MEME listings). */
 export const marketplaceKeys = {
   all: ["marketplace"] as const,
   feed: (tab: "trending" | "forYou" | "new") =>
     [...marketplaceKeys.all, "feed", tab] as const,
+  public: (params: MarketplacePublicListParams) =>
+    [...marketplaceKeys.all, "public", params] as const,
   ad: (id: string) => [...marketplaceKeys.all, "ad", id] as const,
 };
